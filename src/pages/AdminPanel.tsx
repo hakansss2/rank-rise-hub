@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -15,6 +15,7 @@ const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin, getAllUsers } = useAuth();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
+  const [allUsers, setAllUsers] = useState<any[]>([]);
   
   // Kullanıcı yetkilendirme kontrolü
   React.useEffect(() => {
@@ -31,9 +32,13 @@ const AdminPanel = () => {
     }
   }, [isAuthenticated, isAdmin, navigate]);
 
-  // Tüm kullanıcıları getir
-  const allUsers = getAllUsers();
-  console.log("All users:", allUsers);
+  // Tüm kullanıcıları getir ve state'e at
+  useEffect(() => {
+    // Her render'da getAllUsers ile güncel kullanıcıları al
+    const users = getAllUsers();
+    console.log("Admin panel fetched users:", users.length);
+    setAllUsers(users);
+  }, [getAllUsers]);
   
   // Kullanıcıları rollerine göre filtrele
   const customers = allUsers.filter(u => u.role === 'customer');
@@ -41,6 +46,16 @@ const AdminPanel = () => {
   
   const toggleCurrency = () => {
     setCurrency(prev => prev === 'TRY' ? 'USD' : 'TRY');
+  };
+  
+  const refreshUsers = () => {
+    const users = getAllUsers();
+    console.log("Manually refreshed users:", users.length);
+    setAllUsers(users);
+    toast({
+      title: "Kullanıcı Listesi Güncellendi",
+      description: `Toplam ${users.length} kullanıcı bulundu.`,
+    });
   };
   
   const formatBalance = (balance: number): string => {
@@ -80,9 +95,14 @@ const AdminPanel = () => {
             <h1 className="text-3xl font-bold mb-2 font-heading">Admin <span className="text-valorant-green">Paneli</span></h1>
             <p className="text-gray-400">Tüm kullanıcıları yönetin ve bakiyeleri görüntüleyin.</p>
           </div>
-          <Button onClick={toggleCurrency} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-green-600">
-            {currency === 'TRY' ? '₺ TRY' : '$ USD'}
-          </Button>
+          <div className="flex space-x-4">
+            <Button onClick={refreshUsers} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500">
+              Kullanıcıları Yenile
+            </Button>
+            <Button onClick={toggleCurrency} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-green-600">
+              {currency === 'TRY' ? '₺ TRY' : '$ USD'}
+            </Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">

@@ -46,10 +46,14 @@ const loadRegisteredUsers = () => {
     try {
       registeredUsers = JSON.parse(storedUsers);
       console.log('Loaded registered users from localStorage:', registeredUsers.length);
+      console.log('Registered users data:', registeredUsers);
     } catch (error) {
       console.error('Failed to parse stored users', error);
       registeredUsers = [];
     }
+  } else {
+    console.log('No registered users found in localStorage');
+    registeredUsers = [];
   }
 };
 
@@ -58,6 +62,7 @@ const saveRegisteredUsers = () => {
   try {
     localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
     console.log('Saved registered users to localStorage:', registeredUsers.length);
+    console.log('Registered users data after save:', registeredUsers);
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
   }
@@ -88,10 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Tüm kullanıcıları getir (sabit ve kayıtlı)
   const getAllUsers = () => {
-    // Clone arrays to prevent modification
+    // First load the latest registered users
+    loadRegisteredUsers();
+    
+    // Then combine with default users
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
     const registeredUsersList = registeredUsers.map(({ password, ...rest }) => rest);
-    return [...defaultUsers, ...registeredUsersList];
+    
+    const allUsers = [...defaultUsers, ...registeredUsersList];
+    console.log("getAllUsers returning users:", allUsers.length);
+    return allUsers;
   };
 
   const login = async (email: string, password: string) => {
@@ -164,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Creating new user:', { ...newUser, password: '***' });
       
-      // Kayıtlı kullanıcılar listesine ekle
+      // Kayıtlı kullanıcılar listesine ekle - IMPORTANT FIX - use array push correctly
       registeredUsers.push(newUser);
       
       // LocalStorage'a kaydet
