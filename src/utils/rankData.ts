@@ -169,10 +169,10 @@ export function getRankPrice(currentRank: number, targetRank: number): number {
   return totalPrice;
 }
 
-// Currency conversion (example rates)
+// Currency conversion (updated rate: 1 USD = 35 TRY)
 export const currencyRates = {
   TRY: 1,
-  USD: 0.031 // 1 TRY = 0.031 USD
+  USD: 0.0286 // 1 TRY = 0.0286 USD (which means 1 USD = 35 TRY)
 };
 
 export function convertCurrency(amount: number, from: keyof typeof currencyRates, to: keyof typeof currencyRates): number {
