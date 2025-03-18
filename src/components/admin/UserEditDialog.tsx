@@ -25,7 +25,7 @@ interface UserEditDialogProps {
 const UserEditDialog: React.FC<UserEditDialogProps> = ({ user, open, onOpenChange, onSave }) => {
   const [email, setEmail] = useState(user?.email || '');
   const [username, setUsername] = useState(user?.username || '');
-  const [role, setRole] = useState(user?.role || 'customer');
+  const [role, setRole] = useState<'customer' | 'booster' | 'admin'>(user?.role || 'customer');
   const [balance, setBalance] = useState(user?.balance?.toString() || '0');
   const [newPassword, setNewPassword] = useState('');
   const { toast } = useToast();
@@ -61,7 +61,7 @@ const UserEditDialog: React.FC<UserEditDialogProps> = ({ user, open, onOpenChang
       ...user,
       email,
       username,
-      role: role as 'customer' | 'booster' | 'admin',
+      role,
       balance: numBalance
     };
     
@@ -111,7 +111,10 @@ const UserEditDialog: React.FC<UserEditDialogProps> = ({ user, open, onOpenChang
             <Label htmlFor="role" className="text-right text-white">
               Rol
             </Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select 
+              value={role} 
+              onValueChange={(value: 'customer' | 'booster' | 'admin') => setRole(value)}
+            >
               <SelectTrigger className="col-span-3 bg-valorant-gray/20 border-valorant-gray/30 text-white">
                 <SelectValue placeholder="Rol seçin" />
               </SelectTrigger>
