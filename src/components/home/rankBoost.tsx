@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const RankBoost = () => {
   const [currentRank, setCurrentRank] = useState<number | null>(null);
@@ -27,6 +29,9 @@ const RankBoost = () => {
   const [selectedTargetTier, setSelectedTargetTier] = useState<RankTier | null>(null);
   const [currentTierRanks, setCurrentTierRanks] = useState<any[]>([]);
   const [targetTierRanks, setTargetTierRanks] = useState<any[]>([]);
+  const [gameUsername, setGameUsername] = useState('');
+  const [gamePassword, setGamePassword] = useState('');
+  const [showCredentials, setShowCredentials] = useState(false);
   
   const currentDivisionRef = useRef<HTMLDivElement>(null);
   const targetDivisionRef = useRef<HTMLDivElement>(null);
@@ -113,6 +118,8 @@ const RankBoost = () => {
           });
         }
       }, 100);
+      
+      setShowCredentials(true);
     }
   }, [currentRank, targetRank, priorityOrder, streaming, offlineMode]);
   
@@ -170,6 +177,15 @@ const RankBoost = () => {
       return;
     }
     
+    if (!gameUsername || !gamePassword) {
+      toast({
+        title: "Hata",
+        description: "Lütfen oyun hesap bilgilerinizi girin.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       const success = await deductBalance(finalPrice);
       
@@ -183,7 +199,7 @@ const RankBoost = () => {
         return;
       }
       
-      await createOrder(currentRank, targetRank, finalPrice);
+      await createOrder(currentRank, targetRank, finalPrice, gameUsername, gamePassword);
       toast({
         title: "Başarılı",
         description: "Siparişiniz başarıyla oluşturuldu. Hesabım sayfasından takip edebilirsiniz.",
@@ -637,6 +653,38 @@ const RankBoost = () => {
               </div>
             </div>
           </div>
+          
+          {showCredentials && (
+            <div className="mt-6 pt-6 border-t border-valorant-gray/30">
+              <h3 className="text-white font-medium text-lg mb-4">Hesap Bilgileri</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="space-y-2">
+                  <Label htmlFor="gameUsername" className="text-white">Oyun Kullanıcı Adı</Label>
+                  <Input 
+                    id="gameUsername" 
+                    placeholder="Kullanıcı adınızı girin" 
+                    value={gameUsername} 
+                    onChange={(e) => setGameUsername(e.target.value)}
+                    className="bg-valorant-black/70 border-valorant-gray/50 text-white"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="gamePassword" className="text-white">Oyun Şifresi</Label>
+                  <Input 
+                    id="gamePassword" 
+                    type="password" 
+                    placeholder="Şifrenizi girin" 
+                    value={gamePassword} 
+                    onChange={(e) => setGamePassword(e.target.value)}
+                    className="bg-valorant-black/70 border-valorant-gray/50 text-white"
+                  />
+                  <p className="text-xs text-gray-400">Şifreniz güvenli bir şekilde saklanır.</p>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-valorant-gray/30">
             <div className="space-y-4 mb-6">
