@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -25,6 +24,7 @@ interface AuthContextType {
   deductBalance: (amount: number) => Promise<boolean>;
   formatBalance: (currency?: 'TRY' | 'USD') => string;
   getAllUsers: () => Array<User>;
+  updateUser: (updatedUser: User, newPassword?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -307,6 +307,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUser = async (updatedUser: User, newPassword?: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if updating the current logged-in user
+      if (user && user.id === updatedUser.id) {
+        setUser(updatedUser);
+        localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      }
+      
+      // Check if the user is a default user or registered user
+      const isDefaultUser = USERS.some(u => u.id === updatedUser.id);
+      
+      if (isDefaultUser) {
+        // We can't modify the hardcoded users, but we'll update the UI state
+        console.log('Updated default user in UI only:', updatedUser.username);
+      } else {
+        // Update the user in the registered users array
+        loadRegisteredUsers(); // Ensure we have the latest data
+        
+        const userIndex = registeredUsers.findIndex(u => u.id === updatedUser.id);
+        if (userIndex !== -1) {
+          // Keep the existing password if no new one provided
+          const currentPassword = registeredUsers[userIndex].password;
+          
+          registeredUsers[userIndex] = {
+            ...updatedUser,
+            password: newPassword || currentPassword
+          };
+          
+          saveRegisteredUsers();
+          console.log('Updated registered user:', updatedUser.username);
+        } else {
+          console.error('User not found in registered users:', updatedUser.id);
+        }
+      }
+      
+      // Force a re-render to update UI with new user data
+      forceUpdate(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Failed to update user', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -321,6 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     deductBalance,
     formatBalance,
     getAllUsers,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

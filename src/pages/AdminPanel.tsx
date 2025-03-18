@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Edit } from 'lucide-react';
+import UserEditDialog from '@/components/admin/UserEditDialog';
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin, getAllUsers } = useAuth();
@@ -18,6 +18,8 @@ const AdminPanel = () => {
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   
   // Kullanıcı yetkilendirme kontrolü
   React.useEffect(() => {
@@ -102,6 +104,78 @@ const AdminPanel = () => {
     }
   };
 
+  const handleEditUser = (user: any) => {
+    setSelectedUser(user);
+    setDialogOpen(true);
+  };
+
+  const handleSaveUser = async (updatedUser: any, newPassword?: string) => {
+    // Update user in localStorage
+    try {
+      // First check if user is one of the default users
+      const isDefaultUser = ['1', '2', '3'].includes(updatedUser.id);
+      
+      if (isDefaultUser) {
+        // For demo, we'll just update the UI but not localStorage for default users
+        setAllUsers(prev => 
+          prev.map(u => u.id === updatedUser.id ? updatedUser : u)
+        );
+        
+        toast({
+          title: "Sistem Kullanıcısı Güncellendi",
+          description: "Not: Değişiklikler sadece bu oturum için geçerlidir.",
+        });
+      } else {
+        // For registered users, update localStorage
+        const storedUsers = localStorage.getItem('valorant_registered_users');
+        if (storedUsers) {
+          const parsedUsers = JSON.parse(storedUsers);
+          const updatedUsers = parsedUsers.map((u: any) => {
+            if (u.id === updatedUser.id) {
+              // Keep the password if no new password provided
+              const updatedUserWithPassword = {
+                ...updatedUser,
+                password: newPassword || u.password
+              };
+              return updatedUserWithPassword;
+            }
+            return u;
+          });
+          
+          localStorage.setItem('valorant_registered_users', JSON.stringify(updatedUsers));
+          
+          // Update current user if user is editing their own profile
+          if (user && user.id === updatedUser.id) {
+            const currentUserData = JSON.parse(localStorage.getItem('valorant_user') || '{}');
+            const updatedCurrentUser = {
+              ...currentUserData,
+              email: updatedUser.email,
+              username: updatedUser.username,
+              role: updatedUser.role,
+              balance: updatedUser.balance
+            };
+            localStorage.setItem('valorant_user', JSON.stringify(updatedCurrentUser));
+          }
+          
+          toast({
+            title: "Kullanıcı Güncellendi",
+            description: "Kullanıcı bilgileri başarıyla güncellendi.",
+          });
+        }
+      }
+      
+      // Refresh user list
+      refreshUsers();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Güncelleme Başarısız",
+        description: "Kullanıcı güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -177,6 +251,7 @@ const AdminPanel = () => {
                     <TableHead>E-posta</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead className="text-right">Bakiye</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -188,11 +263,21 @@ const AdminPanel = () => {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{getRoleBadge(user.role)}</TableCell>
                         <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditUser(user)}
+                            className="hover:bg-valorant-gray/20 text-blue-500"
+                          >
+                            <Edit className="h-4 w-4 mr-1" /> Düzenle
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-400">
                         Henüz kullanıcı bulunmuyor
                       </TableCell>
                     </TableRow>
@@ -209,6 +294,7 @@ const AdminPanel = () => {
                     <TableHead>Kullanıcı Adı</TableHead>
                     <TableHead>E-posta</TableHead>
                     <TableHead className="text-right">Bakiye</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,11 +305,21 @@ const AdminPanel = () => {
                         <TableCell className="font-medium">{user.username}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditUser(user)}
+                            className="hover:bg-valorant-gray/20 text-blue-500"
+                          >
+                            <Edit className="h-4 w-4 mr-1" /> Düzenle
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-gray-400">
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
                         Henüz müşteri bulunmuyor
                       </TableCell>
                     </TableRow>
@@ -241,6 +337,7 @@ const AdminPanel = () => {
                     <TableHead>E-posta</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead className="text-right">Bakiye</TableHead>
+                    <TableHead className="text-right">İşlemler</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -252,11 +349,21 @@ const AdminPanel = () => {
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{getRoleBadge(user.role)}</TableCell>
                         <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditUser(user)}
+                            className="hover:bg-valorant-gray/20 text-blue-500"
+                          >
+                            <Edit className="h-4 w-4 mr-1" /> Düzenle
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-400">
                         Henüz booster bulunmuyor
                       </TableCell>
                     </TableRow>
@@ -267,6 +374,13 @@ const AdminPanel = () => {
           </Tabs>
         </div>
       </div>
+      
+      <UserEditDialog 
+        user={selectedUser}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSave={handleSaveUser}
+      />
       
       <Footer />
     </div>

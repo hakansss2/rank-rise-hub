@@ -8,17 +8,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+// Form schema with validations
+const formSchema = z.object({
+  email: z.string().email('Geçerli bir e-posta adresi girin.'),
+  username: z.string().min(3, 'Kullanıcı adı en az 3 karakter olmalı.'),
+  password: z.string()
+    .min(6, 'Şifre en az 6 karakter olmalı.')
+    .regex(/[A-Z]/, 'Şifrede en az bir büyük harf olmalı.')
+    .regex(/[0-9]/, 'Şifrede en az bir sayı olmalı.'),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Şifreler eşleşmiyor",
+  path: ["confirmPassword"],
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 const Register = () => {
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [registeredUsers, setRegisteredUsers] = useState<number>(0);
-  const { register } = useAuth();
+  const { register: registerUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Set up form with validation
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: '',
+      username: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
   // Display current registered users count
   useEffect(() => {
@@ -37,31 +64,20 @@ const Register = () => {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      toast({
-        title: 'Şifreler eşleşmiyor',
-        description: 'Lütfen şifrenizi doğru şekilde tekrar girin.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
+  const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
 
     try {
-      console.log(`Attempting to register user: ${username}, ${email}`);
-      await register(email, username, password);
+      console.log(`Attempting to register user: ${data.username}, ${data.email}`);
+      await registerUser(data.email, data.username, data.password);
       
       // Verify registration success by checking localStorage directly
       const storedUsers = localStorage.getItem('valorant_registered_users');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
         console.log('Current registered users after registration:', parsedUsers.length);
-        const userFound = parsedUsers.some((u: any) => u.email === email);
-        console.log(`User with email ${email} found in storage: ${userFound}`);
+        const userFound = parsedUsers.some((u: any) => u.email === data.email);
+        console.log(`User with email ${data.email} found in storage: ${userFound}`);
         
         // Show details of the registered users for debugging
         console.log('All registered users:', parsedUsers);
@@ -101,75 +117,103 @@ const Register = () => {
           </div>
           
           <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-8 shadow-xl">
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">E-posta</label>
-                <Input
-                  type="email"
-                  id="email"
-                  placeholder="e-posta@ornegi.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
-                  required
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-400">E-posta</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="e-posta@ornegi.com"
+                          className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="mb-4">
-                <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-1">Kullanıcı Adı</label>
-                <Input
-                  type="text"
-                  id="username"
-                  placeholder="kullanici_adi"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
-                  required
+                
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-400">Kullanıcı Adı</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="text"
+                          placeholder="kullanici_adi"
+                          className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="mb-4">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-400 mb-1">Şifre</label>
-                <Input
-                  type="password"
-                  id="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
-                  required
-                  minLength={6}
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-400">Şifre</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
+                          {...field}
+                        />
+                      </FormControl>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <p>Şifre en az 6 karakter, 1 büyük harf ve 1 sayı içermelidir.</p>
+                      </div>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <div className="mb-6">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-400 mb-1">Şifre Tekrar</label>
-                <Input
-                  type="password"
-                  id="confirmPassword"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
-                  required
+                
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-400">Şifre Tekrar</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="••••••••"
+                          className="bg-valorant-gray/20 border-valorant-gray/30 text-white placeholder:text-gray-500 focus:border-valorant-green focus:ring-valorant-green"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-500" />
+                    </FormItem>
+                  )}
                 />
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-valorant-green hover:bg-valorant-darkGreen text-white py-5 rounded-md font-medium transition-all duration-300"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Kayıt Yapılıyor...
-                  </>
-                ) : (
-                  'Kayıt Ol'
-                )}
-              </Button>
-            </form>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-valorant-green hover:bg-valorant-darkGreen text-white py-5 rounded-md font-medium transition-all duration-300 mt-6"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Kayıt Yapılıyor...
+                    </>
+                  ) : (
+                    'Kayıt Ol'
+                  )}
+                </Button>
+              </form>
+            </Form>
             
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-400">
