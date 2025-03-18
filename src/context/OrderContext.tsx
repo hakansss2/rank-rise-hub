@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Order {
   id: string;
@@ -96,8 +97,9 @@ const MOCK_ORDERS: Order[] = [
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
+  const [orders, setOrders] = useState<Order[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -126,10 +128,14 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setOrders(parsedOrders);
       } catch (error) {
         console.error('Failed to parse stored orders', error);
+        // Initialize with mock data if parsing fails
+        setOrders(MOCK_ORDERS);
+        localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
       }
     } else {
       // Initialize with mock data if no saved data exists
       console.log('No saved orders found, using mock data');
+      setOrders(MOCK_ORDERS);
       localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
     }
   };
@@ -159,6 +165,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const claimOrder = async (orderId: string) => {
     if (!user) throw new Error('User must be logged in to claim an order');
     if (!user.id) throw new Error('User ID is required');
+    
+    // If the user is an admin, they shouldn't be able to claim orders
+    if (user.role === 'admin') {
+      toast({
+        title: "İşlem Reddedildi",
+        description: "Admin hesapları sipariş alamaz.",
+        variant: "destructive",
+      });
+      throw new Error('Admin accounts cannot claim orders');
+    }
 
     console.log(`Claiming order ${orderId} by user ${user.username} with ID ${user.id}`);
     
@@ -174,21 +190,46 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           : order
       )
     );
+    
     return Promise.resolve();
   };
 
   const completeOrder = async (orderId: string) => {
-    setOrders(prev => 
-      prev.map(order => 
-        order.id === orderId 
-          ? { ...order, status: 'completed' } 
-          : order
-      )
-    );
-    return Promise.resolve();
+    if (!user) throw new Error('User must be logged in to complete an order');
+    
+    const order = orders.find(o => o.id === orderId);
+    
+    // Only the assigned booster or an admin can complete an order
+    if (order && (order.boosterId === user.id || user.role === 'admin')) {
+      setOrders(prev => 
+        prev.map(order => 
+          order.id === orderId 
+            ? { ...order, status: 'completed' } 
+            : order
+        )
+      );
+      return Promise.resolve();
+    } else {
+      toast({
+        title: "İşlem Reddedildi",
+        description: "Bu siparişi sadece atanmış booster veya admin tamamlayabilir.",
+        variant: "destructive",
+      });
+      throw new Error('Only the assigned booster or an admin can complete this order');
+    }
   };
 
   const cancelOrder = async (orderId: string) => {
+    // Only admins can cancel orders
+    if (!user || user.role !== 'admin') {
+      toast({
+        title: "İşlem Reddedildi",
+        description: "Sipariş iptali sadece adminler tarafından yapılabilir.",
+        variant: "destructive",
+      });
+      throw new Error('Only admins can cancel orders');
+    }
+    
     setOrders(prev => 
       prev.map(order => 
         order.id === orderId 
@@ -206,13 +247,24 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getBoosterOrders = () => {
     if (!user) return [];
-    console.log(`Checking booster orders for user ${user.username} with ID ${user.id}`);
+    
+    // If the user is an admin, they shouldn't see booster orders
+    if (user.role === 'admin') {
+      return [];
+    }
+    
+    console.log(`Checking booster orders for user ${user.username} with ID ${user.id} and role ${user.role}`);
     const filtered = orders.filter(order => order.boosterId === user.id);
     console.log(`Found ${filtered.length} orders for booster ${user.username}`);
     return filtered;
   };
 
   const getAvailableOrders = () => {
+    // Admins should not see available orders to claim
+    if (user?.role === 'admin') {
+      return [];
+    }
+    
     console.log('All orders:', orders);
     const availableOrders = orders.filter(order => order.status === 'pending');
     console.log(`Found ${availableOrders.length} pending orders:`, availableOrders);

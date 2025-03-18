@@ -34,6 +34,7 @@ const Register = () => {
     setIsLoading(true);
 
     try {
+      console.log(`Attempting to register user: ${username}, ${email}`);
       await register(email, username, password);
       toast({
         title: 'Kayıt başarılı',

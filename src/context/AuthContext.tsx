@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -19,6 +20,7 @@ interface AuthContextType {
   logout: () => void;
   isAdmin: boolean;
   isBooster: boolean;
+  isCustomer: boolean;
   addBalance: (amount: number) => Promise<void>;
   deductBalance: (amount: number) => Promise<boolean>;
   formatBalance: (currency?: 'TRY' | 'USD') => string;
@@ -40,6 +42,7 @@ const loadRegisteredUsers = () => {
   if (storedUsers) {
     try {
       registeredUsers = JSON.parse(storedUsers);
+      console.log('Loaded registered users from localStorage:', registeredUsers.length);
     } catch (error) {
       console.error('Failed to parse stored users', error);
       registeredUsers = [];
@@ -73,6 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      // Reload registered users to get the latest data
+      loadRegisteredUsers();
+      
       // Simulating API call with timeout
       await new Promise(resolve => setTimeout(resolve, 800));
       
@@ -83,19 +89,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Sabit kullanıcılarda bulunamazsa, kayıtlı kullanıcılarda ara
       if (!foundUser) {
+        console.log('Searching in registered users for:', email);
+        console.log('Registered users:', registeredUsers);
+        
         foundUser = registeredUsers.find(
           u => u.email === email && u.password === password
         );
       }
       
       if (!foundUser) {
+        console.error('Login failed: Invalid credentials for', email);
         throw new Error('Invalid credentials');
       }
       
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
-      console.log('User logged in successfully:', userWithoutPassword.username);
+      console.log('User logged in successfully:', userWithoutPassword.username, 'with role:', userWithoutPassword.role);
     } catch (error) {
       console.error('Login failed', error);
       throw error;
@@ -252,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     isAdmin: user?.role === 'admin',
     isBooster: user?.role === 'booster' || user?.role === 'admin',
+    isCustomer: user?.role === 'customer',
     addBalance,
     deductBalance,
     formatBalance,
