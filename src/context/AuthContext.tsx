@@ -27,18 +27,35 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Gerçek kullanıcı verileri (Demo modundan çıkış)
-const MOCK_USERS = [
+// Kullanıcı verileri
+const USERS = [
   { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
-  { id: '2', email: 'booster@valorank.com', username: 'booster', password: 'booster123', role: 'booster' as UserRole, balance: 1000 },
-  { id: '3', email: 'customer@valorank.com', username: 'customer', password: 'customer123', role: 'customer' as UserRole, balance: 2500 },
 ];
+
+// Yeni kayıt olan kullanıcıları bu array'de saklayacağız
+let registeredUsers: Array<typeof USERS[0]> = [];
+
+// LocalStorage'dan kayıtlı kullanıcıları yükleme
+const loadRegisteredUsers = () => {
+  const storedUsers = localStorage.getItem('valorant_registered_users');
+  if (storedUsers) {
+    try {
+      registeredUsers = JSON.parse(storedUsers);
+    } catch (error) {
+      console.error('Failed to parse stored users', error);
+      registeredUsers = [];
+    }
+  }
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Load registered users when component mounts
+    loadRegisteredUsers();
+    
     // Check local storage for existing auth
     const storedUser = localStorage.getItem('valorant_user');
     if (storedUser) {
@@ -58,9 +75,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulating API call with timeout
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      const foundUser = MOCK_USERS.find(
+      // Önce sabit kullanıcılarda ara
+      let foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
+      
+      // Sabit kullanıcılarda bulunamazsa, kayıtlı kullanıcılarda ara
+      if (!foundUser) {
+        foundUser = registeredUsers.find(
+          u => u.email === email && u.password === password
+        );
+      }
       
       if (!foundUser) {
         throw new Error('Invalid credentials');
@@ -83,22 +108,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulating API call with timeout
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Check if user already exists
-      if (MOCK_USERS.some(u => u.email === email)) {
+      // Tüm kullanıcılarda e-posta kontrolü (sabit ve kayıtlı)
+      if (USERS.some(u => u.email === email) || registeredUsers.some(u => u.email === email)) {
         throw new Error('Email already in use');
       }
       
-      // In a real app, you would make an API call to register the user
+      // Yeni kullanıcı oluştur
       const newUser = {
-        id: String(MOCK_USERS.length + 1),
+        id: `u-${Date.now()}`,
         email,
         username,
+        password, // şifreyi kaydet
         role: 'customer' as UserRole,
         balance: 0, // New users start with 0 balance
       };
       
-      setUser(newUser);
-      localStorage.setItem('valorant_user', JSON.stringify(newUser));
+      // Kayıtlı kullanıcılar listesine ekle
+      registeredUsers.push(newUser);
+      
+      // LocalStorage'a kaydet
+      localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+      
+      // Kullanıcı bilgilerini state'e ve localStorage'a ekle (şifre olmadan)
+      const { password: _, ...userWithoutPassword } = newUser;
+      setUser(userWithoutPassword);
+      localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
@@ -127,6 +161,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+
+      // Kayıtlı kullanıcılarda da güncelle
+      if (user.role !== 'admin') {
+        const userIndex = registeredUsers.findIndex(u => u.id === user.id);
+        if (userIndex !== -1) {
+          registeredUsers[userIndex] = { 
+            ...registeredUsers[userIndex], 
+            balance: updatedUser.balance 
+          };
+          localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+        }
+      }
     } catch (error) {
       console.error('Failed to add balance', error);
       throw error;
@@ -153,6 +199,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+
+      // Kayıtlı kullanıcılarda da güncelle
+      if (user.role !== 'admin') {
+        const userIndex = registeredUsers.findIndex(u => u.id === user.id);
+        if (userIndex !== -1) {
+          registeredUsers[userIndex] = { 
+            ...registeredUsers[userIndex], 
+            balance: updatedUser.balance 
+          };
+          localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+        }
+      }
+      
       return true;
     } catch (error) {
       console.error('Failed to deduct balance', error);

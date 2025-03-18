@@ -103,15 +103,6 @@ const Login = () => {
                 </Link>
               </p>
             </div>
-            
-            <div className="mt-8 pt-6 border-t border-valorant-gray/20 text-center text-xs text-gray-500">
-              <p>
-                Demo giriş bilgileri: <br />
-                Admin: admin@valorank.com / admin123 <br />
-                Booster: booster@valorank.com / booster123 <br />
-                Müşteri: customer@valorank.com / customer123
-              </p>
-            </div>
           </div>
         </div>
       </div>
