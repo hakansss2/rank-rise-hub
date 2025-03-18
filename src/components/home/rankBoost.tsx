@@ -6,7 +6,7 @@ import { useOrder } from '@/context/OrderContext';
 import { valorantRanks, getRankPrice, formatCurrency, rankTierGroups, getRanksByTier, RankTier } from '@/utils/rankData';
 import { Button } from '@/components/ui/button';
 import RankCard from '@/components/ui/rankCard';
-import { ArrowRight, ChevronLeft, ChevronRight, CheckCircle, Clock, Shield, Award, Zap, Video, WifiOff } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, CheckCircle, Clock, Shield, Award, Zap, Video, WifiOff, Wallet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,7 +33,10 @@ const RankBoost = () => {
   
   const navigate = useNavigate();
   const {
-    isAuthenticated
+    isAuthenticated,
+    user,
+    deductBalance,
+    formatBalance
   } = useAuth();
   const {
     createOrder
@@ -137,7 +140,21 @@ const RankBoost = () => {
       });
       return;
     }
+    
     try {
+      // Check if user has enough balance
+      const success = await deductBalance(finalPrice);
+      
+      if (!success) {
+        toast({
+          title: "Yetersiz Bakiye",
+          description: "Bakiyeniz yetersiz. Lütfen bakiye yükleyiniz.",
+          variant: "destructive"
+        });
+        navigate('/dashboard');
+        return;
+      }
+      
       await createOrder(currentRank, targetRank, finalPrice);
       toast({
         title: "Başarılı",
@@ -455,10 +472,17 @@ const RankBoost = () => {
                 {(priorityOrder || streaming) && <div className="text-sm text-gray-400 mt-1">
                     Baz fiyat: {formatCurrency(basePrice, currency)}
                   </div>}
+                
+                {isAuthenticated && (
+                  <div className="flex items-center justify-center md:justify-start mt-2 text-valorant-green font-medium">
+                    <Wallet className="w-4 h-4 mr-1" />
+                    Bakiyeniz: {formatBalance(currency)}
+                  </div>
+                )}
               </div>
               
               <Button className="bg-valorant-green hover:bg-valorant-darkGreen text-white px-6 py-5 text-base md:text-lg rounded-lg w-full md:w-auto" onClick={handlePurchase}>
-                Şimdi Satın Al <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2" />
+                {isAuthenticated ? 'Şimdi Satın Al' : 'Giriş Yap ve Satın Al'} <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2" />
               </Button>
             </div>
           </div>

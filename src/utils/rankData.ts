@@ -1,4 +1,3 @@
-
 export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'ascendant' | 'immortal' | 'radiant';
 
 export interface RankInfo {
@@ -169,21 +168,26 @@ export function getRankPrice(currentRank: number, targetRank: number): number {
   return totalPrice;
 }
 
-// Currency conversion (updated rate: 1 USD = 35 TRY)
+// Currency conversion (USD to TRY conversion rate: 1 USD = 35 TRY)
 export const currencyRates = {
   TRY: 1,
-  USD: 0.0286 // 1 TRY = 0.0286 USD (which means 1 USD = 35 TRY)
+  USD: 0.0286 // 1 TRY = 0.0286 USD (35 TRY = 1 USD)
 };
 
 export function convertCurrency(amount: number, from: keyof typeof currencyRates, to: keyof typeof currencyRates): number {
-  const valueInBase = amount / currencyRates[from];
-  return valueInBase * currencyRates[to];
+  if (from === 'TRY' && to === 'USD') {
+    return amount / 35; // Convert TRY to USD by dividing by 35
+  } else if (from === 'USD' && to === 'TRY') {
+    return amount * 35; // Convert USD to TRY by multiplying by 35
+  }
+  return amount; // Same currency, no conversion needed
 }
 
 export function formatCurrency(amount: number, currency: 'TRY' | 'USD'): string {
   if (currency === 'TRY') {
     return `${amount.toLocaleString('tr-TR')} ₺`;
   } else {
-    return `$${amount.toLocaleString('en-US')}`;
+    const usdAmount = convertCurrency(amount, 'TRY', 'USD');
+    return `$${usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 }

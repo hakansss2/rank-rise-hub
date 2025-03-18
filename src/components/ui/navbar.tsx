@@ -3,10 +3,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Wallet } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, isAuthenticated, logout, isAdmin, isBooster } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isBooster, formatBalance } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currencyType, setCurrencyType] = useState<'TRY' | 'USD'>('TRY');
   const navigate = useNavigate();
@@ -51,36 +51,42 @@ const Navbar = () => {
               </button>
               
               {isAuthenticated ? (
-                <div className="relative group">
-                  <button className="flex items-center text-gray-300 hover:bg-valorant-gray hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                    <User className="w-4 h-4 mr-1" />
-                    {user?.username}
-                    <ChevronDown className="w-4 h-4 ml-1" />
-                  </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-valorant-black border border-valorant-gray rounded-md shadow-lg overflow-hidden transform scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 origin-top-right z-50">
-                    <div className="py-1">
-                      <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
-                        Hesabım
-                      </Link>
-                      {isBooster && (
-                        <Link to="/booster" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
-                          Booster Paneli
+                <>
+                  <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-2 rounded-md text-sm font-medium">
+                    <Wallet className="w-4 h-4 mr-1" />
+                    <span>{formatBalance(currencyType)}</span>
+                  </div>
+                  <div className="relative group">
+                    <button className="flex items-center text-gray-300 hover:bg-valorant-gray hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                      <User className="w-4 h-4 mr-1" />
+                      {user?.username}
+                      <ChevronDown className="w-4 h-4 ml-1" />
+                    </button>
+                    <div className="absolute right-0 mt-2 w-48 bg-valorant-black border border-valorant-gray rounded-md shadow-lg overflow-hidden transform scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all duration-200 origin-top-right z-50">
+                      <div className="py-1">
+                        <Link to="/dashboard" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
+                          Hesabım
                         </Link>
-                      )}
-                      {isAdmin && (
-                        <Link to="/admin" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
-                          Admin Paneli
-                        </Link>
-                      )}
-                      <button 
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray"
-                      >
-                        Çıkış Yap
-                      </button>
+                        {isBooster && (
+                          <Link to="/booster" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
+                            Booster Paneli
+                          </Link>
+                        )}
+                        {isAdmin && (
+                          <Link to="/admin" className="block px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray">
+                            Admin Paneli
+                          </Link>
+                        )}
+                        <button 
+                          onClick={handleLogout}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-valorant-gray"
+                        >
+                          Çıkış Yap
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </>
               ) : (
                 <div className="flex items-center space-x-2">
                   <Link to="/login">
@@ -100,6 +106,12 @@ const Navbar = () => {
 
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
+            {isAuthenticated && (
+              <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-1 rounded-md text-sm font-medium mr-2">
+                <Wallet className="w-3 h-3 mr-1" />
+                <span>{formatBalance(currencyType)}</span>
+              </div>
+            )}
             <button
               onClick={toggleNav}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-valorant-gray focus:outline-none"
