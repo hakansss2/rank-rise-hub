@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
@@ -36,6 +37,7 @@ interface OrderContextType {
   getAvailableOrders: () => Order[];
   setActiveOrder: (order: Order | null) => void;
   sendMessage: (orderId: string, content: string) => Promise<void>;
+  refreshOrders: () => void;
 }
 
 // Mock order data - This will be replaced by localStorage data if available
@@ -97,9 +99,24 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // Improve how we load and save orders
+  // Load orders from localStorage on mount
   useEffect(() => {
+    refreshOrders();
+    // Only set initialized to true after the first load
+    setInitialized(true);
+  }, []);
+
+  // Save orders to localStorage whenever they change, but only after initialization
+  useEffect(() => {
+    if (initialized) {
+      localStorage.setItem('valorant_orders', JSON.stringify(orders));
+      console.log('Saved orders to localStorage:', orders.length);
+    }
+  }, [orders, initialized]);
+
+  const refreshOrders = () => {
     // Load orders from localStorage if available
     const storedOrders = localStorage.getItem('valorant_orders');
     if (storedOrders) {
@@ -115,13 +132,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('No saved orders found, using mock data');
       localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
     }
-  }, []);
-
-  // Save orders to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('valorant_orders', JSON.stringify(orders));
-    console.log('Saved orders to localStorage:', orders.length);
-  }, [orders]);
+  };
 
   const createOrder = async (currentRank: number, targetRank: number, price: number) => {
     if (!user) throw new Error('User must be logged in to create an order');
@@ -149,7 +160,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) throw new Error('User must be logged in to claim an order');
     if (!user.id) throw new Error('User ID is required');
 
-    console.log(`Claiming order ${orderId} by user ${user.username}`);
+    console.log(`Claiming order ${orderId} by user ${user.username} with ID ${user.id}`);
     
     setOrders(prev => 
       prev.map(order => 
@@ -195,14 +206,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getBoosterOrders = () => {
     if (!user) return [];
+    console.log(`Checking booster orders for user ${user.username} with ID ${user.id}`);
     const filtered = orders.filter(order => order.boosterId === user.id);
     console.log(`Found ${filtered.length} orders for booster ${user.username}`);
     return filtered;
   };
 
   const getAvailableOrders = () => {
+    console.log('All orders:', orders);
     const availableOrders = orders.filter(order => order.status === 'pending');
-    console.log(`Found ${availableOrders.length} pending orders`);
+    console.log(`Found ${availableOrders.length} pending orders:`, availableOrders);
     return availableOrders;
   };
 
@@ -243,6 +256,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     getAvailableOrders,
     setActiveOrder,
     sendMessage,
+    refreshOrders,
   };
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>;

@@ -11,6 +11,7 @@ import { formatCurrency, getRankById } from '@/utils/rankData';
 import { Clock, CheckCircle, ArrowRight, MessageCircle, XCircle, RefreshCw } from 'lucide-react';
 import Image from '@/components/ui/image';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const BoosterPanel = () => {
   const {
@@ -19,31 +20,31 @@ const BoosterPanel = () => {
     isBooster
   } = useAuth();
   const {
-    orders,
     getBoosterOrders,
     getAvailableOrders,
     setActiveOrder,
-    claimOrder
+    claimOrder,
+    refreshOrders
   } = useOrder();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Force refresh orders on component mount and refreshKey changes
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders, refreshKey]);
+  
   const boosterOrders = getBoosterOrders();
   const availableOrders = getAvailableOrders();
   
   console.log('Available Orders:', availableOrders);
   console.log('Booster Orders:', boosterOrders);
   
-  // Filter orders by status
   const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
   const completedOrders = boosterOrders.filter(o => o.status === 'completed');
   const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
 
-  // Refresh orders and check auth status
   useEffect(() => {
-    // Validate that the user is authenticated and is a booster
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
       navigate('/login');
@@ -56,15 +57,15 @@ const BoosterPanel = () => {
       return;
     }
     
-    // Log current user state to help debug
     console.log('Current user in BoosterPanel:', user);
     console.log('isAuthenticated:', isAuthenticated);
     console.log('isBooster:', isBooster);
-    
   }, [isAuthenticated, isBooster, navigate, user, refreshKey]);
 
   const handleRefresh = () => {
+    refreshOrders();
     setRefreshKey(prev => prev + 1);
+    toast.success('Siparişler güncellendi');
   };
 
   const getStatusColor = (status: string) => {
@@ -123,11 +124,13 @@ const BoosterPanel = () => {
   const handleClaimOrder = async (orderId: string) => {
     try {
       await claimOrder(orderId);
-      // Force refresh after claiming
+      refreshOrders();
       setRefreshKey(prev => prev + 1);
+      toast.success('Sipariş başarıyla alındı');
       navigate(`/order/${orderId}`);
     } catch (error) {
       console.error('Error claiming order:', error);
+      toast.error('Sipariş alınırken hata oluştu');
     }
   };
 
