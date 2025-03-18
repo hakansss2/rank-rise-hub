@@ -27,10 +27,10 @@ const RankBoost = () => {
   const [selectedTargetTier, setSelectedTargetTier] = useState<RankTier | null>(null);
   const [currentTierRanks, setCurrentTierRanks] = useState<any[]>([]);
   const [targetTierRanks, setTargetTierRanks] = useState<any[]>([]);
-  const [currentDivisionRef, setCurrentDivisionRef] = useState<HTMLDivElement | null>(null);
-  const [targetDivisionRef, setTargetDivisionRef] = useState<HTMLDivElement | null>(null);
-  const [targetRankRef, setTargetRankRef] = useState<HTMLDivElement | null>(null);
   
+  const currentDivisionRef = useRef<HTMLDivElement>(null);
+  const targetDivisionRef = useRef<HTMLDivElement>(null);
+  const targetRankRef = useRef<HTMLDivElement>(null);
   const orderSummaryRef = useRef<HTMLDivElement>(null);
   
   const navigate = useNavigate();
