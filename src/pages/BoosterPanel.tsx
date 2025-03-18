@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency, getRankById } from '@/utils/rankData';
-import { Clock, CheckCircle, ArrowRight, MessageCircle, XCircle } from 'lucide-react';
+import { Clock, CheckCircle, ArrowRight, MessageCircle, XCircle, RefreshCw } from 'lucide-react';
 import Image from '@/components/ui/image';
 import { format } from 'date-fns';
 
@@ -20,6 +19,7 @@ const BoosterPanel = () => {
     isBooster
   } = useAuth();
   const {
+    orders,
     getBoosterOrders,
     getAvailableOrders,
     setActiveOrder,
@@ -27,19 +27,45 @@ const BoosterPanel = () => {
   } = useOrder();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Force refresh orders on component mount and refreshKey changes
   const boosterOrders = getBoosterOrders();
   const availableOrders = getAvailableOrders();
+  
+  console.log('Available Orders:', availableOrders);
+  console.log('Booster Orders:', boosterOrders);
   
   // Filter orders by status
   const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
   const completedOrders = boosterOrders.filter(o => o.status === 'completed');
   const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
 
+  // Refresh orders and check auth status
   useEffect(() => {
-    if (!isAuthenticated || !isBooster) {
+    // Validate that the user is authenticated and is a booster
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
       navigate('/login');
+      return;
     }
-  }, [isAuthenticated, isBooster, navigate]);
+    
+    if (!isBooster) {
+      console.log('User is not a booster, redirecting to login');
+      navigate('/login');
+      return;
+    }
+    
+    // Log current user state to help debug
+    console.log('Current user in BoosterPanel:', user);
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('isBooster:', isBooster);
+    
+  }, [isAuthenticated, isBooster, navigate, user, refreshKey]);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -97,6 +123,8 @@ const BoosterPanel = () => {
   const handleClaimOrder = async (orderId: string) => {
     try {
       await claimOrder(orderId);
+      // Force refresh after claiming
+      setRefreshKey(prev => prev + 1);
       navigate(`/order/${orderId}`);
     } catch (error) {
       console.error('Error claiming order:', error);
@@ -116,9 +144,15 @@ const BoosterPanel = () => {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold mb-2 font-heading">Booster <span className="text-valorant-green">Paneli</span></h1>
-          <p className="text-gray-400">Mevcut siparişleri görüntüleyin ve yeni siparişler alın.</p>
+        <div className="mb-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 font-heading">Booster <span className="text-valorant-green">Paneli</span></h1>
+            <p className="text-gray-400">Mevcut siparişleri görüntüleyin ve yeni siparişler alın.</p>
+          </div>
+          <Button onClick={handleRefresh} variant="outline" className="flex gap-2 items-center">
+            <RefreshCw size={16} />
+            Yenile
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
