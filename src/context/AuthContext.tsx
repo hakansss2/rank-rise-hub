@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -98,24 +99,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Tüm kullanıcıları getir (sabit ve kayıtlı)
   const getAllUsers = () => {
-    // First load the latest registered users
+    // Always load the latest registered users first
     loadRegisteredUsers();
     
     // Then combine with default users
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
     const registeredUsersList = registeredUsers.map(({ password, ...rest }) => rest);
     
-    const allUsers = [...defaultUsers, ...registeredUsersList];
-    console.log("getAllUsers returning users:", allUsers.length);
     console.log("Registered users in getAllUsers:", registeredUsersList.length);
     console.log("Full registered users list:", registeredUsersList);
+    
+    const allUsers = [...defaultUsers, ...registeredUsersList];
+    console.log("getAllUsers returning users:", allUsers.length);
+    
     return allUsers;
   };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Reload registered users to get the latest data
+      // Always reload registered users to get the latest data
       loadRegisteredUsers();
       
       // Simulating API call with timeout
@@ -129,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Sabit kullanıcılarda bulunamazsa, kayıtlı kullanıcılarda ara
       if (!foundUser) {
         console.log('Searching in registered users for:', email);
-        console.log('Registered users:', registeredUsers);
+        console.log('Registered users count:', registeredUsers.length);
         
         foundUser = registeredUsers.find(
           u => u.email === email && u.password === password
@@ -159,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulating API call with timeout
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Reload registered users to get latest data
+      // Always reload registered users to get latest data
       loadRegisteredUsers();
       console.log('Before registration - current registered users:', registeredUsers.length);
       
@@ -182,16 +185,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Creating new user:', { ...newUser, password: '***' });
       
-      // Bu yaklaşım sorunlu olabilir, doğrudan değişkene eklemek yerine yeni bir dizi oluşturalım
-      const updatedRegisteredUsers = [...registeredUsers, newUser];
-      registeredUsers = updatedRegisteredUsers;
+      // Add the new user to registered users
+      registeredUsers = [...registeredUsers, newUser];
       
-      // LocalStorage'a kaydet
+      // Save to localStorage immediately
       saveRegisteredUsers();
-      console.log('After registration - updated registered users:', registeredUsers.length);
       
-      // Force a re-render to update UI with new user data
-      forceUpdate(prev => prev + 1);
+      console.log('After registration - updated registered users:', registeredUsers.length);
       
       // Verify the save operation
       const storedUsers = localStorage.getItem('valorant_registered_users');
@@ -200,6 +200,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Verification - users in localStorage after save:', parsedUsers.length);
         console.log('Stored users data:', parsedUsers);
       }
+      
+      // Force a re-render to update UI with new user data
+      forceUpdate(prev => prev + 1);
       
       // Kullanıcı bilgilerini state'e ve localStorage'a ekle (şifre olmadan)
       const { password: _, ...userWithoutPassword } = newUser;
@@ -319,6 +322,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // First load the latest registered users data
+      loadRegisteredUsers();
+      
       // Check if updating the current logged-in user
       if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
@@ -333,14 +339,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Updated default user in UI only:', updatedUser.username);
       } else {
         // Update the user in the registered users array
-        loadRegisteredUsers(); // Ensure we have the latest data
-        
         const userIndex = registeredUsers.findIndex(u => u.id === updatedUser.id);
         if (userIndex !== -1) {
           // Keep the existing password if no new one provided
           const currentPassword = registeredUsers[userIndex].password;
           
-          // Yeni bir kopya oluşturuyoruz ve dizinin kendisini doğrudan değiştirmekten kaçınıyoruz
+          // Create a new copy of the array
           const updatedRegisteredUsers = [...registeredUsers];
           updatedRegisteredUsers[userIndex] = {
             ...updatedUser,

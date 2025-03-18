@@ -74,10 +74,6 @@ const AdminPanel = () => {
   
   useEffect(() => {
     refreshUsers();
-    
-    const interval = setInterval(refreshUsers, 3000);
-    
-    return () => clearInterval(interval);
   }, [refreshUsers]);
   
   const customers = allUsers.filter(u => u.role === 'customer');
