@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -171,169 +170,87 @@ const RankBoost = () => {
     }
   };
   
-  const renderMobileRankSelector = () => {
-    return (
-      <div className="space-y-6">
-        <div className="animate-fade-in">
-          <h3 className="text-xl font-bold text-white mb-4">Mevcut Rankınız</h3>
-          <div className="space-y-3">
-            <Select 
-              value={selectedCurrentTier || ""} 
-              onValueChange={(value) => handleMobileSelect(value, true, true)}
-            >
-              <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                <SelectValue placeholder="Rank tier seçin" />
-              </SelectTrigger>
-              <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
-                {rankTierGroups.map(tier => (
-                  <SelectItem key={tier.id} value={tier.id} className="flex items-center">
-                    <div className="flex items-center">
-                      <img src={tier.image} alt={tier.name} className="w-6 h-6 mr-2" />
-                      <span>{tier.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {selectedCurrentTier && (
-              <Select 
-                value={currentRank?.toString() || ""} 
-                onValueChange={(value) => handleMobileSelect(value, true, false)}
-              >
-                <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                  <SelectValue placeholder="Bölüm seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
-                  {currentTierRanks.map(rank => (
-                    <SelectItem key={rank.id} value={rank.id.toString()} className="flex items-center">
-                      <div className="flex items-center">
-                        <img src={rank.image} alt={rank.name} className="w-6 h-6 mr-2" />
-                        <span>{rank.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          
-          {!currentRank && selectedCurrentTier && (
-            <div className="mt-3 text-valorant-green text-sm animate-pulse">
-              <p>Lütfen bölüm seçiniz</p>
-            </div>
-          )}
-        </div>
-        
-        <div className="animate-fade-in">
-          <h3 className="text-xl font-bold text-white mb-4">Hedef Rankınız</h3>
-          <div className="space-y-3">
-            <Select 
-              value={selectedTargetTier || ""} 
-              onValueChange={(value) => handleMobileSelect(value, false, true)}
-            >
-              <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                <SelectValue placeholder="Rank tier seçin" />
-              </SelectTrigger>
-              <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
-                {rankTierGroups.map(tier => (
-                  <SelectItem key={tier.id} value={tier.id} className="flex items-center">
-                    <div className="flex items-center">
-                      <img src={tier.image} alt={tier.name} className="w-6 h-6 mr-2" />
-                      <span>{tier.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {selectedTargetTier && (
-              <Select 
-                value={targetRank?.toString() || ""} 
-                onValueChange={(value) => handleMobileSelect(value, false, false)}
-              >
-                <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                  <SelectValue placeholder="Bölüm seçin" />
-                </SelectTrigger>
-                <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
-                  {targetTierRanks.map(rank => (
-                    <SelectItem key={rank.id} value={rank.id.toString()} className="flex items-center">
-                      <div className="flex items-center">
-                        <img src={rank.image} alt={rank.name} className="w-6 h-6 mr-2" />
-                        <span>{rank.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          
-          {!targetRank && selectedTargetTier && (
-            <div className="mt-3 text-valorant-green text-sm animate-pulse">
-              <p>Lütfen hedef bölüm seçiniz</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-  
   const renderDesktopRankSelector = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="animate-fade-in">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Mevcut Rankınız</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 mb-6">
-            {rankTierGroups.map(tier => (
-              <Popover key={tier.id}>
-                <PopoverTrigger asChild>
-                  <div className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 border ${
-                    selectedCurrentTier === tier.id 
-                      ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
-                      : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
-                  }`}>
-                    <div className="flex flex-col items-center">
-                      <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
-                        <div className={`absolute inset-0 rounded-full ${
-                          selectedCurrentTier === tier.id ? 'bg-valorant-green/20' : 'bg-gray-800/40'
-                        } filter blur-md`}></div>
-                        <img src={tier.image} alt={tier.name} className="relative z-10 w-14 h-14 object-contain" />
+          
+          {currentRank ? (
+            <div className="flex flex-col items-center justify-center mb-6">
+              <RankCard 
+                rank={valorantRanks.find(r => r.id === currentRank)!} 
+                isSelected={true}
+                showTier={true}
+              />
+              <Button 
+                variant="outline" 
+                className="mt-4 text-valorant-green border-valorant-green hover:bg-valorant-green/10"
+                onClick={() => {
+                  setCurrentRank(null);
+                  setSelectedCurrentTier(null);
+                }}
+              >
+                Tekrar Seç
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 mb-6">
+                {rankTierGroups.map(tier => {
+                  const firstRankOfTier = getRanksByTier(tier.id as RankTier)[0];
+                  return (
+                    <div 
+                      key={tier.id}
+                      className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer border ${
+                        selectedCurrentTier === tier.id 
+                          ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
+                          : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
+                      }`}
+                      onClick={() => handleSelectTier(tier.id, true)}
+                    >
+                      <div className="flex flex-col items-center">
+                        <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
+                          <div className={`absolute inset-0 rounded-full ${
+                            selectedCurrentTier === tier.id ? 'bg-valorant-green/20' : 'bg-gray-800/40'
+                          } filter blur-md`}></div>
+                          <img 
+                            src={firstRankOfTier ? firstRankOfTier.image : tier.image} 
+                            alt={tier.name} 
+                            className="relative z-10 w-14 h-14 object-contain" 
+                          />
+                        </div>
+                        <h3 className="text-lg font-bold text-white">{tier.name}</h3>
                       </div>
-                      <h3 className="text-lg font-bold text-white">{tier.name}</h3>
                     </div>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-valorant-black border-valorant-gray/50">
-                  <div className="grid grid-cols-3 gap-2 p-2">
-                    {getRanksByTier(tier.id as RankTier).map(rank => (
+                  );
+                })}
+              </div>
+              
+              {selectedCurrentTier && (
+                <div className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg">
+                  <h3 className="text-white text-center mb-3">Bölüm Seçin</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    {getRanksByTier(selectedCurrentTier).map(rank => (
                       <div
                         key={rank.id}
-                        className={`p-2 rounded flex flex-col items-center cursor-pointer ${
+                        className={`p-3 rounded-lg flex flex-col items-center cursor-pointer transition-all duration-200 ${
                           currentRank === rank.id 
-                            ? 'bg-valorant-green/20 border-2 border-valorant-green' 
-                            : 'hover:bg-valorant-gray/20 border border-transparent'
+                            ? 'bg-valorant-green/20 border-2 border-valorant-green scale-105' 
+                            : 'hover:bg-valorant-gray/20 border border-transparent hover:border-valorant-green/50'
                         }`}
                         onClick={() => handleSelectDivision(rank.id, true)}
                       >
-                        <img src={rank.image} alt={rank.name} className="w-10 h-10" />
-                        <span className="text-sm text-white mt-1">{rank.division}</span>
+                        <img src={rank.image} alt={rank.name} className="w-12 h-12 mb-1" />
+                        <span className="text-sm text-white">{rank.division}</span>
                       </div>
                     ))}
                   </div>
-                </PopoverContent>
-              </Popover>
-            ))}
-          </div>
-          {currentRank && (
-            <div className="flex items-center justify-center mt-4">
-              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green">
-                <p className="text-white text-center">
-                  Seçilen: <span className="font-bold text-valorant-green">{valorantRanks.find(r => r.id === currentRank)?.name}</span>
-                </p>
-              </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
+          
           {!currentRank && selectedCurrentTier && (
             <div className="flex items-center justify-center mt-4">
               <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
@@ -347,62 +264,108 @@ const RankBoost = () => {
         
         <div className="animate-fade-in">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Hedef Rankınız</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 mb-6">
-            {rankTierGroups.map(tier => (
-              <Popover key={tier.id}>
-                <PopoverTrigger asChild>
-                  <div className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 border ${
-                    selectedTargetTier === tier.id 
-                      ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
-                      : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
-                  }`}>
-                    <div className="flex flex-col items-center">
-                      <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
-                        <div className={`absolute inset-0 rounded-full ${
-                          selectedTargetTier === tier.id ? 'bg-valorant-green/20' : 'bg-gray-800/40'
-                        } filter blur-md`}></div>
-                        <img src={tier.image} alt={tier.name} className="relative z-10 w-14 h-14 object-contain" />
-                      </div>
-                      <h3 className="text-lg font-bold text-white">{tier.name}</h3>
+          
+          {targetRank ? (
+            <div className="flex flex-col items-center justify-center mb-6">
+              <RankCard 
+                rank={valorantRanks.find(r => r.id === targetRank)!} 
+                isSelected={true}
+                showTier={true}
+              />
+              <Button 
+                variant="outline" 
+                className="mt-4 text-valorant-green border-valorant-green hover:bg-valorant-green/10"
+                onClick={() => {
+                  setTargetRank(null);
+                  setSelectedTargetTier(null);
+                }}
+              >
+                Tekrar Seç
+              </Button>
+            </div>
+          ) : (
+            <>
+              {currentRank ? (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-3 gap-4 mb-6">
+                    {rankTierGroups.map(tier => {
+                      const firstRankOfTier = getRanksByTier(tier.id as RankTier)[0];
+                      const currentRankObj = valorantRanks.find(r => r.id === currentRank);
+                      const isTierSelectable = currentRankObj ? 
+                        rankTierGroups.findIndex(t => t.id === tier.id) >= 
+                        rankTierGroups.findIndex(t => t.id === currentRankObj.tier) : true;
+                      
+                      return (
+                        <div 
+                          key={tier.id}
+                          className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out border ${
+                            !isTierSelectable 
+                              ? 'border-red-500/30 bg-valorant-black/50 opacity-50 cursor-not-allowed' 
+                              : selectedTargetTier === tier.id 
+                                ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)] cursor-pointer' 
+                                : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black cursor-pointer'
+                          }`}
+                          onClick={() => isTierSelectable && handleSelectTier(tier.id, false)}
+                        >
+                          <div className="flex flex-col items-center">
+                            <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
+                              <div className={`absolute inset-0 rounded-full ${
+                                selectedTargetTier === tier.id ? 'bg-valorant-green/20' : 'bg-gray-800/40'
+                              } filter blur-md`}></div>
+                              <img 
+                                src={firstRankOfTier ? firstRankOfTier.image : tier.image} 
+                                alt={tier.name} 
+                                className="relative z-10 w-14 h-14 object-contain" 
+                              />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">{tier.name}</h3>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg">
+                    <h3 className="text-white text-center mb-3">Hedef Bölüm Seçin</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {targetTierRanks.map(rank => {
+                        const isRankSelectable = rank.id > (currentRank || 0);
+                        
+                        return (
+                          <div
+                            key={rank.id}
+                            className={`p-3 rounded-lg flex flex-col items-center transition-all duration-200 ${
+                              !isRankSelectable 
+                                ? 'opacity-50 cursor-not-allowed border border-red-500/30'
+                                : targetRank === rank.id 
+                                  ? 'bg-valorant-green/20 border-2 border-valorant-green scale-105 cursor-pointer'
+                                  : 'hover:bg-valorant-gray/20 border border-transparent hover:border-valorant-green/50 cursor-pointer'
+                            }`}
+                            onClick={() => isRankSelectable && handleSelectDivision(rank.id, false)}
+                          >
+                            <img src={rank.image} alt={rank.name} className="w-12 h-12 mb-1" />
+                            <span className="text-sm text-white">{rank.division}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-valorant-black border-valorant-gray/50">
-                  <div className="grid grid-cols-3 gap-2 p-2">
-                    {getRanksByTier(tier.id as RankTier).map(rank => (
-                      <div
-                        key={rank.id}
-                        className={`p-2 rounded flex flex-col items-center ${
-                          rank.id <= (currentRank || 0) 
-                            ? 'opacity-50 cursor-not-allowed border border-red-500/30' 
-                            : targetRank === rank.id 
-                              ? 'bg-valorant-green/20 border-2 border-valorant-green cursor-pointer' 
-                              : 'hover:bg-valorant-gray/20 border border-transparent cursor-pointer'
-                        }`}
-                        onClick={() => {
-                          if (rank.id > (currentRank || 0)) {
-                            handleSelectDivision(rank.id, false);
-                          }
-                        }}
-                      >
-                        <img src={rank.image} alt={rank.name} className="w-10 h-10" />
-                        <span className="text-sm text-white mt-1">{rank.division}</span>
-                      </div>
-                    ))}
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-48">
+                  <div className="bg-valorant-black/50 px-6 py-4 rounded-lg border border-yellow-500/50 text-center">
+                    <p className="text-yellow-400 text-lg mb-2">
+                      Önce mevcut rankınızı seçmelisiniz
+                    </p>
+                    <p className="text-gray-400">
+                      Sol taraftan mevcut rankınızı seçtikten sonra hedef rankınızı seçebilirsiniz
+                    </p>
                   </div>
-                </PopoverContent>
-              </Popover>
-            ))}
-          </div>
-          {targetRank && (
-            <div className="flex items-center justify-center mt-4">
-              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green">
-                <p className="text-white text-center">
-                  Seçilen: <span className="font-bold text-valorant-green">{valorantRanks.find(r => r.id === targetRank)?.name}</span>
-                </p>
-              </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
+          
           {!targetRank && selectedTargetTier && currentRank && (
             <div className="flex items-center justify-center mt-4">
               <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
@@ -412,13 +375,192 @@ const RankBoost = () => {
               </div>
             </div>
           )}
-          {!currentRank && (
-            <div className="flex items-center justify-center mt-4">
-              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-red/50">
-                <p className="text-yellow-400 text-center">
-                  Önce mevcut rankınızı seçmelisiniz
-                </p>
-              </div>
+        </div>
+      </div>
+    );
+  };
+  
+  const renderMobileRankSelector = () => {
+    return (
+      <div className="space-y-6">
+        <div className="animate-fade-in">
+          <h3 className="text-xl font-bold text-white mb-4">Mevcut Rankınız</h3>
+          
+          {currentRank ? (
+            <div className="flex flex-col items-center justify-center mb-4">
+              <RankCard 
+                rank={valorantRanks.find(r => r.id === currentRank)!} 
+                isSelected={true}
+                showTier={true}
+              />
+              <Button 
+                variant="outline" 
+                className="mt-3 text-sm text-valorant-green border-valorant-green hover:bg-valorant-green/10"
+                onClick={() => {
+                  setCurrentRank(null);
+                  setSelectedCurrentTier(null);
+                }}
+              >
+                Tekrar Seç
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Select 
+                value={selectedCurrentTier || ""} 
+                onValueChange={(value) => handleMobileSelect(value, true, true)}
+              >
+                <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
+                  <SelectValue placeholder="Rank tier seçin" />
+                </SelectTrigger>
+                <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
+                  {rankTierGroups.map(tier => {
+                    const firstRankOfTier = getRanksByTier(tier.id as RankTier)[0];
+                    return (
+                      <SelectItem key={tier.id} value={tier.id} className="flex items-center">
+                        <div className="flex items-center">
+                          <img 
+                            src={firstRankOfTier ? firstRankOfTier.image : tier.image} 
+                            alt={tier.name} 
+                            className="w-6 h-6 mr-2" 
+                          />
+                          <span>{tier.name}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              
+              {selectedCurrentTier && (
+                <Select 
+                  value={currentRank?.toString() || ""} 
+                  onValueChange={(value) => handleMobileSelect(value, true, false)}
+                >
+                  <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
+                    <SelectValue placeholder="Bölüm seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
+                    {currentTierRanks.map(rank => (
+                      <SelectItem key={rank.id} value={rank.id.toString()} className="flex items-center">
+                        <div className="flex items-center">
+                          <img src={rank.image} alt={rank.name} className="w-6 h-6 mr-2" />
+                          <span>{rank.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+          
+          {!currentRank && selectedCurrentTier && (
+            <div className="mt-3 text-valorant-green text-sm animate-pulse">
+              <p>Lütfen bölüm seçiniz</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="animate-fade-in">
+          <h3 className="text-xl font-bold text-white mb-4">Hedef Rankınız</h3>
+          
+          {targetRank ? (
+            <div className="flex flex-col items-center justify-center mb-4">
+              <RankCard 
+                rank={valorantRanks.find(r => r.id === targetRank)!} 
+                isSelected={true}
+                showTier={true}
+              />
+              <Button 
+                variant="outline" 
+                className="mt-3 text-sm text-valorant-green border-valorant-green hover:bg-valorant-green/10"
+                onClick={() => {
+                  setTargetRank(null);
+                  setSelectedTargetTier(null);
+                }}
+              >
+                Tekrar Seç
+              </Button>
+            </div>
+          ) : currentRank ? (
+            <div className="space-y-3">
+              <Select 
+                value={selectedTargetTier || ""} 
+                onValueChange={(value) => handleMobileSelect(value, false, true)}
+              >
+                <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
+                  <SelectValue placeholder="Rank tier seçin" />
+                </SelectTrigger>
+                <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
+                  {rankTierGroups.map(tier => {
+                    const firstRankOfTier = getRanksByTier(tier.id as RankTier)[0];
+                    const currentRankObj = valorantRanks.find(r => r.id === currentRank);
+                    const isTierSelectable = currentRankObj ? 
+                      rankTierGroups.findIndex(t => t.id === tier.id) >= 
+                      rankTierGroups.findIndex(t => t.id === currentRankObj.tier) : true;
+                    
+                    return (
+                      <SelectItem 
+                        key={tier.id} 
+                        value={tier.id} 
+                        className={`flex items-center ${!isTierSelectable ? 'opacity-50' : ''}`}
+                        disabled={!isTierSelectable}
+                      >
+                        <div className="flex items-center">
+                          <img 
+                            src={firstRankOfTier ? firstRankOfTier.image : tier.image} 
+                            alt={tier.name} 
+                            className="w-6 h-6 mr-2" 
+                          />
+                          <span>{tier.name}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              
+              {selectedTargetTier && (
+                <Select 
+                  value={targetRank?.toString() || ""} 
+                  onValueChange={(value) => handleMobileSelect(value, false, false)}
+                >
+                  <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
+                    <SelectValue placeholder="Bölüm seçin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
+                    {targetTierRanks.map(rank => {
+                      const isRankSelectable = rank.id > (currentRank || 0);
+                      return (
+                        <SelectItem 
+                          key={rank.id} 
+                          value={rank.id.toString()} 
+                          className={`flex items-center ${!isRankSelectable ? 'opacity-50' : ''}`}
+                          disabled={!isRankSelectable}
+                        >
+                          <div className="flex items-center">
+                            <img src={rank.image} alt={rank.name} className="w-6 h-6 mr-2" />
+                            <span>{rank.name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          ) : (
+            <div className="bg-valorant-black/50 px-4 py-3 rounded-lg border border-yellow-500/50 text-center">
+              <p className="text-yellow-400 text-sm">
+                Önce mevcut rankınızı seçmelisiniz
+              </p>
+            </div>
+          )}
+          
+          {!targetRank && selectedTargetTier && (
+            <div className="mt-3 text-valorant-green text-sm animate-pulse">
+              <p>Lütfen hedef bölüm seçiniz</p>
             </div>
           )}
         </div>
