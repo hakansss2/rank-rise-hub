@@ -36,52 +36,7 @@ export function getRankDivisionPrice(tier: RankTier, division: number): number {
   return Math.round(basePrice * multiplier);
 }
 
-export const valorantRanks: RankInfo[] = [
-  // Iron Ranks
-  { id: 1, name: 'Demir 1', tier: 'iron', division: 1, image: '/ranks/iron1.png' },
-  { id: 2, name: 'Demir 2', tier: 'iron', division: 2, image: '/ranks/iron2.png' },
-  { id: 3, name: 'Demir 3', tier: 'iron', division: 3, image: '/ranks/iron3.png' },
-  
-  // Bronze Ranks
-  { id: 4, name: 'Bronz 1', tier: 'bronze', division: 1, image: '/ranks/bronze1.png' },
-  { id: 5, name: 'Bronz 2', tier: 'bronze', division: 2, image: '/ranks/bronze2.png' },
-  { id: 6, name: 'Bronz 3', tier: 'bronze', division: 3, image: '/ranks/bronze3.png' },
-  
-  // Silver Ranks
-  { id: 7, name: 'Gümüş 1', tier: 'silver', division: 1, image: '/ranks/silver1.png' },
-  { id: 8, name: 'Gümüş 2', tier: 'silver', division: 2, image: '/ranks/silver2.png' },
-  { id: 9, name: 'Gümüş 3', tier: 'silver', division: 3, image: '/ranks/silver3.png' },
-  
-  // Gold Ranks
-  { id: 10, name: 'Altın 1', tier: 'gold', division: 1, image: '/ranks/gold1.png' },
-  { id: 11, name: 'Altın 2', tier: 'gold', division: 2, image: '/ranks/gold2.png' },
-  { id: 12, name: 'Altın 3', tier: 'gold', division: 3, image: '/ranks/gold3.png' },
-  
-  // Platinum Ranks
-  { id: 13, name: 'Platin 1', tier: 'platinum', division: 1, image: '/ranks/platinum1.png' },
-  { id: 14, name: 'Platin 2', tier: 'platinum', division: 2, image: '/ranks/platinum2.png' },
-  { id: 15, name: 'Platin 3', tier: 'platinum', division: 3, image: '/ranks/platinum3.png' },
-  
-  // Diamond Ranks
-  { id: 16, name: 'Elmas 1', tier: 'diamond', division: 1, image: '/ranks/diamond1.png' },
-  { id: 17, name: 'Elmas 2', tier: 'diamond', division: 2, image: '/ranks/diamond2.png' },
-  { id: 18, name: 'Elmas 3', tier: 'diamond', division: 3, image: '/ranks/diamond3.png' },
-  
-  // Ascendant Ranks
-  { id: 19, name: 'Yükselen 1', tier: 'ascendant', division: 1, image: '/ranks/ascendant1.png' },
-  { id: 20, name: 'Yükselen 2', tier: 'ascendant', division: 2, image: '/ranks/ascendant2.png' },
-  { id: 21, name: 'Yükselen 3', tier: 'ascendant', division: 3, image: '/ranks/ascendant3.png' },
-  
-  // Immortal Ranks
-  { id: 22, name: 'Ölümsüz 1', tier: 'immortal', division: 1, image: '/ranks/immortal1.png' },
-  { id: 23, name: 'Ölümsüz 2', tier: 'immortal', division: 2, image: '/ranks/immortal2.png' },
-  { id: 24, name: 'Ölümsüz 3', tier: 'immortal', division: 3, image: '/ranks/immortal3.png' },
-  
-  // Radiant
-  { id: 25, name: 'Radyant', tier: 'radiant', division: 1, image: '/ranks/radiant.png' },
-];
-
-// Generate rank images URLs for testing
+// Generate rank images URLs for direct access
 export const rankImagesUrls = {
   // Iron ranks
   'iron1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt825d0c86c912b0e9/5eb7cf66e6f6795e282ffffb/TX_CompetitiveTier_Large_1.png',
@@ -127,13 +82,50 @@ export const rankImagesUrls = {
   'radiant': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltbcf81f3a1025a91d/5eb7cf73b60a0862fe2f8e37/TX_CompetitiveTier_Large_22.png'
 };
 
-// Update rank images with actual URLs
-valorantRanks.forEach(rank => {
-  const imageKey = `${rank.tier}${rank.division}`;
-  if (rankImagesUrls[imageKey as keyof typeof rankImagesUrls]) {
-    rank.image = rankImagesUrls[imageKey as keyof typeof rankImagesUrls];
-  }
-});
+export const valorantRanks: RankInfo[] = [
+  // Iron Ranks
+  { id: 1, name: 'Demir 1', tier: 'iron', division: 1, image: rankImagesUrls.iron1 },
+  { id: 2, name: 'Demir 2', tier: 'iron', division: 2, image: rankImagesUrls.iron2 },
+  { id: 3, name: 'Demir 3', tier: 'iron', division: 3, image: rankImagesUrls.iron3 },
+  
+  // Bronze Ranks
+  { id: 4, name: 'Bronz 1', tier: 'bronze', division: 1, image: rankImagesUrls.bronze1 },
+  { id: 5, name: 'Bronz 2', tier: 'bronze', division: 2, image: rankImagesUrls.bronze2 },
+  { id: 6, name: 'Bronz 3', tier: 'bronze', division: 3, image: rankImagesUrls.bronze3 },
+  
+  // Silver Ranks
+  { id: 7, name: 'Gümüş 1', tier: 'silver', division: 1, image: rankImagesUrls.silver1 },
+  { id: 8, name: 'Gümüş 2', tier: 'silver', division: 2, image: rankImagesUrls.silver2 },
+  { id: 9, name: 'Gümüş 3', tier: 'silver', division: 3, image: rankImagesUrls.silver3 },
+  
+  // Gold Ranks
+  { id: 10, name: 'Altın 1', tier: 'gold', division: 1, image: rankImagesUrls.gold1 },
+  { id: 11, name: 'Altın 2', tier: 'gold', division: 2, image: rankImagesUrls.gold2 },
+  { id: 12, name: 'Altın 3', tier: 'gold', division: 3, image: rankImagesUrls.gold3 },
+  
+  // Platinum Ranks
+  { id: 13, name: 'Platin 1', tier: 'platinum', division: 1, image: rankImagesUrls.platinum1 },
+  { id: 14, name: 'Platin 2', tier: 'platinum', division: 2, image: rankImagesUrls.platinum2 },
+  { id: 15, name: 'Platin 3', tier: 'platinum', division: 3, image: rankImagesUrls.platinum3 },
+  
+  // Diamond Ranks
+  { id: 16, name: 'Elmas 1', tier: 'diamond', division: 1, image: rankImagesUrls.diamond1 },
+  { id: 17, name: 'Elmas 2', tier: 'diamond', division: 2, image: rankImagesUrls.diamond2 },
+  { id: 18, name: 'Elmas 3', tier: 'diamond', division: 3, image: rankImagesUrls.diamond3 },
+  
+  // Ascendant Ranks
+  { id: 19, name: 'Yükselen 1', tier: 'ascendant', division: 1, image: rankImagesUrls.ascendant1 },
+  { id: 20, name: 'Yükselen 2', tier: 'ascendant', division: 2, image: rankImagesUrls.ascendant2 },
+  { id: 21, name: 'Yükselen 3', tier: 'ascendant', division: 3, image: rankImagesUrls.ascendant3 },
+  
+  // Immortal Ranks
+  { id: 22, name: 'Ölümsüz 1', tier: 'immortal', division: 1, image: rankImagesUrls.immortal1 },
+  { id: 23, name: 'Ölümsüz 2', tier: 'immortal', division: 2, image: rankImagesUrls.immortal2 },
+  { id: 24, name: 'Ölümsüz 3', tier: 'immortal', division: 3, image: rankImagesUrls.immortal3 },
+  
+  // Radiant
+  { id: 25, name: 'Radyant', tier: 'radiant', division: 1, image: rankImagesUrls.radiant },
+];
 
 export function getRankById(id: number): RankInfo | undefined {
   return valorantRanks.find(rank => rank.id === id);

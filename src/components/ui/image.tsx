@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { ImageOff } from 'lucide-react';
 
 interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
@@ -20,16 +21,22 @@ const Image: React.FC<ImageProps> = ({
   ...props 
 }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [currentSrc, setCurrentSrc] = useState(placeholder);
+  const [currentSrc, setCurrentSrc] = useState<string>(placeholder);
   const [hasError, setHasError] = useState(false);
   
   useEffect(() => {
     // Reset loading state when src changes
     setIsLoading(true);
     setHasError(false);
-    setCurrentSrc(placeholder);
     
-    const img = new window.Image();
+    // Use a conditional to check if the src exists
+    if (!src) {
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
+    
+    const img = new Image();
     img.src = src;
     
     img.onload = () => {
@@ -40,9 +47,8 @@ const Image: React.FC<ImageProps> = ({
     
     img.onerror = () => {
       console.error(`Failed to load image: ${src}`);
-      setCurrentSrc(placeholder);
-      setIsLoading(false);
       setHasError(true);
+      setIsLoading(false);
       if (externalOnError) externalOnError();
     };
     
@@ -54,21 +60,22 @@ const Image: React.FC<ImageProps> = ({
   
   return (
     <div className="relative overflow-hidden">
-      <img
-        src={currentSrc}
-        alt={alt}
-        className={cn(
-          "transition-all duration-500 ease-in-out",
-          isLoading ? "scale-110 blur-md" : "scale-100 blur-0",
-          hasError ? "opacity-50" : "opacity-100",
-          className
-        )}
-        {...props}
-      />
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center text-red-500 text-xs">
-          Image Error
+      {hasError ? (
+        <div className="flex flex-col items-center justify-center bg-valorant-gray/20 rounded w-full h-full min-h-[64px]">
+          <ImageOff className="h-6 w-6 text-valorant-gray/60" />
+          <span className="text-xs text-valorant-gray/60 mt-1">Resim Yüklenemedi</span>
         </div>
+      ) : (
+        <img
+          src={currentSrc}
+          alt={alt}
+          className={cn(
+            "transition-all duration-300 ease-in-out",
+            isLoading ? "scale-105 blur-sm" : "scale-100 blur-0",
+            className
+          )}
+          {...props}
+        />
       )}
     </div>
   );

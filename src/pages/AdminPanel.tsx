@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrder } from '@/context/OrderContext';
@@ -30,10 +30,13 @@ const AdminPanel = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  if (!isAuthenticated || !isAdmin) {
-    navigate('/login');
-    return null;
-  }
+  const [activeTab, setActiveTab] = useState("boosters");
+  
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
 
   const [boosters, setBoosters] = useState([
     { id: '2', email: 'booster@valorank.com', username: 'booster', role: 'booster' },
@@ -100,6 +103,10 @@ const AdminPanel = () => {
     setEditingPrice(null);
   };
 
+  if (!isAuthenticated || !isAdmin) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-valorant-black text-white">
       <Navbar />
@@ -146,7 +153,7 @@ const AdminPanel = () => {
             </h2>
           </div>
           
-          <Tabs defaultValue="boosters">
+          <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-valorant-gray/20 border border-valorant-gray/30">
               <TabsTrigger value="boosters" className="data-[state=active]:bg-valorant-green data-[state=active]:text-white">
                 Boosterlar
@@ -349,4 +356,3 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
-
