@@ -29,8 +29,8 @@ const Hero = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-valorant-black via-valorant-black/90 to-transparent z-10"></div>
         <div className="absolute top-0 right-0 w-full md:w-2/3 h-full">
           <Image 
-            src="https://images.unsplash.com/photo-1649972904349-6e44c42644a7?auto=format&fit=crop&w=1080" 
-            alt="Valorant Background" 
+            src="https://images.unsplash.com/photo-1580204851756-5f5b898b860c?auto=format&fit=crop&q=80&w=1200" 
+            alt="Valorant Game Background" 
             className="w-full h-full object-cover object-center opacity-40" 
             placeholder="/placeholder.svg" 
           />
