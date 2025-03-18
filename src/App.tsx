@@ -16,12 +16,15 @@ import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
 import Balance from "./pages/Balance";
 
-// Create a new QueryClient with defaultOptions to minimize automatic refetching
+// Create a new QueryClient with strict settings to prevent excessive refetching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      staleTime: Infinity, // Prevent automatic refetching
+      retry: 0, // Disable automatic retries
     },
   },
 });

@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -32,42 +31,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Kullanıcı verileri
+// Default user data
 const USERS = [
   { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
   { id: '2', email: 'booster@test.com', username: 'booster', password: 'password', role: 'booster' as UserRole, balance: 1000 },
   { id: '3', email: 'customer@test.com', username: 'customer', password: 'password', role: 'customer' as UserRole, balance: 2000 },
 ];
 
-// Yeni kayıt olan kullanıcıları bu array'de saklayacağız
-let registeredUsers: Array<typeof USERS[0]> = [];
-
-// LocalStorage'dan kayıtlı kullanıcıları yükleme
+// Load registered users from localStorage
 const loadRegisteredUsers = () => {
-  const storedUsers = localStorage.getItem('valorant_registered_users');
-  if (storedUsers) {
-    try {
-      registeredUsers = JSON.parse(storedUsers);
-      console.log('Loaded registered users from localStorage:', registeredUsers.length);
-      console.log('Registered users data:', registeredUsers);
-    } catch (error) {
-      console.error('Failed to parse stored users', error);
-      registeredUsers = [];
+  try {
+    const storedUsers = localStorage.getItem('valorant_registered_users');
+    if (storedUsers) {
+      return JSON.parse(storedUsers);
     }
-  } else {
-    console.log('No registered users found in localStorage');
-    // Eğer kayıtlı kullanıcı bulunamazsa, localStorage'a boş bir dizi kaydet
-    localStorage.setItem('valorant_registered_users', JSON.stringify([]));
-    registeredUsers = [];
+  } catch (error) {
+    console.error('Failed to parse stored users', error);
   }
+  // Initialize empty array if no users found
+  localStorage.setItem('valorant_registered_users', JSON.stringify([]));
+  return [];
 };
 
-// LocalStorage'a kayıtlı kullanıcıları kaydetme
-const saveRegisteredUsers = () => {
+// Save registered users to localStorage
+const saveRegisteredUsers = (users: any[]) => {
   try {
-    localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
-    console.log('Saved registered users to localStorage:', registeredUsers.length);
-    console.log('Registered users data after save:', registeredUsers);
+    localStorage.setItem('valorant_registered_users', JSON.stringify(users));
+    console.log('Saved registered users to localStorage:', users.length);
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
   }
@@ -76,11 +66,12 @@ const saveRegisteredUsers = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [, forceUpdate] = useState<number>(0); // Force re-renders when needed
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
 
+  // Load registered users on component mount
   useEffect(() => {
-    // Load registered users when component mounts
-    loadRegisteredUsers();
+    const loadedUsers = loadRegisteredUsers();
+    setRegisteredUsers(loadedUsers);
     
     // Check local storage for existing auth
     const storedUser = localStorage.getItem('valorant_user');
@@ -97,44 +88,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Tüm kullanıcıları getir (sabit ve kayıtlı)
+  // Get all users (default + registered)
   const getAllUsers = () => {
-    // Always load the latest registered users first
-    loadRegisteredUsers();
+    // Get the latest registered users from localStorage
+    const latestRegisteredUsers = loadRegisteredUsers();
     
-    // Then combine with default users
+    // Map users to remove passwords
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
-    const registeredUsersList = registeredUsers.map(({ password, ...rest }) => rest);
+    const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }) => rest);
     
-    console.log("Registered users in getAllUsers:", registeredUsersList.length);
-    console.log("Full registered users list:", registeredUsersList);
+    console.log("Total registered users:", registeredUsersList.length);
+    console.log("Registered users list:", registeredUsersList);
     
-    const allUsers = [...defaultUsers, ...registeredUsersList];
-    console.log("getAllUsers returning users:", allUsers.length);
-    
-    return allUsers;
+    // Combine default and registered users
+    return [...defaultUsers, ...registeredUsersList];
   };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Always reload registered users to get the latest data
-      loadRegisteredUsers();
+      // Get the latest registered users
+      const latestRegisteredUsers = loadRegisteredUsers();
       
-      // Simulating API call with timeout
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Önce sabit kullanıcılarda ara
+      // First check default users
       let foundUser = USERS.find(
         u => u.email === email && u.password === password
       );
       
-      // Sabit kullanıcılarda bulunamazsa, kayıtlı kullanıcılarda ara
+      // Then check registered users
       if (!foundUser) {
-        console.log('Searching in registered users for:', email);
-        console.log('Registered users count:', registeredUsers.length);
-        
-        foundUser = registeredUsers.find(
+        console.log('Checking registered users for:', email);
+        foundUser = latestRegisteredUsers.find(
           u => u.email === email && u.password === password
         );
       }
@@ -147,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
-      console.log('User logged in successfully:', userWithoutPassword.username, 'with role:', userWithoutPassword.role);
+      console.log('User logged in successfully:', userWithoutPassword.username);
     } catch (error) {
       console.error('Login failed', error);
       throw error;
@@ -159,56 +146,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, username: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulating API call with timeout
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Always reload registered users to get latest data
-      loadRegisteredUsers();
-      console.log('Before registration - current registered users:', registeredUsers.length);
+      // Get the latest registered users
+      const latestRegisteredUsers = loadRegisteredUsers();
       
-      // Tüm kullanıcılarda e-posta kontrolü (sabit ve kayıtlı)
-      const allUsers = [...USERS, ...registeredUsers];
+      // Check for duplicate email across all users
+      const allUsers = [...USERS, ...latestRegisteredUsers];
       if (allUsers.some(u => u.email === email)) {
         console.error('Registration failed: Email already in use -', email);
         throw new Error('Email already in use');
       }
       
-      // Yeni kullanıcı oluştur
+      // Create new user
       const newUser = {
         id: `u-${Date.now()}`,
         email,
         username,
-        password, // şifreyi kaydet
+        password,
         role: 'customer' as UserRole,
-        balance: 0, // New users start with 0 balance
+        balance: 0,
       };
       
-      console.log('Creating new user:', { ...newUser, password: '***' });
+      // Add to registered users list
+      const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
       
-      // Add the new user to registered users
-      registeredUsers = [...registeredUsers, newUser];
+      // Save to localStorage
+      saveRegisteredUsers(updatedRegisteredUsers);
+      setRegisteredUsers(updatedRegisteredUsers);
       
-      // Save to localStorage immediately
-      saveRegisteredUsers();
+      console.log('User registered successfully:', { ...newUser, password: '***' });
       
-      console.log('After registration - updated registered users:', registeredUsers.length);
-      
-      // Verify the save operation
-      const storedUsers = localStorage.getItem('valorant_registered_users');
-      if (storedUsers) {
-        const parsedUsers = JSON.parse(storedUsers);
-        console.log('Verification - users in localStorage after save:', parsedUsers.length);
-        console.log('Stored users data:', parsedUsers);
-      }
-      
-      // Force a re-render to update UI with new user data
-      forceUpdate(prev => prev + 1);
-      
-      // Kullanıcı bilgilerini state'e ve localStorage'a ekle (şifre olmadan)
+      // Log in the new user
       const { password: _, ...userWithoutPassword } = newUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
-      console.log('Registration successful, logged in as:', userWithoutPassword.username);
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
@@ -228,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) throw new Error('User must be logged in to add balance');
     
     try {
-      // Simulate API call
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const updatedUser = {
@@ -238,21 +211,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
-
-      // Reload registered users to get latest data
-      loadRegisteredUsers();
       
-      // Kayıtlı kullanıcılarda da güncelle
+      // Update balance in registered users if applicable
       const isDefaultUser = USERS.some(u => u.id === user.id);
       if (!isDefaultUser) {
-        const userIndex = registeredUsers.findIndex(u => u.id === user.id);
-        if (userIndex !== -1) {
-          registeredUsers[userIndex] = { 
-            ...registeredUsers[userIndex], 
-            balance: updatedUser.balance 
-          };
-          saveRegisteredUsers();
-        }
+        const latestRegisteredUsers = loadRegisteredUsers();
+        const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
+          if (u.id === user.id) {
+            return { ...u, balance: updatedUser.balance };
+          }
+          return u;
+        });
+        
+        saveRegisteredUsers(updatedRegisteredUsers);
+        setRegisteredUsers(updatedRegisteredUsers);
       }
     } catch (error) {
       console.error('Failed to add balance', error);
@@ -270,7 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      // Simulate API call
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const updatedUser = {
@@ -280,21 +252,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
-
-      // Reload registered users to get latest data
-      loadRegisteredUsers();
       
-      // Kayıtlı kullanıcılarda da güncelle
+      // Update balance in registered users if applicable
       const isDefaultUser = USERS.some(u => u.id === user.id);
       if (!isDefaultUser) {
-        const userIndex = registeredUsers.findIndex(u => u.id === user.id);
-        if (userIndex !== -1) {
-          registeredUsers[userIndex] = { 
-            ...registeredUsers[userIndex], 
-            balance: updatedUser.balance 
-          };
-          saveRegisteredUsers();
-        }
+        const latestRegisteredUsers = loadRegisteredUsers();
+        const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
+          if (u.id === user.id) {
+            return { ...u, balance: updatedUser.balance };
+          }
+          return u;
+        });
+        
+        saveRegisteredUsers(updatedRegisteredUsers);
+        setRegisteredUsers(updatedRegisteredUsers);
       }
       
       return true;
@@ -319,49 +290,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = async (updatedUser: User, newPassword?: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simulate API call
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // First load the latest registered users data
-      loadRegisteredUsers();
+      // Get the latest registered users
+      const latestRegisteredUsers = loadRegisteredUsers();
       
-      // Check if updating the current logged-in user
+      // Check if updating current logged-in user
       if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
         localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
       }
       
-      // Check if the user is a default user or registered user
+      // Check if the user is a default user
       const isDefaultUser = USERS.some(u => u.id === updatedUser.id);
       
-      if (isDefaultUser) {
-        // We can't modify the hardcoded users, but we'll update the UI state
-        console.log('Updated default user in UI only:', updatedUser.username);
+      if (!isDefaultUser) {
+        // Update the user in registered users list
+        const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
+          if (u.id === updatedUser.id) {
+            return {
+              ...updatedUser,
+              password: newPassword || u.password
+            };
+          }
+          return u;
+        });
+        
+        saveRegisteredUsers(updatedRegisteredUsers);
+        setRegisteredUsers(updatedRegisteredUsers);
+        console.log('Updated registered user:', updatedUser.username);
       } else {
-        // Update the user in the registered users array
-        const userIndex = registeredUsers.findIndex(u => u.id === updatedUser.id);
-        if (userIndex !== -1) {
-          // Keep the existing password if no new one provided
-          const currentPassword = registeredUsers[userIndex].password;
-          
-          // Create a new copy of the array
-          const updatedRegisteredUsers = [...registeredUsers];
-          updatedRegisteredUsers[userIndex] = {
-            ...updatedUser,
-            password: newPassword || currentPassword
-          };
-          
-          registeredUsers = updatedRegisteredUsers;
-          saveRegisteredUsers();
-          console.log('Updated registered user:', updatedUser.username);
-        } else {
-          console.error('User not found in registered users:', updatedUser.id);
-        }
+        console.log('Updated default user in UI only:', updatedUser.username);
       }
-      
-      // Force a re-render to update UI with new user data
-      forceUpdate(prev => prev + 1);
-      
     } catch (error) {
       console.error('Failed to update user', error);
       throw error;
@@ -370,38 +331,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Remove all registered users except admin (hakan200505@gmail.com)
+  // Remove all registered users except admin
   const removeAllExceptAdmin = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simulate API call
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Load registered users to get latest data
-      loadRegisteredUsers();
-      
-      console.log('Before cleanup - registered users count:', registeredUsers.length);
-      
-      // Filter to keep only the admin account
+      // Filter to keep only the admin account if it exists
       const adminEmail = 'hakan200505@gmail.com';
+      const latestRegisteredUsers = loadRegisteredUsers();
+      const filteredUsers = latestRegisteredUsers.filter(u => u.email === adminEmail);
       
-      // Keep only users with email hakan200505@gmail.com (which should be in USERS not registeredUsers)
-      registeredUsers = registeredUsers.filter(u => u.email === adminEmail);
+      saveRegisteredUsers(filteredUsers);
+      setRegisteredUsers(filteredUsers);
       
-      // Save the filtered list back to localStorage
-      saveRegisteredUsers();
-      
-      console.log('After cleanup - registered users count:', registeredUsers.length);
-      console.log('Cleanup complete - removed all non-admin users');
-      
-      // Check if current user was removed, if so log them out
+      // Check if current user was removed
       if (user && user.email !== adminEmail && !USERS.some(u => u.id === user.id)) {
         logout();
       }
-      
-      // Force a re-render to update UI
-      forceUpdate(prev => prev + 1);
-      
     } catch (error) {
       console.error('Failed to remove users', error);
       throw error;
@@ -410,36 +358,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Remove specific users by their email addresses
+  // Remove specific users by email
   const removeUsersByEmails = async (emails: string[]): Promise<void> => {
     setIsLoading(true);
     try {
-      // Simulate API call
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Load registered users to get latest data
-      loadRegisteredUsers();
+      // Get the latest registered users
+      const latestRegisteredUsers = loadRegisteredUsers();
       
-      console.log('Before removal - registered users count:', registeredUsers.length);
-      console.log('Emails to remove:', emails);
+      // Filter out users with specified emails
+      const filteredUsers = latestRegisteredUsers.filter(u => !emails.includes(u.email));
       
-      // Filter out users with the specified emails
-      registeredUsers = registeredUsers.filter(u => !emails.includes(u.email));
+      saveRegisteredUsers(filteredUsers);
+      setRegisteredUsers(filteredUsers);
       
-      // Save the filtered list back to localStorage
-      saveRegisteredUsers();
-      
-      console.log('After removal - registered users count:', registeredUsers.length);
-      console.log('Removal complete - removed specified users');
-      
-      // Check if current user was removed, if so log them out
+      // Check if current user was removed
       if (user && emails.includes(user.email)) {
         logout();
       }
-      
-      // Force a re-render to update UI
-      forceUpdate(prev => prev + 1);
-      
     } catch (error) {
       console.error('Failed to remove users', error);
       throw error;

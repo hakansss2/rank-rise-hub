@@ -33,7 +33,7 @@ const AdminPanel = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
       navigate('/login');
@@ -51,25 +51,26 @@ const AdminPanel = () => {
     setLoading(true);
     
     try {
-      const rawUsers = localStorage.getItem('valorant_registered_users');
-      console.log('Raw registered users data:', rawUsers);
-    } catch (e) {
-      console.error('Error reading raw localStorage data:', e);
-    }
-    
-    setTimeout(() => {
       const users = getAllUsers();
       console.log("Refreshed users:", users);
       console.log("Total users count:", users.length);
       
       setAllUsers(users);
-      setLoading(false);
       
       toast({
         title: "Kullanıcı Listesi Güncellendi",
         description: `Toplam ${users.length} kullanıcı bulundu.`,
       });
-    }, 100);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        title: "Hata",
+        description: "Kullanıcılar yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [getAllUsers]);
   
   useEffect(() => {
@@ -112,54 +113,15 @@ const AdminPanel = () => {
 
   const handleSaveUser = async (updatedUser: any, newPassword?: string) => {
     try {
-      const isDefaultUser = ['1', '2', '3'].includes(updatedUser.id);
-      
-      if (isDefaultUser) {
-        setAllUsers(prev => 
-          prev.map(u => u.id === updatedUser.id ? updatedUser : u)
-        );
-        
-        toast({
-          title: "Sistem Kullanıcısı Güncellendi",
-          description: "Not: Değişiklikler sadece bu oturum için geçerlidir.",
-        });
-      } else {
-        const storedUsers = localStorage.getItem('valorant_registered_users');
-        if (storedUsers) {
-          const parsedUsers = JSON.parse(storedUsers);
-          const updatedUsers = parsedUsers.map((u: any) => {
-            if (u.id === updatedUser.id) {
-              const updatedUserWithPassword = {
-                ...updatedUser,
-                password: newPassword || u.password
-              };
-              return updatedUserWithPassword;
-            }
-            return u;
-          });
-          
-          localStorage.setItem('valorant_registered_users', JSON.stringify(updatedUsers));
-          
-          if (user && user.id === updatedUser.id) {
-            const currentUserData = JSON.parse(localStorage.getItem('valorant_user') || '{}');
-            const updatedCurrentUser = {
-              ...currentUserData,
-              email: updatedUser.email,
-              username: updatedUser.username,
-              role: updatedUser.role,
-              balance: updatedUser.balance
-            };
-            localStorage.setItem('valorant_user', JSON.stringify(updatedCurrentUser));
-          }
-          
-          toast({
-            title: "Kullanıcı Güncellendi",
-            description: "Kullanıcı bilgileri başarıyla güncellendi.",
-          });
-        }
-      }
+      const { updateUser } = useAuth();
+      await updateUser(updatedUser, newPassword);
       
       refreshUsers();
+      
+      toast({
+        title: "Kullanıcı Güncellendi",
+        description: "Kullanıcı bilgileri başarıyla güncellendi.",
+      });
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
