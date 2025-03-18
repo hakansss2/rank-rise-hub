@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -22,7 +21,8 @@ import {
   Info,
   User,
   UserPlus,
-  Shield
+  Shield,
+  Wallet
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import RankCard from '@/components/ui/rankCard';
@@ -46,7 +46,7 @@ import {
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
-  const { orders } = useOrder();
+  const { orders, refreshOrders } = useOrder();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -62,6 +62,7 @@ const AdminPanel = () => {
   const [allUsers, setAllUsers] = useState<Array<any>>([]);
   const [admins, setAdmins] = useState<Array<any>>([]);
   const [boosters, setBoosters] = useState<Array<any>>([]);
+  const [customers, setCustomers] = useState<Array<any>>([]);
   
   // Load all users from localStorage
   useEffect(() => {
@@ -73,9 +74,10 @@ const AdminPanel = () => {
           const parsedUsers = JSON.parse(storedUsers);
           setAllUsers(parsedUsers);
           
-          // Filter admins and boosters
+          // Filter admins, boosters and customers
           setAdmins(parsedUsers.filter((u: any) => u.role === 'admin'));
           setBoosters(parsedUsers.filter((u: any) => u.role === 'booster'));
+          setCustomers(parsedUsers.filter((u: any) => u.role === 'customer'));
         } catch (error) {
           console.error('Failed to parse stored users', error);
         }
@@ -86,7 +88,7 @@ const AdminPanel = () => {
     
     // Also add the default admin
     setAdmins(prev => {
-      const defaultAdmin = { id: '1', email: 'hakan200505@gmail.com', username: 'admin', role: 'admin' };
+      const defaultAdmin = { id: '1', email: 'hakan200505@gmail.com', username: 'admin', role: 'admin', balance: 5000 };
       // Check if already exists
       if (!prev.some(a => a.id === '1')) {
         return [...prev, defaultAdmin];
@@ -94,6 +96,11 @@ const AdminPanel = () => {
       return prev;
     });
   }, []);
+  
+  // Format balance with currency symbol
+  const formatBalance = (balance: number) => {
+    return `${balance?.toLocaleString('tr-TR') || 0} ₺`;
+  };
   
   const [newBooster, setNewBooster] = useState({ email: '', username: '', password: '' });
   const [newAdmin, setNewAdmin] = useState({ email: '', username: '', password: '' });
@@ -109,6 +116,7 @@ const AdminPanel = () => {
     setAllUsers(updatedUsers);
     setAdmins(updatedUsers.filter(u => u.role === 'admin'));
     setBoosters(updatedUsers.filter(u => u.role === 'booster'));
+    setCustomers(updatedUsers.filter(u => u.role === 'customer'));
   };
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -215,6 +223,34 @@ const AdminPanel = () => {
     setEditingPrice(null);
   };
 
+  const handleRefresh = () => {
+    // Refresh data
+    const loadUsers = () => {
+      const storedUsers = localStorage.getItem('valorant_registered_users');
+      if (storedUsers) {
+        try {
+          const parsedUsers = JSON.parse(storedUsers);
+          setAllUsers(parsedUsers);
+          
+          // Filter admins, boosters and customers
+          setAdmins(parsedUsers.filter((u: any) => u.role === 'admin'));
+          setBoosters(parsedUsers.filter((u: any) => u.role === 'booster'));
+          setCustomers(parsedUsers.filter((u: any) => u.role === 'customer'));
+        } catch (error) {
+          console.error('Failed to parse stored users', error);
+        }
+      }
+    };
+    
+    loadUsers();
+    refreshOrders();
+    
+    toast({
+      title: "Veriler Yenilendi",
+      description: "Kullanıcı ve sipariş verileri güncellendi.",
+    });
+  };
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -230,9 +266,17 @@ const AdminPanel = () => {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold mb-2 font-heading">Admin <span className="text-valorant-green">Paneli</span></h1>
-          <p className="text-gray-400">Site ayarlarını, adminleri, boosterları ve fiyatları yönetin.</p>
+        <div className="mb-10 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 font-heading">Admin <span className="text-valorant-green">Paneli</span></h1>
+            <p className="text-gray-400">Site ayarlarını, adminleri, boosterları ve fiyatları yönetin.</p>
+          </div>
+          <Button 
+            onClick={handleRefresh}
+            className="bg-valorant-green hover:bg-valorant-darkGreen"
+          >
+            Verileri Yenile
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
@@ -290,6 +334,11 @@ const AdminPanel = () => {
                 "data-[state=active]:bg-valorant-green data-[state=active]:text-white"
               )}>
                 Boosterlar
+              </TabsTrigger>
+              <TabsTrigger value="customers" className={cn(
+                "data-[state=active]:bg-valorant-green data-[state=active]:text-white"
+              )}>
+                Müşteriler
               </TabsTrigger>
               <TabsTrigger value="prices" className={cn(
                 "data-[state=active]:bg-valorant-green data-[state=active]:text-white"
@@ -361,6 +410,7 @@ const AdminPanel = () => {
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">ID</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Kullanıcı Adı</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">E-posta</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Bakiye</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">İşlemler</th>
                       </tr>
                     </thead>
@@ -370,6 +420,7 @@ const AdminPanel = () => {
                           <td className="px-4 py-3 text-sm text-gray-300">{admin.id}</td>
                           <td className="px-4 py-3 text-sm font-medium text-white">{admin.username}</td>
                           <td className="px-4 py-3 text-sm text-gray-300">{admin.email}</td>
+                          <td className="px-4 py-3 text-sm text-valorant-green font-medium">{formatBalance(admin.balance)}</td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex space-x-2">
                               <Dialog>
@@ -491,6 +542,7 @@ const AdminPanel = () => {
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">ID</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Kullanıcı Adı</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">E-posta</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Bakiye</th>
                         <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">İşlemler</th>
                       </tr>
                     </thead>
@@ -500,6 +552,7 @@ const AdminPanel = () => {
                           <td className="px-4 py-3 text-sm text-gray-300">{booster.id}</td>
                           <td className="px-4 py-3 text-sm font-medium text-white">{booster.username}</td>
                           <td className="px-4 py-3 text-sm text-gray-300">{booster.email}</td>
+                          <td className="px-4 py-3 text-sm text-valorant-green font-medium">{formatBalance(booster.balance)}</td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex space-x-2">
                               <Dialog>
@@ -543,6 +596,84 @@ const AdminPanel = () => {
                                 size="sm"
                                 className="border-red-500 text-red-500 hover:bg-red-500/10"
                                 onClick={() => handleRemoveUser(booster.id, booster.role)}
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="customers" className="pt-6">
+              <div>
+                <h3 className="text-lg font-bold mb-4">Müşteriler</h3>
+                
+                <div className="bg-valorant-gray/10 border border-valorant-gray/30 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-valorant-gray/30">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">ID</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Kullanıcı Adı</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">E-posta</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">Bakiye</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-200">İşlemler</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-valorant-gray/30">
+                      {customers.map((customer) => (
+                        <tr key={customer.id} className="hover:bg-valorant-gray/10">
+                          <td className="px-4 py-3 text-sm text-gray-300">{customer.id}</td>
+                          <td className="px-4 py-3 text-sm font-medium text-white">{customer.username}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300">{customer.email}</td>
+                          <td className="px-4 py-3 text-sm text-valorant-green font-medium">{formatBalance(customer.balance)}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex space-x-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="border-blue-500 text-blue-500 hover:bg-blue-500/10"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="bg-valorant-black border-valorant-gray/40 text-white">
+                                  <DialogHeader>
+                                    <DialogTitle>Rol Değiştir</DialogTitle>
+                                    <DialogDescription className="text-gray-400">
+                                      {customer.username} kullanıcısının rolünü değiştir
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="py-4">
+                                    <label className="text-sm font-medium text-gray-400 mb-2 block">Yeni Rol</label>
+                                    <Select 
+                                      onValueChange={(value) => handleChangeRole(customer.id, customer.role, value as any)}
+                                      defaultValue={customer.role}
+                                    >
+                                      <SelectTrigger className="bg-valorant-gray/20 border-valorant-gray/30 text-white">
+                                        <SelectValue placeholder="Rol seçin" />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-valorant-black border-valorant-gray/40 text-white">
+                                        <SelectItem value="admin">Admin</SelectItem>
+                                        <SelectItem value="booster">Booster</SelectItem>
+                                        <SelectItem value="customer">Müşteri</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="border-red-500 text-red-500 hover:bg-red-500/10"
+                                onClick={() => handleRemoveUser(customer.id, customer.role)}
                               >
                                 <Trash className="w-4 h-4" />
                               </Button>

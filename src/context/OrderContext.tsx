@@ -97,7 +97,7 @@ const MOCK_ORDERS: Order[] = [
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, addBalance } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
@@ -205,6 +205,51 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     // Only the assigned booster or an admin can complete an order
     if (order && (order.boosterId === user.id || user.role === 'admin')) {
+      // Calculate 60% of the order price for the booster's commission
+      const boosterCommission = Math.round(order.price * 0.6);
+      
+      // Add the commission to the booster's balance if it's not an admin completing the order
+      if (order.boosterId && order.boosterId !== user.id && user.role === 'admin') {
+        // If admin is completing the order, add balance to the assigned booster
+        try {
+          // Load all registered users to find the booster
+          const storedUsers = localStorage.getItem('valorant_registered_users');
+          if (storedUsers) {
+            const parsedUsers = JSON.parse(storedUsers);
+            const booster = parsedUsers.find((u: any) => u.id === order.boosterId);
+            
+            if (booster) {
+              // Update booster's balance
+              booster.balance = (booster.balance || 0) + boosterCommission;
+              localStorage.setItem('valorant_registered_users', JSON.stringify(parsedUsers));
+              
+              console.log(`Admin completed order. Added ${boosterCommission}₺ to booster ${booster.username}'s account`);
+              
+              toast({
+                title: "Sipariş Tamamlandı",
+                description: `${booster.username} hesabına ${boosterCommission}₺ komisyon eklendi.`,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to add commission to booster', error);
+        }
+      } else if (user.id === order.boosterId) {
+        // If booster is completing their own order, add balance to their account
+        try {
+          await addBalance(boosterCommission);
+          console.log(`Booster earned ${boosterCommission}₺ commission`);
+          
+          toast({
+            title: "Komisyon Eklendi",
+            description: `Hesabınıza ${boosterCommission}₺ komisyon eklendi.`,
+          });
+        } catch (error) {
+          console.error('Failed to add commission to booster', error);
+        }
+      }
+      
+      // Update the order status to completed
       setOrders(prev => 
         prev.map(order => 
           order.id === orderId 
@@ -272,11 +317,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     console.log('Getting available orders for booster');
     console.log('All orders:', orders);
+    console.log('Current user ID:', user.id);
     
     // Filter out only pending orders that aren't created by the current user
-    const availableOrders = orders.filter(order => 
-      order.status === 'pending' && order.userId !== user.id
-    );
+    const availableOrders = orders.filter(order => {
+      console.log(`Checking order ${order.id}: status=${order.status}, userId=${order.userId}, user.id=${user.id}`);
+      return order.status === 'pending' && order.userId !== user.id;
+    });
     
     console.log(`Found ${availableOrders.length} pending orders for boosters:`, availableOrders);
     return availableOrders;
