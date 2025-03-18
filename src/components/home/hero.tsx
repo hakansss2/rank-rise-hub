@@ -1,32 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Image from '@/components/ui/image';
-
 const Hero = () => {
   const [isVisible, setIsVisible] = useState(false);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 100);
-    
     return () => clearTimeout(timer);
   }, []);
-
-  return (
-    <div className="relative min-h-[85vh] flex items-center overflow-hidden bg-valorant-black">
+  return <div className="relative min-h-[85vh] flex items-center overflow-hidden bg-valorant-black">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-r from-valorant-black via-valorant-black/90 to-transparent z-10"></div>
         <div className="absolute top-0 right-0 w-full md:w-2/3 h-full">
-          <Image
-            src="/hero-background.jpg"
-            alt="Valorant"
-            className="w-full h-full object-cover object-center opacity-40"
-            placeholder="/placeholder.svg"
-          />
+          <Image src="/hero-background.jpg" alt="Valorant" className="w-full h-full object-cover object-center opacity-40" placeholder="/placeholder.svg" />
         </div>
       </div>
 
@@ -56,7 +45,7 @@ const Hero = () => {
               </Button>
             </Link>
             <Link to="/login">
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out">
+              <Button variant="outline" className="border-white text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out bg-zinc-950 hover:bg-zinc-800">
                 Giriş Yap
               </Button>
             </Link>
@@ -81,8 +70,6 @@ const Hero = () => {
       
       {/* Bottom Gradient */}
       <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-valorant-black to-transparent z-10"></div>
-    </div>
-  );
+    </div>;
 };
-
 export default Hero;
