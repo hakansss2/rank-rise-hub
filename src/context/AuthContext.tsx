@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -43,6 +44,7 @@ const loadRegisteredUsers = () => {
   try {
     const storedUsers = localStorage.getItem('valorant_registered_users');
     if (storedUsers) {
+      console.log("Loading registered users from localStorage:", storedUsers);
       return JSON.parse(storedUsers);
     }
   } catch (error) {
@@ -72,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const loadedUsers = loadRegisteredUsers();
     setRegisteredUsers(loadedUsers);
+    console.log("Loaded registered users into state:", loadedUsers.length);
     
     // Check local storage for existing auth
     const storedUser = localStorage.getItem('valorant_user');
@@ -92,16 +95,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getAllUsers = () => {
     // Get the latest registered users from localStorage
     const latestRegisteredUsers = loadRegisteredUsers();
+    console.log("getAllUsers - registered users count:", latestRegisteredUsers.length);
     
     // Map users to remove passwords
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
     const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }) => rest);
     
-    console.log("Total registered users:", registeredUsersList.length);
-    console.log("Registered users list:", registeredUsersList);
+    // Log the combined users to verify
+    const allUsers = [...defaultUsers, ...registeredUsersList];
+    console.log("getAllUsers - returning total users:", allUsers.length);
     
     // Combine default and registered users
-    return [...defaultUsers, ...registeredUsersList];
+    return allUsers;
   };
 
   const login = async (email: string, password: string) => {
@@ -151,6 +156,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Get the latest registered users
       const latestRegisteredUsers = loadRegisteredUsers();
+      console.log("Registration - Current registered users:", latestRegisteredUsers.length);
       
       // Check for duplicate email across all users
       const allUsers = [...USERS, ...latestRegisteredUsers];
@@ -177,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRegisteredUsers(updatedRegisteredUsers);
       
       console.log('User registered successfully:', { ...newUser, password: '***' });
+      console.log('Total registered users after registration:', updatedRegisteredUsers.length);
       
       // Log in the new user
       const { password: _, ...userWithoutPassword } = newUser;

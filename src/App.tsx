@@ -16,7 +16,7 @@ import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
 import Balance from "./pages/Balance";
 
-// Create a new QueryClient with strict settings to prevent excessive refetching
+// Create a new QueryClient to prevent excessive refetching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -45,6 +45,8 @@ const AdminPanel = () => {
       navigate('/dashboard');
       return;
     }
+    
+    refreshUsers();
   }, [isAuthenticated, isAdmin, navigate]);
 
   const refreshUsers = useCallback(() => {
@@ -52,8 +54,7 @@ const AdminPanel = () => {
     
     try {
       const users = getAllUsers();
-      console.log("Refreshed users:", users);
-      console.log("Total users count:", users.length);
+      console.log("Admin panel - Total users fetched:", users.length);
       
       setAllUsers(users);
       
@@ -73,49 +74,10 @@ const AdminPanel = () => {
     }
   }, [getAllUsers]);
   
-  useEffect(() => {
-    refreshUsers();
-  }, [refreshUsers]);
-  
-  const customers = allUsers.filter(u => u.role === 'customer');
-  const boosters = allUsers.filter(u => u.role === 'booster' || u.role === 'admin');
-  
-  const toggleCurrency = () => {
-    setCurrency(prev => prev === 'TRY' ? 'USD' : 'TRY');
-  };
-  
-  const formatBalance = (balance: number): string => {
-    if (currency === 'TRY') {
-      return `${balance.toLocaleString('tr-TR')} ₺`;
-    } else {
-      const usdAmount = balance / 35;
-      return `$${usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-  };
-
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Badge className="bg-red-500/10 text-red-500 border-red-500/30">Admin</Badge>;
-      case 'booster':
-        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30">Booster</Badge>;
-      case 'customer':
-        return <Badge className="bg-valorant-green/10 text-valorant-green border-valorant-green/30">Müşteri</Badge>;
-      default:
-        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/30">{role}</Badge>;
-    }
-  };
-
-  const handleEditUser = (user: any) => {
-    setSelectedUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleSaveUser = async (updatedUser: any, newPassword?: string) => {
+  const handleUserEdit = async (updatedUser: any, newPassword?: string) => {
     try {
       const { updateUser } = useAuth();
       await updateUser(updatedUser, newPassword);
-      
       refreshUsers();
       
       toast({
@@ -130,6 +92,11 @@ const AdminPanel = () => {
         variant: "destructive",
       });
     }
+  };
+  
+  const handleEditUser = (user: any) => {
+    setSelectedUser(user);
+    setDialogOpen(true);
   };
 
   const handleCleanupUsers = async () => {
@@ -159,6 +126,35 @@ const AdminPanel = () => {
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
+
+  const customers = allUsers.filter(u => u.role === 'customer');
+  const boosters = allUsers.filter(u => u.role === 'booster' || u.role === 'admin');
+  
+  const toggleCurrency = () => {
+    setCurrency(prev => prev === 'TRY' ? 'USD' : 'TRY');
+  };
+  
+  const formatBalance = (balance: number): string => {
+    if (currency === 'TRY') {
+      return `${balance.toLocaleString('tr-TR')} ₺`;
+    } else {
+      const usdAmount = balance / 35;
+      return `$${usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/30">Admin</Badge>;
+      case 'booster':
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30">Booster</Badge>;
+      case 'customer':
+        return <Badge className="bg-valorant-green/10 text-valorant-green border-valorant-green/30">Müşteri</Badge>;
+      default:
+        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/30">{role}</Badge>;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">
@@ -373,7 +369,7 @@ const AdminPanel = () => {
         user={selectedUser}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onSave={handleSaveUser}
+        onSave={handleUserEdit}
       />
       
       <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>

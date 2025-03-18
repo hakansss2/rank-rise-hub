@@ -48,19 +48,24 @@ const Register = () => {
 
   // Display current registered users count
   useEffect(() => {
-    const storedUsers = localStorage.getItem('valorant_registered_users');
-    if (storedUsers) {
-      try {
-        const parsedUsers = JSON.parse(storedUsers);
-        setRegisteredUsers(parsedUsers.length);
-        console.log('Register page - current registered users:', parsedUsers.length);
-      } catch (error) {
-        console.error('Failed to parse stored users', error);
+    const loadRegisteredUsersCount = () => {
+      const storedUsers = localStorage.getItem('valorant_registered_users');
+      if (storedUsers) {
+        try {
+          const parsedUsers = JSON.parse(storedUsers);
+          console.log('Register page - loaded registered users:', parsedUsers);
+          setRegisteredUsers(parsedUsers.length);
+        } catch (error) {
+          console.error('Failed to parse stored users', error);
+          setRegisteredUsers(0);
+        }
+      } else {
+        console.log('Register page - no registered users found');
+        setRegisteredUsers(0);
       }
-    } else {
-      console.log('Register page - no registered users found');
-      setRegisteredUsers(0);
-    }
+    };
+
+    loadRegisteredUsersCount();
   }, []);
 
   const onSubmit = async (data: FormValues) => {
@@ -70,18 +75,12 @@ const Register = () => {
       console.log(`Attempting to register user: ${data.username}, ${data.email}`);
       await registerUser(data.email, data.username, data.password);
       
-      // Verify registration success by checking localStorage directly
+      // Update the local registered users count after successful registration
       const storedUsers = localStorage.getItem('valorant_registered_users');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
-        console.log('Current registered users after registration:', parsedUsers.length);
-        const userFound = parsedUsers.some((u: any) => u.email === data.email);
-        console.log(`User with email ${data.email} found in storage: ${userFound}`);
-        
-        // Show details of the registered users for debugging
-        console.log('All registered users:', parsedUsers);
-      } else {
-        console.log('No registered users found in localStorage after registration attempt');
+        setRegisteredUsers(parsedUsers.length);
+        console.log('Updated registered users count after registration:', parsedUsers.length);
       }
       
       toast({
