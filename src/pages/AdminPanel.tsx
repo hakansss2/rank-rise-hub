@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -25,7 +26,9 @@ import RankCard from '@/components/ui/rankCard';
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
+  const { orders } = useOrder();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   if (!isAuthenticated || !isAdmin) {
     navigate('/login');
@@ -346,3 +349,4 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
