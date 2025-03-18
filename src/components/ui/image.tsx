@@ -36,16 +36,18 @@ const Image: React.FC<ImageProps> = ({
       return;
     }
     
-    const img = new Image();
-    img.src = src;
+    // Use HTMLImageElement instead of the global Image constructor
+    // This avoids the name collision with our React component
+    const imgElement = document.createElement('img');
+    imgElement.src = src;
     
-    img.onload = () => {
+    imgElement.onload = () => {
       setCurrentSrc(src);
       setIsLoading(false);
       if (externalOnLoad) externalOnLoad();
     };
     
-    img.onerror = () => {
+    imgElement.onerror = () => {
       console.error(`Failed to load image: ${src}`);
       setHasError(true);
       setIsLoading(false);
@@ -53,8 +55,8 @@ const Image: React.FC<ImageProps> = ({
     };
     
     return () => {
-      img.onload = null;
-      img.onerror = null;
+      imgElement.onload = null;
+      imgElement.onerror = null;
     };
   }, [src, placeholder, externalOnLoad, externalOnError]);
   
