@@ -78,6 +78,18 @@ let MOCK_ORDERS: Order[] = [
       },
     ],
   },
+  {
+    id: '3',
+    userId: '3',
+    currentRank: 8,
+    targetRank: 12,
+    price: 950,
+    status: 'completed',
+    boosterId: '2',
+    boosterUsername: 'booster',
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    messages: [],
+  },
 ];
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
