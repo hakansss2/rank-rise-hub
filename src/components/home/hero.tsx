@@ -1,15 +1,26 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Image from '@/components/ui/image';
+
 const Hero = () => {
   const [isVisible, setIsVisible] = useState(false);
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+  
+  const scrollToRankBoost = () => {
+    const rankBoostSection = document.getElementById('rank-boost');
+    if (rankBoostSection) {
+      rankBoostSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
   return <div className="relative min-h-[85vh] flex items-center overflow-hidden bg-valorant-black">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
@@ -39,11 +50,12 @@ const Hero = () => {
           </p>
           
           <div className={`flex flex-wrap gap-4 transform transition-all duration-700 delay-600 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
-            <Link to="/ranks">
-              <Button className="bg-valorant-green hover:bg-valorant-darkGreen text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out shadow-[0_5px_15px_rgba(22,163,74,0.3)]">
-                Hemen Rank Atlayın
-              </Button>
-            </Link>
+            <Button 
+              className="bg-valorant-green hover:bg-valorant-darkGreen text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out shadow-[0_5px_15px_rgba(22,163,74,0.3)]"
+              onClick={scrollToRankBoost}
+            >
+              Hemen Rank Atlayın
+            </Button>
             <Link to="/login">
               <Button variant="outline" className="border-white text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out bg-zinc-950 hover:bg-zinc-800">
                 Giriş Yap
@@ -72,4 +84,5 @@ const Hero = () => {
       <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-valorant-black to-transparent z-10"></div>
     </div>;
 };
+
 export default Hero;
