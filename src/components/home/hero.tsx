@@ -39,13 +39,13 @@ const Hero = () => {
             </span>
           </div>
           
-          <h1 className={`text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 font-heading transform transition-all duration-700 delay-200 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+          <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 font-heading transform transition-all duration-700 delay-200 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
             <span className="block">Valorant Rankınızı</span>
             <span className="gradient-text">Profesyonellere</span> 
             <span className="block">Yükseltmeyi Bırakın</span>
           </h1>
           
-          <p className={`text-xl text-gray-300 mb-8 max-w-xl transform transition-all duration-700 delay-400 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+          <p className={`text-lg sm:text-xl text-gray-300 mb-8 max-w-xl transform transition-all duration-700 delay-400 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
             Güvenli, hızlı ve profesyonel Valorant rank boost hizmetimizle istediğiniz lige ulaşmanız artık çok kolay.
           </p>
           
@@ -63,18 +63,18 @@ const Hero = () => {
             </Link>
           </div>
           
-          <div className={`mt-12 grid grid-cols-3 gap-8 max-w-lg transform transition-all duration-700 delay-800 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
+          <div className={`mt-12 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg transform transition-all duration-700 delay-800 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
             <div className="text-center">
-              <div className="text-3xl font-bold text-valorant-green mb-2">500+</div>
-              <div className="text-gray-400 text-sm">Tamamlanan Sipariş</div>
+              <div className="text-2xl sm:text-3xl font-bold text-valorant-green mb-2">500+</div>
+              <div className="text-xs sm:text-sm text-gray-400">Tamamlanan Sipariş</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-valorant-green mb-2">50+</div>
-              <div className="text-gray-400 text-sm">Profesyonel Booster</div>
+              <div className="text-2xl sm:text-3xl font-bold text-valorant-green mb-2">50+</div>
+              <div className="text-xs sm:text-sm text-gray-400">Profesyonel Booster</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-valorant-green mb-2">%100</div>
-              <div className="text-gray-400 text-sm">Müşteri Memnuniyeti</div>
+              <div className="text-2xl sm:text-3xl font-bold text-valorant-green mb-2">%100</div>
+              <div className="text-xs sm:text-sm text-gray-400">Müşteri Memnuniyeti</div>
             </div>
           </div>
         </div>

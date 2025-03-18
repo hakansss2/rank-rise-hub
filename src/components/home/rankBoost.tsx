@@ -370,7 +370,7 @@ const RankBoost = () => {
       <div className="animate-fade-in mt-8">
         <h2 className="text-2xl font-bold text-white mb-6 text-center">Sipariş Özeti</h2>
         
-        <div className="glass-card p-6 md:p-8 rounded-xl mb-8 bg-valorant-black/50 border border-valorant-gray/30">
+        <div className="glass-card p-4 sm:p-6 md:p-8 rounded-xl mb-8 bg-valorant-black/50 border border-valorant-gray/30">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex flex-col items-center mb-6 md:mb-0">
               <span className="text-sm text-gray-400 mb-2">Mevcut Rank</span>
@@ -433,7 +433,7 @@ const RankBoost = () => {
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="text-center md:text-left mb-4 md:mb-0">
                 <div className="font-medium text-gray-400">Toplam Tutar:</div>
-                <div className="text-2xl md:text-3xl font-bold text-white flex items-center">
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center justify-center md:justify-start">
                   {formatCurrency(finalPrice, currency)}
                   <button onClick={toggleCurrency} className="ml-2 text-xs bg-valorant-green/20 text-valorant-green px-2 py-1 rounded">
                     {currency === 'TRY' ? 'USD' : 'TRY'}
