@@ -127,6 +127,24 @@ export const valorantRanks: RankInfo[] = [
   { id: 25, name: 'Radyant', tier: 'radiant', division: 1, image: rankImagesUrls.radiant },
 ];
 
+// New tier groups data for simplified rank selection
+export const rankTierGroups = [
+  { id: 'iron', name: 'Demir', image: rankImagesUrls.iron2 },
+  { id: 'bronze', name: 'Bronz', image: rankImagesUrls.bronze2 },
+  { id: 'silver', name: 'Gümüş', image: rankImagesUrls.silver2 },
+  { id: 'gold', name: 'Altın', image: rankImagesUrls.gold2 },
+  { id: 'platinum', name: 'Platin', image: rankImagesUrls.platinum2 },
+  { id: 'diamond', name: 'Elmas', image: rankImagesUrls.diamond2 },
+  { id: 'ascendant', name: 'Yükselen', image: rankImagesUrls.ascendant2 },
+  { id: 'immortal', name: 'Ölümsüz', image: rankImagesUrls.immortal2 },
+  { id: 'radiant', name: 'Radyant', image: rankImagesUrls.radiant },
+];
+
+// Function to get ranks by tier
+export function getRanksByTier(tier: RankTier): RankInfo[] {
+  return valorantRanks.filter(rank => rank.tier === tier);
+}
+
 export function getRankById(id: number): RankInfo | undefined {
   return valorantRanks.find(rank => rank.id === id);
 }
