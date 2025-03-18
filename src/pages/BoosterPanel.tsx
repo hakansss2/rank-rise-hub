@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -12,6 +13,7 @@ import { Clock, CheckCircle, ArrowRight, MessageCircle, XCircle, RefreshCw } fro
 import Image from '@/components/ui/image';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Toaster } from '@/components/ui/toaster';
 
 const BoosterPanel = () => {
   const {
@@ -32,13 +34,14 @@ const BoosterPanel = () => {
   
   useEffect(() => {
     refreshOrders();
+    console.log("Refreshing orders in BoosterPanel");
   }, [refreshOrders, refreshKey]);
   
   const boosterOrders = getBoosterOrders();
   const availableOrders = getAvailableOrders();
   
-  console.log('Available Orders:', availableOrders);
-  console.log('Booster Orders:', boosterOrders);
+  console.log('Available Orders in BoosterPanel:', availableOrders);
+  console.log('Booster Orders in BoosterPanel:', boosterOrders);
   
   const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
   const completedOrders = boosterOrders.filter(o => o.status === 'completed');
@@ -60,7 +63,7 @@ const BoosterPanel = () => {
     console.log('Current user in BoosterPanel:', user);
     console.log('isAuthenticated:', isAuthenticated);
     console.log('isBooster:', isBooster);
-  }, [isAuthenticated, isBooster, navigate, user, refreshKey]);
+  }, [isAuthenticated, isBooster, navigate, user]);
 
   const handleRefresh = () => {
     refreshOrders();
@@ -145,7 +148,7 @@ const BoosterPanel = () => {
   return (
     <div className="min-h-screen bg-valorant-black text-white">
       <Navbar />
-      
+      <Toaster />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-10 flex justify-between items-center">
           <div>

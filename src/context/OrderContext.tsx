@@ -121,10 +121,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshOrders = () => {
     // Load orders from localStorage if available
     const storedOrders = localStorage.getItem('valorant_orders');
+    console.log('Attempting to load orders from localStorage');
+    
     if (storedOrders) {
       try {
         const parsedOrders = JSON.parse(storedOrders);
         console.log('Loaded orders from localStorage:', parsedOrders.length);
+        console.log('Order details:', parsedOrders);
         setOrders(parsedOrders);
       } catch (error) {
         console.error('Failed to parse stored orders', error);
@@ -155,6 +158,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     setOrders(prev => [...prev, newOrder]);
+    console.log('Created new order:', newOrder);
     return Promise.resolve();
   };
 
@@ -261,13 +265,20 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const getAvailableOrders = () => {
     // Admins should not see available orders to claim
-    if (user?.role === 'admin') {
+    if (!user || user?.role === 'admin') {
+      console.log('Admin user or no user - not showing available orders');
       return [];
     }
     
+    console.log('Getting available orders for booster');
     console.log('All orders:', orders);
-    const availableOrders = orders.filter(order => order.status === 'pending');
-    console.log(`Found ${availableOrders.length} pending orders:`, availableOrders);
+    
+    // Filter out only pending orders that aren't created by the current user
+    const availableOrders = orders.filter(order => 
+      order.status === 'pending' && order.userId !== user.id
+    );
+    
+    console.log(`Found ${availableOrders.length} pending orders for boosters:`, availableOrders);
     return availableOrders;
   };
 
