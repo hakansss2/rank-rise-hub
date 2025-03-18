@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import RankCard from '@/components/ui/rankCard';
+import { cn } from '@/lib/utils';
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
@@ -107,6 +108,12 @@ const AdminPanel = () => {
     return null;
   }
 
+  // Find a valid rank for demo visualization that doesn't require an image to load
+  const getValidRankByTier = (tier: string, division: number = 2) => {
+    const rank = valorantRanks.find(r => r.tier === tier && r.division === division);
+    return rank || valorantRanks[0]; // Fallback to first rank if not found
+  };
+
   return (
     <div className="min-h-screen bg-valorant-black text-white">
       <Navbar />
@@ -153,12 +160,16 @@ const AdminPanel = () => {
             </h2>
           </div>
           
-          <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="bg-valorant-gray/20 border border-valorant-gray/30">
-              <TabsTrigger value="boosters" className="data-[state=active]:bg-valorant-green data-[state=active]:text-white">
+              <TabsTrigger value="boosters" className={cn(
+                "data-[state=active]:bg-valorant-green data-[state=active]:text-white"
+              )}>
                 Boosterlar
               </TabsTrigger>
-              <TabsTrigger value="prices" className="data-[state=active]:bg-valorant-green data-[state=active]:text-white">
+              <TabsTrigger value="prices" className={cn(
+                "data-[state=active]:bg-valorant-green data-[state=active]:text-white"
+              )}>
                 Fiyatlar
               </TabsTrigger>
             </TabsList>
@@ -279,8 +290,9 @@ const AdminPanel = () => {
                   >
                     <div className="flex items-center mb-3">
                       <RankCard 
-                        rank={valorantRanks.find(r => r.tier === tier && r.division === 2)!}
+                        rank={getValidRankByTier(tier)}
                         showTier={true}
+                        showPrice={false}
                       />
                     </div>
                     

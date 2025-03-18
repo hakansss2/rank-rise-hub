@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -116,8 +115,7 @@ const RankBoost = () => {
                 rank={rank}
                 isSelected={currentRank === rank.id}
                 onClick={() => handleRankSelect(rank.id)}
-                showPrice={true}
-                currency={currency}
+                showPrice={false}
               />
             ))}
           </div>
@@ -134,8 +132,7 @@ const RankBoost = () => {
                 rank={rank}
                 isSelected={targetRank === rank.id}
                 onClick={() => handleRankSelect(rank.id)}
-                showPrice={true}
-                currency={currency}
+                showPrice={false}
               />
             ))}
           </div>

@@ -21,8 +21,9 @@ const RankCard: React.FC<RankCardProps> = ({
   showPrice = false,
   currency = 'TRY'
 }) => {
-  const rankPrice = getRankDivisionPrice(rank.tier, rank.division);
-  const formattedPrice = formatCurrency(rankPrice, currency);
+  // Only calculate price if it's going to be shown
+  const rankPrice = showPrice ? getRankDivisionPrice(rank.tier, rank.division) : 0;
+  const formattedPrice = showPrice ? formatCurrency(rankPrice, currency) : '';
 
   return (
     <Card 
@@ -41,7 +42,7 @@ const RankCard: React.FC<RankCardProps> = ({
           <Image 
             src={rank.image} 
             alt={rank.name} 
-            placeholder="https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt8a627ec4743a8f8a/5eb7cf70bab1845bb576da25/TX_CompetitiveTier_Large_16.png" 
+            placeholder="/placeholder.svg" 
             className="relative z-10 w-14 h-14 object-contain" 
           />
         </div>
