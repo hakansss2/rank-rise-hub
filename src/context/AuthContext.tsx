@@ -24,6 +24,7 @@ interface AuthContextType {
   addBalance: (amount: number) => Promise<void>;
   deductBalance: (amount: number) => Promise<boolean>;
   formatBalance: (currency?: 'TRY' | 'USD') => string;
+  getAllUsers: () => Array<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Kullanıcı verileri
 const USERS = [
   { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
+  { id: '2', email: 'booster@test.com', username: 'booster', password: 'password', role: 'booster' as UserRole, balance: 1000 },
+  { id: '3', email: 'customer@test.com', username: 'customer', password: 'password', role: 'customer' as UserRole, balance: 2000 },
 ];
 
 // Yeni kayıt olan kullanıcıları bu array'de saklayacağız
@@ -47,6 +50,16 @@ const loadRegisteredUsers = () => {
       console.error('Failed to parse stored users', error);
       registeredUsers = [];
     }
+  }
+};
+
+// LocalStorage'a kayıtlı kullanıcıları kaydetme
+const saveRegisteredUsers = () => {
+  try {
+    localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+    console.log('Saved registered users to localStorage:', registeredUsers.length);
+  } catch (error) {
+    console.error('Failed to save registered users to localStorage', error);
   }
 };
 
@@ -72,6 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(false);
   }, []);
+
+  // Tüm kullanıcıları getir (sabit ve kayıtlı)
+  const getAllUsers = () => {
+    // Clone arrays to prevent modification
+    const defaultUsers = USERS.map(({ password, ...rest }) => rest);
+    const registeredUsersList = registeredUsers.map(({ password, ...rest }) => rest);
+    return [...defaultUsers, ...registeredUsersList];
+  };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -125,7 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Before registration - current registered users:', registeredUsers.length);
       
       // Tüm kullanıcılarda e-posta kontrolü (sabit ve kayıtlı)
-      if (USERS.some(u => u.email === email) || registeredUsers.some(u => u.email === email)) {
+      const allUsers = [...USERS, ...registeredUsers];
+      if (allUsers.some(u => u.email === email)) {
         console.error('Registration failed: Email already in use -', email);
         throw new Error('Email already in use');
       }
@@ -146,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       registeredUsers.push(newUser);
       
       // LocalStorage'a kaydet
-      localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+      saveRegisteredUsers();
       console.log('After registration - updated registered users:', registeredUsers.length);
       
       // Verify the save operation
@@ -195,14 +217,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loadRegisteredUsers();
       
       // Kayıtlı kullanıcılarda da güncelle
-      if (user.role !== 'admin' || user.id !== '1') { // Don't update default admin in storage
+      const isDefaultUser = USERS.some(u => u.id === user.id);
+      if (!isDefaultUser) {
         const userIndex = registeredUsers.findIndex(u => u.id === user.id);
         if (userIndex !== -1) {
           registeredUsers[userIndex] = { 
             ...registeredUsers[userIndex], 
             balance: updatedUser.balance 
           };
-          localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+          saveRegisteredUsers();
         }
       }
     } catch (error) {
@@ -236,14 +259,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loadRegisteredUsers();
       
       // Kayıtlı kullanıcılarda da güncelle
-      if (user.role !== 'admin' || user.id !== '1') { // Don't update default admin in storage
+      const isDefaultUser = USERS.some(u => u.id === user.id);
+      if (!isDefaultUser) {
         const userIndex = registeredUsers.findIndex(u => u.id === user.id);
         if (userIndex !== -1) {
           registeredUsers[userIndex] = { 
             ...registeredUsers[userIndex], 
             balance: updatedUser.balance 
           };
-          localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+          saveRegisteredUsers();
         }
       }
       
@@ -279,6 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addBalance,
     deductBalance,
     formatBalance,
+    getAllUsers,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
