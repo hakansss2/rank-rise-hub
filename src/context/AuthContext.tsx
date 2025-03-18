@@ -71,6 +71,7 @@ const saveRegisteredUsers = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [, forceUpdate] = useState<number>(0); // Force re-renders when needed
 
   useEffect(() => {
     // Load registered users when component mounts
@@ -102,6 +103,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const allUsers = [...defaultUsers, ...registeredUsersList];
     console.log("getAllUsers returning users:", allUsers.length);
+    console.log("Registered users in getAllUsers:", registeredUsersList.length);
     return allUsers;
   };
 
@@ -182,11 +184,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       saveRegisteredUsers();
       console.log('After registration - updated registered users:', registeredUsers.length);
       
+      // Force a re-render to update UI with new user data
+      forceUpdate(prev => prev + 1);
+      
       // Verify the save operation
       const storedUsers = localStorage.getItem('valorant_registered_users');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
         console.log('Verification - users in localStorage after save:', parsedUsers.length);
+        console.log('Stored users data:', parsedUsers);
       }
       
       // Kullanıcı bilgilerini state'e ve localStorage'a ekle (şifre olmadan)

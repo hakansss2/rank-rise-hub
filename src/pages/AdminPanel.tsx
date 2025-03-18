@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -10,12 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
+import { RefreshCw } from 'lucide-react';
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin, getAllUsers } = useAuth();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   
   // Kullanıcı yetkilendirme kontrolü
   React.useEffect(() => {
@@ -32,13 +34,43 @@ const AdminPanel = () => {
     }
   }, [isAuthenticated, isAdmin, navigate]);
 
-  // Tüm kullanıcıları getir ve state'e at
-  useEffect(() => {
-    // Her render'da getAllUsers ile güncel kullanıcıları al
-    const users = getAllUsers();
-    console.log("Admin panel fetched users:", users.length);
-    setAllUsers(users);
+  // Memoized refreshUsers function to prevent unnecessary re-renders
+  const refreshUsers = useCallback(() => {
+    setLoading(true);
+    
+    // Clear localStorage cache to ensure fresh data
+    try {
+      // Directly access localStorage to read users without the cache
+      const rawUsers = localStorage.getItem('valorant_registered_users');
+      console.log('Raw registered users data:', rawUsers);
+    } catch (e) {
+      console.error('Error reading raw localStorage data:', e);
+    }
+    
+    // Get latest user data
+    setTimeout(() => {
+      const users = getAllUsers();
+      console.log("Refreshed users:", users);
+      console.log("Total users count:", users.length);
+      
+      setAllUsers(users);
+      setLoading(false);
+      
+      toast({
+        title: "Kullanıcı Listesi Güncellendi",
+        description: `Toplam ${users.length} kullanıcı bulundu.`,
+      });
+    }, 100); // Short timeout to ensure DOM updates
   }, [getAllUsers]);
+  
+  // Tüm kullanıcıları getir ve state'e at (initial load and when dependencies change)
+  useEffect(() => {
+    refreshUsers();
+    // Set up interval to refresh users every 5 seconds
+    const interval = setInterval(refreshUsers, 5000);
+    
+    return () => clearInterval(interval);
+  }, [refreshUsers]);
   
   // Kullanıcıları rollerine göre filtrele
   const customers = allUsers.filter(u => u.role === 'customer');
@@ -46,16 +78,6 @@ const AdminPanel = () => {
   
   const toggleCurrency = () => {
     setCurrency(prev => prev === 'TRY' ? 'USD' : 'TRY');
-  };
-  
-  const refreshUsers = () => {
-    const users = getAllUsers();
-    console.log("Manually refreshed users:", users.length);
-    setAllUsers(users);
-    toast({
-      title: "Kullanıcı Listesi Güncellendi",
-      description: `Toplam ${users.length} kullanıcı bulundu.`,
-    });
   };
   
   const formatBalance = (balance: number): string => {
@@ -96,7 +118,17 @@ const AdminPanel = () => {
             <p className="text-gray-400">Tüm kullanıcıları yönetin ve bakiyeleri görüntüleyin.</p>
           </div>
           <div className="flex space-x-4">
-            <Button onClick={refreshUsers} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500">
+            <Button 
+              onClick={refreshUsers} 
+              variant="outline" 
+              className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500 flex items-center gap-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               Kullanıcıları Yenile
             </Button>
             <Button onClick={toggleCurrency} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-green-600">
@@ -148,15 +180,23 @@ const AdminPanel = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                  {allUsers.length > 0 ? (
+                    allUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                        Henüz kullanıcı bulunmuyor
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -172,14 +212,22 @@ const AdminPanel = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {customers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                  {customers.length > 0 ? (
+                    customers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-gray-400">
+                        Henüz müşteri bulunmuyor
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>
@@ -196,15 +244,23 @@ const AdminPanel = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {boosters.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-mono text-xs">{user.id}</TableCell>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                  {boosters.length > 0 ? (
+                    boosters.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell className="text-right font-bold">{formatBalance(user.balance)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-400">
+                        Henüz booster bulunmuyor
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
             </TabsContent>

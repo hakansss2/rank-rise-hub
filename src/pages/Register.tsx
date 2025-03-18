@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -15,9 +15,27 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [registeredUsers, setRegisteredUsers] = useState<number>(0);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Display current registered users count
+  useEffect(() => {
+    const storedUsers = localStorage.getItem('valorant_registered_users');
+    if (storedUsers) {
+      try {
+        const parsedUsers = JSON.parse(storedUsers);
+        setRegisteredUsers(parsedUsers.length);
+        console.log('Register page - current registered users:', parsedUsers.length);
+      } catch (error) {
+        console.error('Failed to parse stored users', error);
+      }
+    } else {
+      console.log('Register page - no registered users found');
+      setRegisteredUsers(0);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +59,14 @@ const Register = () => {
       const storedUsers = localStorage.getItem('valorant_registered_users');
       if (storedUsers) {
         const parsedUsers = JSON.parse(storedUsers);
-        console.log('Current registered users:', parsedUsers.length);
+        console.log('Current registered users after registration:', parsedUsers.length);
         const userFound = parsedUsers.some((u: any) => u.email === email);
         console.log(`User with email ${email} found in storage: ${userFound}`);
+        
+        // Show details of the registered users for debugging
+        console.log('All registered users:', parsedUsers);
       } else {
-        console.log('No registered users found in localStorage');
+        console.log('No registered users found in localStorage after registration attempt');
       }
       
       toast({
@@ -74,6 +95,9 @@ const Register = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2 font-heading">Hemen <span className="gradient-text">Kayıt Olun</span></h1>
             <p className="text-gray-400">Valorant boost hizmetimize erişim için hesap oluşturun</p>
+            {registeredUsers > 0 && (
+              <p className="text-sm text-valorant-green mt-2">Şu ana kadar {registeredUsers} kişi kayıt oldu!</p>
+            )}
           </div>
           
           <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-8 shadow-xl">
