@@ -29,8 +29,8 @@ const RankCard: React.FC<RankCardProps> = ({
     <Card 
       className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover-scale ${
         isSelected 
-          ? 'border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
-          : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
+          ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
+          : 'border border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
       }`}
       onClick={onClick}
     >

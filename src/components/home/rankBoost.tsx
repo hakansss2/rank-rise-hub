@@ -217,6 +217,12 @@ const RankBoost = () => {
               </Select>
             )}
           </div>
+          
+          {!currentRank && selectedCurrentTier && (
+            <div className="mt-3 text-valorant-green text-sm animate-pulse">
+              <p>Lütfen bölüm seçiniz</p>
+            </div>
+          )}
         </div>
         
         <div className="animate-fade-in">
@@ -262,6 +268,12 @@ const RankBoost = () => {
               </Select>
             )}
           </div>
+          
+          {!targetRank && selectedTargetTier && (
+            <div className="mt-3 text-valorant-green text-sm animate-pulse">
+              <p>Lütfen hedef bölüm seçiniz</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -278,7 +290,7 @@ const RankBoost = () => {
                 <PopoverTrigger asChild>
                   <div className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 border ${
                     selectedCurrentTier === tier.id 
-                      ? 'border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
+                      ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
                       : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
                   }`}>
                     <div className="flex flex-col items-center">
@@ -299,8 +311,8 @@ const RankBoost = () => {
                         key={rank.id}
                         className={`p-2 rounded flex flex-col items-center cursor-pointer ${
                           currentRank === rank.id 
-                            ? 'bg-valorant-green/20 border border-valorant-green' 
-                            : 'hover:bg-valorant-gray/20'
+                            ? 'bg-valorant-green/20 border-2 border-valorant-green' 
+                            : 'hover:bg-valorant-gray/20 border border-transparent'
                         }`}
                         onClick={() => handleSelectDivision(rank.id, true)}
                       >
@@ -315,9 +327,18 @@ const RankBoost = () => {
           </div>
           {currentRank && (
             <div className="flex items-center justify-center mt-4">
-              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-gray/30">
+              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green">
                 <p className="text-white text-center">
-                  Seçilen: <span className="font-bold">{valorantRanks.find(r => r.id === currentRank)?.name}</span>
+                  Seçilen: <span className="font-bold text-valorant-green">{valorantRanks.find(r => r.id === currentRank)?.name}</span>
+                </p>
+              </div>
+            </div>
+          )}
+          {!currentRank && selectedCurrentTier && (
+            <div className="flex items-center justify-center mt-4">
+              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
+                <p className="text-valorant-green text-center animate-pulse">
+                  Lütfen bir bölüm seçin
                 </p>
               </div>
             </div>
@@ -332,7 +353,7 @@ const RankBoost = () => {
                 <PopoverTrigger asChild>
                   <div className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover:scale-105 border ${
                     selectedTargetTier === tier.id 
-                      ? 'border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
+                      ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
                       : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
                   }`}>
                     <div className="flex flex-col items-center">
@@ -351,12 +372,12 @@ const RankBoost = () => {
                     {getRanksByTier(tier.id as RankTier).map(rank => (
                       <div
                         key={rank.id}
-                        className={`p-2 rounded flex flex-col items-center cursor-pointer ${
+                        className={`p-2 rounded flex flex-col items-center ${
                           rank.id <= (currentRank || 0) 
-                            ? 'opacity-50 cursor-not-allowed' 
+                            ? 'opacity-50 cursor-not-allowed border border-red-500/30' 
                             : targetRank === rank.id 
-                              ? 'bg-valorant-green/20 border border-valorant-green' 
-                              : 'hover:bg-valorant-gray/20'
+                              ? 'bg-valorant-green/20 border-2 border-valorant-green cursor-pointer' 
+                              : 'hover:bg-valorant-gray/20 border border-transparent cursor-pointer'
                         }`}
                         onClick={() => {
                           if (rank.id > (currentRank || 0)) {
@@ -375,9 +396,27 @@ const RankBoost = () => {
           </div>
           {targetRank && (
             <div className="flex items-center justify-center mt-4">
-              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-gray/30">
+              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green">
                 <p className="text-white text-center">
-                  Seçilen: <span className="font-bold">{valorantRanks.find(r => r.id === targetRank)?.name}</span>
+                  Seçilen: <span className="font-bold text-valorant-green">{valorantRanks.find(r => r.id === targetRank)?.name}</span>
+                </p>
+              </div>
+            </div>
+          )}
+          {!targetRank && selectedTargetTier && currentRank && (
+            <div className="flex items-center justify-center mt-4">
+              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
+                <p className="text-valorant-green text-center animate-pulse">
+                  Lütfen hedef bölüm seçin
+                </p>
+              </div>
+            </div>
+          )}
+          {!currentRank && (
+            <div className="flex items-center justify-center mt-4">
+              <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-red/50">
+                <p className="text-yellow-400 text-center">
+                  Önce mevcut rankınızı seçmelisiniz
                 </p>
               </div>
             </div>
