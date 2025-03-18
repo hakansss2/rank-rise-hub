@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import Image from '@/components/ui/image';
 import { useAuth } from '@/context/AuthContext';
 
 const Hero = () => {
@@ -26,15 +25,7 @@ const Hero = () => {
   return <div className="relative min-h-[85vh] flex items-center overflow-hidden bg-valorant-black">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-valorant-black via-valorant-black/90 to-transparent z-10"></div>
-        <div className="absolute top-0 right-0 w-full md:w-2/3 h-full">
-          <Image 
-            src="https://images.unsplash.com/photo-1580204851756-5f5b898b860c?auto=format&fit=crop&q=80&w=1200" 
-            alt="Valorant Game Background" 
-            className="w-full h-full object-cover object-center opacity-40" 
-            placeholder="/placeholder.svg" 
-          />
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-valorant-black via-valorant-black/90 to-valorant-black/70 z-10"></div>
       </div>
 
       {/* Content */}
