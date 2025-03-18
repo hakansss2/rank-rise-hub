@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -56,12 +57,12 @@ const RankBoost = () => {
     if (selectedCurrentTier) {
       setCurrentTierRanks(getRanksByTier(selectedCurrentTier));
       
-      // Scroll to division selection
+      // Improved scrolling to division selection with better centering
       setTimeout(() => {
         if (currentDivisionRef.current) {
           currentDivisionRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'start'
+            block: 'center' // Changed from 'start' to 'center'
           });
         }
       }, 100);
@@ -72,12 +73,12 @@ const RankBoost = () => {
     if (selectedTargetTier) {
       setTargetTierRanks(getRanksByTier(selectedTargetTier));
       
-      // Scroll to target division selection
+      // Improved scrolling to target division selection with better centering
       setTimeout(() => {
         if (targetDivisionRef.current) {
           targetDivisionRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'start'
+            block: 'center' // Changed from 'start' to 'center'
           });
         }
       }, 100);
@@ -86,12 +87,12 @@ const RankBoost = () => {
   
   useEffect(() => {
     if (currentRank && !targetRank) {
-      // Scroll to target rank section when current rank is selected
+      // Improved scrolling to target rank section with better centering
       setTimeout(() => {
         if (targetRankRef.current) {
           targetRankRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'start'
+            block: 'center' // Changed from 'start' to 'center'
           });
         }
       }, 100);
@@ -111,12 +112,12 @@ const RankBoost = () => {
 
       setFinalPrice(totalPrice);
       
-      // Scroll to order summary when both ranks are selected
+      // Improved scrolling to order summary with better centering
       setTimeout(() => {
         if (orderSummaryRef.current) {
           orderSummaryRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'start'
+            block: 'center' // Changed from 'start' to 'center'
           });
         }
       }, 100);
