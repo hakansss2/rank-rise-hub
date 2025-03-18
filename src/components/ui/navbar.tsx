@@ -24,6 +24,16 @@ const Navbar = () => {
     setCurrencyType(prev => prev === 'TRY' ? 'USD' : 'TRY');
   };
 
+  // Safe balance formatting
+  const safeFormatBalance = () => {
+    try {
+      return formatBalance(currencyType);
+    } catch (error) {
+      console.error('Error formatting balance:', error);
+      return currencyType === 'TRY' ? '0 ₺' : '$0.00';
+    }
+  };
+
   return (
     <nav className="bg-valorant-black border-b border-valorant-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-opacity-90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,7 +64,7 @@ const Navbar = () => {
                 <>
                   <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-2 rounded-md text-sm font-medium">
                     <Wallet className="w-4 h-4 mr-1" />
-                    <span>{formatBalance(currencyType)}</span>
+                    <span>{safeFormatBalance()}</span>
                   </div>
                   <div className="relative group">
                     <button className="flex items-center text-gray-300 hover:bg-valorant-gray hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
@@ -109,7 +119,7 @@ const Navbar = () => {
             {isAuthenticated && (
               <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-1 rounded-md text-sm font-medium mr-2">
                 <Wallet className="w-3 h-3 mr-1" />
-                <span>{formatBalance(currencyType)}</span>
+                <span>{safeFormatBalance()}</span>
               </div>
             )}
             <button

@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -162,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   // Format user balance with currency
   const formatBalance = (currency: 'TRY' | 'USD' = 'TRY'): string => {
-    if (!user) return '0';
+    if (!user) return currency === 'TRY' ? '0 ₺' : '$0.00';
     
     if (currency === 'TRY') {
       return `${user.balance.toLocaleString('tr-TR')} ₺`;
