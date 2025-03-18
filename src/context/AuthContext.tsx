@@ -108,6 +108,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulating API call with timeout
       await new Promise(resolve => setTimeout(resolve, 800));
       
+      // Reload registered users to get latest data
+      loadRegisteredUsers();
+      
       // Tüm kullanıcılarda e-posta kontrolü (sabit ve kayıtlı)
       if (USERS.some(u => u.email === email) || registeredUsers.some(u => u.email === email)) {
         throw new Error('Email already in use');
@@ -162,8 +165,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
 
+      // Reload registered users to get latest data
+      loadRegisteredUsers();
+      
       // Kayıtlı kullanıcılarda da güncelle
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' || user.id !== '1') { // Don't update default admin in storage
         const userIndex = registeredUsers.findIndex(u => u.id === user.id);
         if (userIndex !== -1) {
           registeredUsers[userIndex] = { 
@@ -200,8 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
 
+      // Reload registered users to get latest data
+      loadRegisteredUsers();
+      
       // Kayıtlı kullanıcılarda da güncelle
-      if (user.role !== 'admin') {
+      if (user.role !== 'admin' || user.id !== '1') { // Don't update default admin in storage
         const userIndex = registeredUsers.findIndex(u => u.id === user.id);
         if (userIndex !== -1) {
           registeredUsers[userIndex] = { 
