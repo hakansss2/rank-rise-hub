@@ -476,7 +476,7 @@ const RankBoost = () => {
                 {isAuthenticated && (
                   <div className="flex items-center justify-center md:justify-start mt-2 text-valorant-green font-medium">
                     <Wallet className="w-4 h-4 mr-1" />
-                    Bakiyeniz: {formatBalance(currency)}
+                    Bakiyeniz: {isAuthenticated && user ? formatBalance(currency) : '0'}
                   </div>
                 )}
               </div>
