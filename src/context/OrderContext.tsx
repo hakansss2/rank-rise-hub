@@ -14,6 +14,8 @@ export interface Order {
   boosterUsername?: string;
   createdAt: string;
   messages: Message[];
+  gameUsername?: string;
+  gamePassword?: string;
 }
 
 export interface Message {
@@ -27,7 +29,7 @@ export interface Message {
 interface OrderContextType {
   orders: Order[];
   activeOrder: Order | null;
-  createOrder: (currentRank: number, targetRank: number, price: number) => Promise<void>;
+  createOrder: (currentRank: number, targetRank: number, price: number, gameUsername: string, gamePassword: string) => Promise<void>;
   getOrderById: (id: string) => Order | undefined;
   claimOrder: (orderId: string) => Promise<void>;
   completeOrder: (orderId: string) => Promise<void>;
@@ -50,6 +52,8 @@ const MOCK_ORDERS: Order[] = [
     status: 'pending',
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     messages: [],
+    gameUsername: 'testuser1',
+    gamePassword: 'testpass1',
   },
   {
     id: '2',
@@ -77,6 +81,8 @@ const MOCK_ORDERS: Order[] = [
         timestamp: new Date(Date.now() - 30000000).toISOString(),
       },
     ],
+    gameUsername: 'testuser2',
+    gamePassword: 'testpass2',
   },
   {
     id: '3',
@@ -89,6 +95,8 @@ const MOCK_ORDERS: Order[] = [
     boosterUsername: 'booster',
     createdAt: new Date(Date.now() - 259200000).toISOString(),
     messages: [],
+    gameUsername: 'testuser3',
+    gamePassword: 'testpass3',
   },
 ];
 
@@ -135,7 +143,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const createOrder = async (currentRank: number, targetRank: number, price: number) => {
+  const createOrder = async (currentRank: number, targetRank: number, price: number, gameUsername: string, gamePassword: string) => {
     if (!user) throw new Error('User must be logged in to create an order');
 
     const newOrder: Order = {
@@ -147,6 +155,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: 'pending',
       createdAt: new Date().toISOString(),
       messages: [],
+      gameUsername,
+      gamePassword,
     };
 
     setOrders(prev => [...prev, newOrder]);
@@ -280,40 +290,37 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) return [];
     
     if (user.role === 'admin') {
-      return [];
+      return orders.filter(order => order.status === 'in_progress' || order.status === 'completed');
     }
     
     console.log(`Checking booster orders for user ${user.username} with ID ${user.id} and role ${user.role}`);
     
-    const filtered = orders.filter(order => {
-      const isAssignedToUser = order.boosterId === user.id;
-      
-      console.log(`Order ${order.id} - boosterId: ${order.boosterId}, user.id: ${user.id}, status: ${order.status}, isAssigned: ${isAssignedToUser}`);
-      
-      return isAssignedToUser;
-    });
+    const filteredOrders = orders.filter(order => order.boosterId === user.id);
     
-    console.log(`Found ${filtered.length} orders for booster ${user.username}`);
-    return filtered;
+    console.log(`Found ${filteredOrders.length} orders for booster ${user.username}`);
+    return filteredOrders;
   };
 
   const getAvailableOrders = () => {
-    if (!user || user?.role === 'admin') {
-      console.log('Admin user or no user - not showing available orders');
-      return [];
+    if (!user) return [];
+    
+    if (user.role === 'admin') {
+      console.log('Admin user - showing all pending orders');
+      return orders.filter(order => order.status === 'pending');
     }
     
-    console.log('Getting available orders for booster');
-    console.log('All orders:', orders);
-    console.log('Current user ID:', user.id);
+    if (user.role === 'booster') {
+      console.log('Getting available orders for booster');
+      
+      const availableOrders = orders.filter(order => {
+        return order.status === 'pending' && order.userId !== user.id;
+      });
+      
+      console.log(`Found ${availableOrders.length} pending orders for boosters:`, availableOrders);
+      return availableOrders;
+    }
     
-    const availableOrders = orders.filter(order => {
-      console.log(`Checking order ${order.id}: status=${order.status}, userId=${order.userId}, user.id=${user.id}`);
-      return order.status === 'pending' && order.userId !== user.id;
-    });
-    
-    console.log(`Found ${availableOrders.length} pending orders for boosters:`, availableOrders);
-    return availableOrders;
+    return [];
   };
 
   const sendMessage = async (orderId: string, content: string) => {

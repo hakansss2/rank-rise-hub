@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -55,6 +56,8 @@ const loadRegisteredUsers = () => {
     }
   } else {
     console.log('No registered users found in localStorage');
+    // Eğer kayıtlı kullanıcı bulunamazsa, localStorage'a boş bir dizi kaydet
+    localStorage.setItem('valorant_registered_users', JSON.stringify([]));
     registeredUsers = [];
   }
 };
@@ -179,8 +182,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Creating new user:', { ...newUser, password: '***' });
       
-      // Kayıtlı kullanıcılar listesine ekle - IMPORTANT FIX - use array push correctly
-      registeredUsers.push(newUser);
+      // Kayıtlı kullanıcılar listesine ekle
+      // registeredUsers.push(newUser); (düzeltildi)
+      
+      // registeredUsers değişkeni referans olarak kullanılıyor, 
+      // bu yüzden bir kopya oluşturup, kopya üzerinde değişiklik yapıp kaydedelim
+      registeredUsers = [...registeredUsers, newUser];
       
       // LocalStorage'a kaydet
       saveRegisteredUsers();
@@ -336,11 +343,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Keep the existing password if no new one provided
           const currentPassword = registeredUsers[userIndex].password;
           
-          registeredUsers[userIndex] = {
+          // Yeni bir kopya oluşturuyoruz ve dizinin kendisini doğrudan değiştirmekten kaçınıyoruz
+          const updatedRegisteredUsers = [...registeredUsers];
+          updatedRegisteredUsers[userIndex] = {
             ...updatedUser,
             password: newPassword || currentPassword
           };
           
+          registeredUsers = updatedRegisteredUsers;
           saveRegisteredUsers();
           console.log('Updated registered user:', updatedUser.username);
         } else {
