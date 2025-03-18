@@ -36,13 +36,25 @@ const Register = () => {
     try {
       console.log(`Attempting to register user: ${username}, ${email}`);
       await register(email, username, password);
+      
+      // Verify registration success by checking localStorage directly
+      const storedUsers = localStorage.getItem('valorant_registered_users');
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        console.log('Current registered users:', parsedUsers.length);
+        const userFound = parsedUsers.some((u: any) => u.email === email);
+        console.log(`User with email ${email} found in storage: ${userFound}`);
+      } else {
+        console.log('No registered users found in localStorage');
+      }
+      
       toast({
         title: 'Kayıt başarılı',
         description: 'Hoş geldiniz! Artık giriş yaptınız.',
       });
       navigate('/dashboard');
     } catch (error) {
-      console.error(error);
+      console.error('Registration error:', error);
       toast({
         title: 'Kayıt başarısız',
         description: 'Bir hata oluştu. Lütfen tekrar deneyin.',

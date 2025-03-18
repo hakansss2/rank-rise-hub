@@ -122,9 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Reload registered users to get latest data
       loadRegisteredUsers();
+      console.log('Before registration - current registered users:', registeredUsers.length);
       
       // Tüm kullanıcılarda e-posta kontrolü (sabit ve kayıtlı)
       if (USERS.some(u => u.email === email) || registeredUsers.some(u => u.email === email)) {
+        console.error('Registration failed: Email already in use -', email);
         throw new Error('Email already in use');
       }
       
@@ -138,16 +140,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         balance: 0, // New users start with 0 balance
       };
       
+      console.log('Creating new user:', { ...newUser, password: '***' });
+      
       // Kayıtlı kullanıcılar listesine ekle
       registeredUsers.push(newUser);
       
       // LocalStorage'a kaydet
       localStorage.setItem('valorant_registered_users', JSON.stringify(registeredUsers));
+      console.log('After registration - updated registered users:', registeredUsers.length);
+      
+      // Verify the save operation
+      const storedUsers = localStorage.getItem('valorant_registered_users');
+      if (storedUsers) {
+        const parsedUsers = JSON.parse(storedUsers);
+        console.log('Verification - users in localStorage after save:', parsedUsers.length);
+      }
       
       // Kullanıcı bilgilerini state'e ve localStorage'a ekle (şifre olmadan)
       const { password: _, ...userWithoutPassword } = newUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
+      console.log('Registration successful, logged in as:', userWithoutPassword.username);
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
