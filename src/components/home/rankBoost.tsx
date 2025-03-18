@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -57,12 +56,11 @@ const RankBoost = () => {
     if (selectedCurrentTier) {
       setCurrentTierRanks(getRanksByTier(selectedCurrentTier));
       
-      // Improved scrolling to division selection with better centering
       setTimeout(() => {
         if (currentDivisionRef.current) {
           currentDivisionRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'center' // Changed from 'start' to 'center'
+            block: 'center'
           });
         }
       }, 100);
@@ -73,12 +71,11 @@ const RankBoost = () => {
     if (selectedTargetTier) {
       setTargetTierRanks(getRanksByTier(selectedTargetTier));
       
-      // Improved scrolling to target division selection with better centering
       setTimeout(() => {
         if (targetDivisionRef.current) {
           targetDivisionRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'center' // Changed from 'start' to 'center'
+            block: 'center'
           });
         }
       }, 100);
@@ -87,12 +84,11 @@ const RankBoost = () => {
   
   useEffect(() => {
     if (currentRank && !targetRank) {
-      // Improved scrolling to target rank section with better centering
       setTimeout(() => {
         if (targetRankRef.current) {
           targetRankRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'center' // Changed from 'start' to 'center'
+            block: 'center'
           });
         }
       }, 100);
@@ -104,20 +100,16 @@ const RankBoost = () => {
       const calculatedPrice = getRankPrice(currentRank, targetRank);
       setBasePrice(calculatedPrice);
 
-      // Calculate final price with add-ons
       let totalPrice = calculatedPrice;
-      if (priorityOrder) totalPrice += calculatedPrice * 0.2; // 20% increase
-      if (streaming) totalPrice += calculatedPrice * 0.1; // 10% increase
-      // Offline mode is free
-
+      if (priorityOrder) totalPrice += calculatedPrice * 0.2;
+      if (streaming) totalPrice += calculatedPrice * 0.1;
       setFinalPrice(totalPrice);
       
-      // Improved scrolling to order summary with better centering
       setTimeout(() => {
         if (orderSummaryRef.current) {
           orderSummaryRef.current.scrollIntoView({ 
             behavior: 'smooth',
-            block: 'center' // Changed from 'start' to 'center'
+            block: 'center'
           });
         }
       }, 100);
@@ -128,10 +120,10 @@ const RankBoost = () => {
     const tier = tierId as RankTier;
     if (isCurrentRank) {
       setSelectedCurrentTier(tier);
-      setCurrentRank(null); // Reset current rank selection
+      setCurrentRank(null);
     } else {
       setSelectedTargetTier(tier);
-      setTargetRank(null); // Reset target rank selection
+      setTargetRank(null);
     }
   };
   
@@ -179,7 +171,6 @@ const RankBoost = () => {
     }
     
     try {
-      // Check if user has enough balance
       const success = await deductBalance(finalPrice);
       
       if (!success) {
@@ -240,7 +231,7 @@ const RankBoost = () => {
                   return (
                     <div 
                       key={tier.id}
-                      className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer border ${
+                      className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out border ${
                         selectedCurrentTier === tier.id 
                           ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)]' 
                           : 'border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black'
@@ -270,7 +261,7 @@ const RankBoost = () => {
                   ref={currentDivisionRef} 
                   className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg"
                 >
-                  <h3 className="text-white text-center mb-3">Bölüm Seçin</h3>
+                  <h3 className="text-white text-center mb-3">Rank Seçin</h3>
                   <div className="grid grid-cols-3 gap-4">
                     {getRanksByTier(selectedCurrentTier).map(rank => (
                       <div
@@ -296,7 +287,7 @@ const RankBoost = () => {
             <div className="flex items-center justify-center mt-4">
               <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
                 <p className="text-valorant-green text-center animate-pulse">
-                  Lütfen bir bölüm seçin
+                  Lütfen bir rank seçin
                 </p>
               </div>
             </div>
@@ -370,7 +361,7 @@ const RankBoost = () => {
                     ref={targetDivisionRef} 
                     className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg"
                   >
-                    <h3 className="text-white text-center mb-3">Hedef Bölüm Seçin</h3>
+                    <h3 className="text-white text-center mb-3">Hedef Rank Seçin</h3>
                     <div className="grid grid-cols-3 gap-4">
                       {targetTierRanks.map(rank => {
                         const isRankSelectable = rank.id > (currentRank || 0);
@@ -414,7 +405,7 @@ const RankBoost = () => {
             <div className="flex items-center justify-center mt-4">
               <div className="bg-valorant-black/50 px-4 py-2 rounded-lg border border-valorant-green/50">
                 <p className="text-valorant-green text-center animate-pulse">
-                  Lütfen hedef bölüm seçin
+                  Lütfen hedef rank seçin
                 </p>
               </div>
             </div>
@@ -482,7 +473,7 @@ const RankBoost = () => {
                   onValueChange={(value) => handleMobileSelect(value, true, false)}
                 >
                   <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                    <SelectValue placeholder="Bölüm seçin" />
+                    <SelectValue placeholder="Rank seçin" />
                   </SelectTrigger>
                   <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
                     {currentTierRanks.map(rank => (
@@ -501,7 +492,7 @@ const RankBoost = () => {
           
           {!currentRank && selectedCurrentTier && (
             <div className="mt-3 text-valorant-green text-sm animate-pulse">
-              <p>Lütfen bölüm seçiniz</p>
+              <p>Lütfen rank seçiniz</p>
             </div>
           )}
         </div>
@@ -571,7 +562,7 @@ const RankBoost = () => {
                   onValueChange={(value) => handleMobileSelect(value, false, false)}
                 >
                   <SelectTrigger className="w-full bg-valorant-black border-valorant-gray/50 text-white">
-                    <SelectValue placeholder="Bölüm seçin" />
+                    <SelectValue placeholder="Rank seçin" />
                   </SelectTrigger>
                   <SelectContent className="bg-valorant-black border-valorant-gray/50 text-white">
                     {targetTierRanks.map(rank => {
@@ -604,7 +595,7 @@ const RankBoost = () => {
           
           {!targetRank && selectedTargetTier && (
             <div className="mt-3 text-valorant-green text-sm animate-pulse">
-              <p>Lütfen hedef bölüm seçiniz</p>
+              <p>Lütfen hedef rank seçiniz</p>
             </div>
           )}
         </div>

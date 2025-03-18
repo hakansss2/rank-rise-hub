@@ -40,7 +40,7 @@ const Hero = () => {
           <h1 className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6 font-heading transform transition-all duration-700 delay-200 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
             <span className="block">Valorant Rankınızı</span>
             <span className="gradient-text">Profesyonellere</span> 
-            <span className="block">Yükseltmeyi Bırakın</span>
+            <span className="block">Bırakın</span>
           </h1>
           
           <p className={`text-lg sm:text-xl text-gray-300 mb-8 max-w-xl transform transition-all duration-700 delay-400 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>

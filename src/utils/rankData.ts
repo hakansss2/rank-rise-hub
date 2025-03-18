@@ -1,3 +1,4 @@
+
 export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'ascendant' | 'immortal' | 'radiant';
 
 export interface RankInfo {
@@ -113,14 +114,14 @@ export const valorantRanks: RankInfo[] = [
   { id: 18, name: 'Elmas 3', tier: 'diamond', division: 3, image: rankImagesUrls.diamond3 },
   
   // Ascendant Ranks
-  { id: 19, name: 'Yükselen 1', tier: 'ascendant', division: 1, image: rankImagesUrls.ascendant1 },
-  { id: 20, name: 'Yükselen 2', tier: 'ascendant', division: 2, image: rankImagesUrls.ascendant2 },
-  { id: 21, name: 'Yükselen 3', tier: 'ascendant', division: 3, image: rankImagesUrls.ascendant3 },
+  { id: 19, name: 'Yücelik 1', tier: 'ascendant', division: 1, image: rankImagesUrls.ascendant1 },
+  { id: 20, name: 'Yücelik 2', tier: 'ascendant', division: 2, image: rankImagesUrls.ascendant2 },
+  { id: 21, name: 'Yücelik 3', tier: 'ascendant', division: 3, image: rankImagesUrls.ascendant3 },
   
   // Immortal Ranks
-  { id: 22, name: 'Ölümsüz 1', tier: 'immortal', division: 1, image: rankImagesUrls.immortal1 },
-  { id: 23, name: 'Ölümsüz 2', tier: 'immortal', division: 2, image: rankImagesUrls.immortal2 },
-  { id: 24, name: 'Ölümsüz 3', tier: 'immortal', division: 3, image: rankImagesUrls.immortal3 },
+  { id: 22, name: 'Ölümsüzlük 1', tier: 'immortal', division: 1, image: rankImagesUrls.immortal1 },
+  { id: 23, name: 'Ölümsüzlük 2', tier: 'immortal', division: 2, image: rankImagesUrls.immortal2 },
+  { id: 24, name: 'Ölümsüzlük 3', tier: 'immortal', division: 3, image: rankImagesUrls.immortal3 },
   
   // Radiant
   { id: 25, name: 'Radyant', tier: 'radiant', division: 1, image: rankImagesUrls.radiant },
@@ -134,8 +135,8 @@ export const rankTierGroups = [
   { id: 'gold', name: 'Altın', image: rankImagesUrls.gold2 },
   { id: 'platinum', name: 'Platin', image: rankImagesUrls.platinum2 },
   { id: 'diamond', name: 'Elmas', image: rankImagesUrls.diamond2 },
-  { id: 'ascendant', name: 'Yükselen', image: rankImagesUrls.ascendant2 },
-  { id: 'immortal', name: 'Ölümsüz', image: rankImagesUrls.immortal2 },
+  { id: 'ascendant', name: 'Yücelik', image: rankImagesUrls.ascendant2 },
+  { id: 'immortal', name: 'Ölümsüzlük', image: rankImagesUrls.immortal2 },
   { id: 'radiant', name: 'Radyant', image: rankImagesUrls.radiant },
 ];
 
