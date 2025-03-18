@@ -3,9 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import Image from '@/components/ui/image';
+import { useAuth } from '@/context/AuthContext';
 
 const Hero = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const { isAuthenticated } = useAuth();
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -56,11 +58,13 @@ const Hero = () => {
             >
               Hemen Rank Atlayın
             </Button>
-            <Link to="/login">
-              <Button variant="outline" className="border-white text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out bg-zinc-950 hover:bg-zinc-800">
-                Giriş Yap
-              </Button>
-            </Link>
+            {!isAuthenticated && (
+              <Link to="/login">
+                <Button variant="outline" className="border-white text-white font-medium py-6 px-8 rounded-md text-lg transition-all duration-300 ease-in-out bg-zinc-950 hover:bg-zinc-800">
+                  Giriş Yap
+                </Button>
+              </Link>
+            )}
           </div>
           
           <div className={`mt-12 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg transform transition-all duration-700 delay-800 ease-out ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}>
