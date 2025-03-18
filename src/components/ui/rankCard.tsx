@@ -11,6 +11,7 @@ interface RankCardProps {
   showTier?: boolean;
   showPrice?: boolean;
   currency?: 'TRY' | 'USD';
+  disabled?: boolean;
 }
 
 const RankCard: React.FC<RankCardProps> = ({ 
@@ -19,20 +20,34 @@ const RankCard: React.FC<RankCardProps> = ({
   onClick,
   showTier = false,
   showPrice = false,
-  currency = 'TRY'
+  currency = 'TRY',
+  disabled = false
 }) => {
   // Only calculate price if it's going to be shown
   const rankPrice = showPrice ? getRankDivisionPrice(rank.tier, rank.division) : 0;
   const formattedPrice = showPrice ? formatCurrency(rankPrice, currency) : '';
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled) {
+      e.preventDefault();
+      return;
+    }
+    
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <Card 
-      className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer ${
+      className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out ${
+        disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+      } ${
         isSelected 
           ? 'border-2 border-valorant-green bg-valorant-green/10 shadow-[0_0_15px_rgba(22,163,74,0.3)] scale-105' 
           : 'border border-valorant-gray/30 hover:border-valorant-green/50 bg-valorant-black hover:scale-105'
       }`}
-      onClick={onClick}
+      onClick={handleClick}
     >
       <div className="flex flex-col items-center">
         <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
