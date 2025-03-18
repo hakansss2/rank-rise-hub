@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useOrder } from '@/context/OrderContext';
@@ -28,6 +28,8 @@ const RankBoost = () => {
   const [selectedTargetTier, setSelectedTargetTier] = useState<RankTier | null>(null);
   const [currentTierRanks, setCurrentTierRanks] = useState<any[]>([]);
   const [targetTierRanks, setTargetTierRanks] = useState<any[]>([]);
+  
+  const orderSummaryRef = useRef<HTMLDivElement>(null);
   
   const navigate = useNavigate();
   const {
@@ -69,6 +71,16 @@ const RankBoost = () => {
       // Offline mode is free
 
       setFinalPrice(totalPrice);
+      
+      // Scroll to order summary when both ranks are selected
+      setTimeout(() => {
+        if (orderSummaryRef.current) {
+          orderSummaryRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
     }
   }, [currentRank, targetRank, priorityOrder, streaming, offlineMode]);
   
@@ -367,7 +379,7 @@ const RankBoost = () => {
     const target = valorantRanks.find(r => r.id === targetRank);
     
     return (
-      <div className="animate-fade-in mt-8">
+      <div ref={orderSummaryRef} className="animate-fade-in mt-8">
         <h2 className="text-2xl font-bold text-white mb-6 text-center">Sipariş Özeti</h2>
         
         <div className="glass-card p-4 sm:p-6 md:p-8 rounded-xl mb-8 bg-valorant-black/50 border border-valorant-gray/30">
