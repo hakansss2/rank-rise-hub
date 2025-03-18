@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut, ChevronDown, Wallet } from 'lucide-react';
+import { Menu, X, User, LogOut, ChevronDown, Wallet, Plus } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, isAdmin, isBooster, formatBalance } = useAuth();
@@ -34,6 +34,10 @@ const Navbar = () => {
     }
   };
 
+  const navigateToBalance = () => {
+    navigate('/balance');
+  };
+
   return (
     <nav className="bg-valorant-black border-b border-valorant-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-opacity-90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,10 +66,14 @@ const Navbar = () => {
               
               {isAuthenticated ? (
                 <>
-                  <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-2 rounded-md text-sm font-medium">
+                  <button 
+                    onClick={navigateToBalance}
+                    className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-2 rounded-md text-sm font-medium hover:bg-valorant-green/20 transition-colors"
+                  >
                     <Wallet className="w-4 h-4 mr-1" />
                     <span>{safeFormatBalance()}</span>
-                  </div>
+                    <Plus className="w-3 h-3 ml-1" />
+                  </button>
                   <div className="relative group">
                     <button className="flex items-center text-gray-300 hover:bg-valorant-gray hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">
                       <User className="w-4 h-4 mr-1" />
@@ -117,10 +125,14 @@ const Navbar = () => {
           {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
             {isAuthenticated && (
-              <div className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-1 rounded-md text-sm font-medium mr-2">
+              <button
+                onClick={navigateToBalance}
+                className="flex items-center bg-valorant-green/10 text-valorant-green px-3 py-1 rounded-md text-sm font-medium mr-2 hover:bg-valorant-green/20 transition-colors"
+              >
                 <Wallet className="w-3 h-3 mr-1" />
                 <span>{safeFormatBalance()}</span>
-              </div>
+                <Plus className="w-2 h-2 ml-1" />
+              </button>
             )}
             <button
               onClick={toggleNav}
@@ -156,6 +168,11 @@ const Navbar = () => {
             <>
               <Link to="/dashboard" className="text-gray-300 hover:bg-valorant-gray hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                 Hesabım
+              </Link>
+              <Link to="/balance" className="text-valorant-green hover:bg-valorant-gray hover:text-white block px-3 py-2 rounded-md text-base font-medium">
+                <span className="flex items-center">
+                  <Wallet className="w-4 h-4 mr-2" /> Bakiye Yükle
+                </span>
               </Link>
               {isBooster && (
                 <Link to="/booster" className="text-gray-300 hover:bg-valorant-gray hover:text-white block px-3 py-2 rounded-md text-base font-medium">

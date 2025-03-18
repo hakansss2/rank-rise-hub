@@ -14,6 +14,7 @@ import BoosterPanel from "./pages/BoosterPanel";
 import AdminPanel from "./pages/AdminPanel";
 import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
+import Balance from "./pages/Balance";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/order/:id" element={<OrderDetails />} />
               <Route path="/ranks" element={<Index />} />
+              <Route path="/balance" element={<Balance />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
