@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -109,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const allUsers = [...defaultUsers, ...registeredUsersList];
     console.log("getAllUsers returning users:", allUsers.length);
     console.log("Registered users in getAllUsers:", registeredUsersList.length);
+    console.log("Full registered users list:", registeredUsersList);
     return allUsers;
   };
 
@@ -182,12 +182,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Creating new user:', { ...newUser, password: '***' });
       
-      // Kayıtlı kullanıcılar listesine ekle
-      // registeredUsers.push(newUser); (düzeltildi)
-      
-      // registeredUsers değişkeni referans olarak kullanılıyor, 
-      // bu yüzden bir kopya oluşturup, kopya üzerinde değişiklik yapıp kaydedelim
-      registeredUsers = [...registeredUsers, newUser];
+      // Bu yaklaşım sorunlu olabilir, doğrudan değişkene eklemek yerine yeni bir dizi oluşturalım
+      const updatedRegisteredUsers = [...registeredUsers, newUser];
+      registeredUsers = updatedRegisteredUsers;
       
       // LocalStorage'a kaydet
       saveRegisteredUsers();
