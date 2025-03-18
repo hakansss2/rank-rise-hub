@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
 import { RefreshCw, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import UserEditDialog from '@/components/admin/UserEditDialog';
+import DeleteSpecificUsers from '@/components/admin/DeleteSpecificUsers';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -212,6 +213,7 @@ const AdminPanel = () => {
             <p className="text-gray-400">Tüm kullanıcıları yönetin ve bakiyeleri görüntüleyin.</p>
           </div>
           <div className="flex space-x-4">
+            <DeleteSpecificUsers />
             <Button 
               onClick={() => setCleanupDialogOpen(true)} 
               variant="outline" 

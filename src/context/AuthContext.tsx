@@ -26,6 +26,7 @@ interface AuthContextType {
   getAllUsers: () => Array<User>;
   updateUser: (updatedUser: User, newPassword?: string) => Promise<void>;
   removeAllExceptAdmin: () => Promise<void>;
+  removeUsersByEmails: (emails: string[]) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -398,6 +399,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Remove specific users by their email addresses
+  const removeUsersByEmails = async (emails: string[]): Promise<void> => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Load registered users to get latest data
+      loadRegisteredUsers();
+      
+      console.log('Before removal - registered users count:', registeredUsers.length);
+      console.log('Emails to remove:', emails);
+      
+      // Filter out users with the specified emails
+      registeredUsers = registeredUsers.filter(u => !emails.includes(u.email));
+      
+      // Save the filtered list back to localStorage
+      saveRegisteredUsers();
+      
+      console.log('After removal - registered users count:', registeredUsers.length);
+      console.log('Removal complete - removed specified users');
+      
+      // Check if current user was removed, if so log them out
+      if (user && emails.includes(user.email)) {
+        logout();
+      }
+      
+      // Force a re-render to update UI
+      forceUpdate(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Failed to remove users', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -414,6 +453,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getAllUsers,
     updateUser,
     removeAllExceptAdmin,
+    removeUsersByEmails,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -426,4 +466,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

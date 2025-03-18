@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
@@ -41,7 +40,6 @@ interface OrderContextType {
   refreshOrders: () => void;
 }
 
-// Mock order data - This will be replaced by localStorage data if available
 const MOCK_ORDERS: Order[] = [
   {
     id: '1',
@@ -103,14 +101,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [initialized, setInitialized] = useState(false);
 
-  // Load orders from localStorage on mount
   useEffect(() => {
     refreshOrders();
-    // Only set initialized to true after the first load
     setInitialized(true);
   }, []);
 
-  // Save orders to localStorage whenever they change, but only after initialization
   useEffect(() => {
     if (initialized) {
       localStorage.setItem('valorant_orders', JSON.stringify(orders));
@@ -119,7 +114,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [orders, initialized]);
 
   const refreshOrders = () => {
-    // Load orders from localStorage if available
     const storedOrders = localStorage.getItem('valorant_orders');
     console.log('Attempting to load orders from localStorage');
     
@@ -131,12 +125,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setOrders(parsedOrders);
       } catch (error) {
         console.error('Failed to parse stored orders', error);
-        // Initialize with mock data if parsing fails
         setOrders(MOCK_ORDERS);
         localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
       }
     } else {
-      // Initialize with mock data if no saved data exists
       console.log('No saved orders found, using mock data');
       setOrders(MOCK_ORDERS);
       localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
@@ -170,7 +162,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) throw new Error('User must be logged in to claim an order');
     if (!user.id) throw new Error('User ID is required');
     
-    // If the user is an admin, they shouldn't be able to claim orders
     if (user.role === 'admin') {
       toast({
         title: "İşlem Reddedildi",
@@ -203,23 +194,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     const order = orders.find(o => o.id === orderId);
     
-    // Only the assigned booster or an admin can complete an order
     if (order && (order.boosterId === user.id || user.role === 'admin')) {
-      // Calculate 60% of the order price for the booster's commission
       const boosterCommission = Math.round(order.price * 0.6);
       
-      // Add the commission to the booster's balance if it's not an admin completing the order
       if (order.boosterId && order.boosterId !== user.id && user.role === 'admin') {
-        // If admin is completing the order, add balance to the assigned booster
         try {
-          // Load all registered users to find the booster
           const storedUsers = localStorage.getItem('valorant_registered_users');
           if (storedUsers) {
             const parsedUsers = JSON.parse(storedUsers);
             const booster = parsedUsers.find((u: any) => u.id === order.boosterId);
             
             if (booster) {
-              // Update booster's balance
               booster.balance = (booster.balance || 0) + boosterCommission;
               localStorage.setItem('valorant_registered_users', JSON.stringify(parsedUsers));
               
@@ -235,7 +220,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.error('Failed to add commission to booster', error);
         }
       } else if (user.id === order.boosterId) {
-        // If booster is completing their own order, add balance to their account
         try {
           await addBalance(boosterCommission);
           console.log(`Booster earned ${boosterCommission}₺ commission`);
@@ -249,7 +233,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
       
-      // Update the order status to completed
       setOrders(prev => 
         prev.map(order => 
           order.id === orderId 
@@ -269,7 +252,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const cancelOrder = async (orderId: string) => {
-    // Only admins can cancel orders
     if (!user || user.role !== 'admin') {
       toast({
         title: "İşlem Reddedildi",
@@ -297,19 +279,25 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getBoosterOrders = () => {
     if (!user) return [];
     
-    // If the user is an admin, they shouldn't see booster orders
     if (user.role === 'admin') {
       return [];
     }
     
     console.log(`Checking booster orders for user ${user.username} with ID ${user.id} and role ${user.role}`);
-    const filtered = orders.filter(order => order.boosterId === user.id);
+    
+    const filtered = orders.filter(order => {
+      const isAssignedToUser = order.boosterId === user.id;
+      
+      console.log(`Order ${order.id} - boosterId: ${order.boosterId}, user.id: ${user.id}, status: ${order.status}, isAssigned: ${isAssignedToUser}`);
+      
+      return isAssignedToUser;
+    });
+    
     console.log(`Found ${filtered.length} orders for booster ${user.username}`);
     return filtered;
   };
 
   const getAvailableOrders = () => {
-    // Admins should not see available orders to claim
     if (!user || user?.role === 'admin') {
       console.log('Admin user or no user - not showing available orders');
       return [];
@@ -319,7 +307,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     console.log('All orders:', orders);
     console.log('Current user ID:', user.id);
     
-    // Filter out only pending orders that aren't created by the current user
     const availableOrders = orders.filter(order => {
       console.log(`Checking order ${order.id}: status=${order.status}, userId=${order.userId}, user.id=${user.id}`);
       return order.status === 'pending' && order.userId !== user.id;
