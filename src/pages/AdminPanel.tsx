@@ -9,19 +9,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, Edit } from 'lucide-react';
+import { RefreshCw, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import UserEditDialog from '@/components/admin/UserEditDialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AdminPanel = () => {
-  const { user, isAuthenticated, isAdmin, getAllUsers } = useAuth();
+  const { user, isAuthenticated, isAdmin, getAllUsers, removeAllExceptAdmin } = useAuth();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   
-  // Kullanıcı yetkilendirme kontrolü
   React.useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
@@ -36,20 +46,16 @@ const AdminPanel = () => {
     }
   }, [isAuthenticated, isAdmin, navigate]);
 
-  // Memoized refreshUsers function to prevent unnecessary re-renders
   const refreshUsers = useCallback(() => {
     setLoading(true);
     
-    // Clear localStorage cache to ensure fresh data
     try {
-      // Directly access localStorage to read users without the cache
       const rawUsers = localStorage.getItem('valorant_registered_users');
       console.log('Raw registered users data:', rawUsers);
     } catch (e) {
       console.error('Error reading raw localStorage data:', e);
     }
     
-    // Get latest user data
     setTimeout(() => {
       const users = getAllUsers();
       console.log("Refreshed users:", users);
@@ -62,19 +68,16 @@ const AdminPanel = () => {
         title: "Kullanıcı Listesi Güncellendi",
         description: `Toplam ${users.length} kullanıcı bulundu.`,
       });
-    }, 100); // Short timeout to ensure DOM updates
+    }, 100);
   }, [getAllUsers]);
   
-  // Tüm kullanıcıları getir ve state'e at (initial load and when dependencies change)
   useEffect(() => {
     refreshUsers();
-    // Set up interval to refresh users every 5 seconds
     const interval = setInterval(refreshUsers, 5000);
     
     return () => clearInterval(interval);
   }, [refreshUsers]);
   
-  // Kullanıcıları rollerine göre filtrele
   const customers = allUsers.filter(u => u.role === 'customer');
   const boosters = allUsers.filter(u => u.role === 'booster' || u.role === 'admin');
   
@@ -86,7 +89,7 @@ const AdminPanel = () => {
     if (currency === 'TRY') {
       return `${balance.toLocaleString('tr-TR')} ₺`;
     } else {
-      const usdAmount = balance / 35; // Convert TRY to USD
+      const usdAmount = balance / 35;
       return `$${usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
   };
@@ -110,13 +113,10 @@ const AdminPanel = () => {
   };
 
   const handleSaveUser = async (updatedUser: any, newPassword?: string) => {
-    // Update user in localStorage
     try {
-      // First check if user is one of the default users
       const isDefaultUser = ['1', '2', '3'].includes(updatedUser.id);
       
       if (isDefaultUser) {
-        // For demo, we'll just update the UI but not localStorage for default users
         setAllUsers(prev => 
           prev.map(u => u.id === updatedUser.id ? updatedUser : u)
         );
@@ -126,13 +126,11 @@ const AdminPanel = () => {
           description: "Not: Değişiklikler sadece bu oturum için geçerlidir.",
         });
       } else {
-        // For registered users, update localStorage
         const storedUsers = localStorage.getItem('valorant_registered_users');
         if (storedUsers) {
           const parsedUsers = JSON.parse(storedUsers);
           const updatedUsers = parsedUsers.map((u: any) => {
             if (u.id === updatedUser.id) {
-              // Keep the password if no new password provided
               const updatedUserWithPassword = {
                 ...updatedUser,
                 password: newPassword || u.password
@@ -144,7 +142,6 @@ const AdminPanel = () => {
           
           localStorage.setItem('valorant_registered_users', JSON.stringify(updatedUsers));
           
-          // Update current user if user is editing their own profile
           if (user && user.id === updatedUser.id) {
             const currentUserData = JSON.parse(localStorage.getItem('valorant_user') || '{}');
             const updatedCurrentUser = {
@@ -164,7 +161,6 @@ const AdminPanel = () => {
         }
       }
       
-      // Refresh user list
       refreshUsers();
     } catch (error) {
       console.error('Error updating user:', error);
@@ -173,6 +169,30 @@ const AdminPanel = () => {
         description: "Kullanıcı güncellenirken bir hata oluştu.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCleanupUsers = async () => {
+    setLoading(true);
+    try {
+      await removeAllExceptAdmin();
+      refreshUsers();
+      
+      toast({
+        title: "Kullanıcılar Temizlendi",
+        description: "Admin (hakan200505@gmail.com) dışındaki tüm kayıtlı kullanıcılar silindi.",
+      });
+      
+      setCleanupDialogOpen(false);
+    } catch (error) {
+      console.error("Error cleaning up users:", error);
+      toast({
+        title: "Hata",
+        description: "Kullanıcılar silinirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,6 +212,19 @@ const AdminPanel = () => {
             <p className="text-gray-400">Tüm kullanıcıları yönetin ve bakiyeleri görüntüleyin.</p>
           </div>
           <div className="flex space-x-4">
+            <Button 
+              onClick={() => setCleanupDialogOpen(true)} 
+              variant="outline" 
+              className="border-valorant-gray/30 hover:bg-red-500/20 text-red-500 flex items-center gap-2"
+              disabled={loading}
+            >
+              {loading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Kullanıcıları Temizle
+            </Button>
             <Button 
               onClick={refreshUsers} 
               variant="outline" 
@@ -381,6 +414,32 @@ const AdminPanel = () => {
         onOpenChange={setDialogOpen}
         onSave={handleSaveUser}
       />
+      
+      <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
+        <AlertDialogContent className="bg-valorant-black border border-valorant-gray/30 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Kullanıcıları Temizle
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Bu işlem, admin (hakan200505@gmail.com) dışındaki <strong>tüm kayıtlı kullanıcıları silecek</strong>. 
+              Bu işlem geri alınamaz. Devam etmek istiyor musunuz?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-valorant-gray/20 border-valorant-gray/30 text-white hover:bg-valorant-gray/30">
+              İptal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCleanupUsers}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Tüm Kullanıcıları Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       <Footer />
     </div>

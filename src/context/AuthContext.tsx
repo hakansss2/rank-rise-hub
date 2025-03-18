@@ -25,6 +25,7 @@ interface AuthContextType {
   formatBalance: (currency?: 'TRY' | 'USD') => string;
   getAllUsers: () => Array<User>;
   updateUser: (updatedUser: User, newPassword?: string) => Promise<void>;
+  removeAllExceptAdmin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -357,6 +358,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Remove all registered users except admin (hakan200505@gmail.com)
+  const removeAllExceptAdmin = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Load registered users to get latest data
+      loadRegisteredUsers();
+      
+      console.log('Before cleanup - registered users count:', registeredUsers.length);
+      
+      // Filter to keep only the admin account
+      const adminEmail = 'hakan200505@gmail.com';
+      
+      // Keep only users with email hakan200505@gmail.com (which should be in USERS not registeredUsers)
+      registeredUsers = registeredUsers.filter(u => u.email === adminEmail);
+      
+      // Save the filtered list back to localStorage
+      saveRegisteredUsers();
+      
+      console.log('After cleanup - registered users count:', registeredUsers.length);
+      console.log('Cleanup complete - removed all non-admin users');
+      
+      // Check if current user was removed, if so log them out
+      if (user && user.email !== adminEmail && !USERS.some(u => u.id === user.id)) {
+        logout();
+      }
+      
+      // Force a re-render to update UI
+      forceUpdate(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Failed to remove users', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value = {
     user,
     isAuthenticated: !!user,
@@ -372,6 +413,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     formatBalance,
     getAllUsers,
     updateUser,
+    removeAllExceptAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -384,3 +426,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
