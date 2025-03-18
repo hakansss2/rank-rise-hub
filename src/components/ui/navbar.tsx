@@ -38,6 +38,14 @@ const Navbar = () => {
     navigate('/balance');
   };
 
+  const navigateToHome = () => {
+    navigate('/');
+  };
+
+  const navigateToRanks = () => {
+    navigate('/ranks');
+  };
+
   return (
     <nav className="bg-valorant-black border-b border-valorant-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-opacity-90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
