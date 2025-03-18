@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, CreditCard, Plus } from 'lucide-react';
+import { Wallet, CreditCard, Plus, Phone } from 'lucide-react';
 import { 
   Dialog,
   DialogContent,
@@ -16,10 +16,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
 
 const Balance = () => {
   const { user, addBalance, formatBalance } = useAuth();
   const [amount, setAmount] = useState<number>(0);
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -34,6 +36,15 @@ const Balance = () => {
       return;
     }
 
+    if (!phoneNumber || phoneNumber.trim().length < 10) {
+      toast({
+        variant: "destructive",
+        title: "Geçersiz Telefon Numarası",
+        description: "Lütfen geçerli bir telefon numarası giriniz."
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       // This is where payment gateway integration would happen
@@ -44,6 +55,7 @@ const Balance = () => {
         description: `${amount.toLocaleString('tr-TR')} ₺ bakiye hesabınıza eklendi.`,
       });
       setAmount(0);
+      setPhoneNumber('');
     } catch (error) {
       toast({
         variant: "destructive",
@@ -86,9 +98,9 @@ const Balance = () => {
                   </Button>
                 ))}
                 <div className="col-span-3 mt-2">
-                  <label htmlFor="custom-amount" className="text-sm font-medium mb-1 block">
+                  <Label htmlFor="custom-amount" className="text-sm font-medium mb-1 block">
                     Özel Miktar (₺)
-                  </label>
+                  </Label>
                   <Input
                     id="custom-amount"
                     type="number"
@@ -99,13 +111,30 @@ const Balance = () => {
                     className="h-12"
                   />
                 </div>
+
+                <div className="col-span-3 mt-2">
+                  <Label htmlFor="phone-number" className="text-sm font-medium mb-1 block">
+                    Telefon Numarası
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Phone size={20} className="text-muted-foreground" />
+                    <Input
+                      id="phone-number"
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      placeholder="05XX XXX XX XX"
+                      className="h-12"
+                    />
+                  </div>
+                </div>
               </div>
 
               <Dialog>
                 <DialogTrigger asChild>
                   <Button 
                     className="w-full mt-4" 
-                    disabled={amount <= 0 || isProcessing}
+                    disabled={amount <= 0 || isProcessing || !phoneNumber}
                     size="lg"
                   >
                     <CreditCard className="mr-2" />
@@ -127,6 +156,12 @@ const Balance = () => {
                       Onayladığınızda bakiyeniz otomatik olarak artacaktır.
                     </p>
                     <p className="text-sm font-medium">
+                      Telefon: {phoneNumber}
+                    </p>
+                    <p className="text-sm font-medium mt-1">
+                      Tutar: {amount.toLocaleString('tr-TR')} ₺
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-4">
                       Gerçek uygulamada bu aşamada ödeme sağlayıcısının formu görüntülenecektir.
                     </p>
                   </div>
