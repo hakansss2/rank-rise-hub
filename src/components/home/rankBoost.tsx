@@ -27,6 +27,9 @@ const RankBoost = () => {
   const [selectedTargetTier, setSelectedTargetTier] = useState<RankTier | null>(null);
   const [currentTierRanks, setCurrentTierRanks] = useState<any[]>([]);
   const [targetTierRanks, setTargetTierRanks] = useState<any[]>([]);
+  const [currentDivisionRef, setCurrentDivisionRef] = useState<HTMLDivElement | null>(null);
+  const [targetDivisionRef, setTargetDivisionRef] = useState<HTMLDivElement | null>(null);
+  const [targetRankRef, setTargetRankRef] = useState<HTMLDivElement | null>(null);
   
   const orderSummaryRef = useRef<HTMLDivElement>(null);
   
@@ -52,14 +55,48 @@ const RankBoost = () => {
   useEffect(() => {
     if (selectedCurrentTier) {
       setCurrentTierRanks(getRanksByTier(selectedCurrentTier));
+      
+      // Scroll to division selection
+      setTimeout(() => {
+        if (currentDivisionRef.current) {
+          currentDivisionRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
     }
   }, [selectedCurrentTier]);
   
   useEffect(() => {
     if (selectedTargetTier) {
       setTargetTierRanks(getRanksByTier(selectedTargetTier));
+      
+      // Scroll to target division selection
+      setTimeout(() => {
+        if (targetDivisionRef.current) {
+          targetDivisionRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
     }
   }, [selectedTargetTier]);
+  
+  useEffect(() => {
+    if (currentRank && !targetRank) {
+      // Scroll to target rank section when current rank is selected
+      setTimeout(() => {
+        if (targetRankRef.current) {
+          targetRankRef.current.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100);
+    }
+  }, [currentRank]);
   
   useEffect(() => {
     if (currentRank && targetRank) {
@@ -228,7 +265,10 @@ const RankBoost = () => {
               </div>
               
               {selectedCurrentTier && (
-                <div className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg">
+                <div 
+                  ref={currentDivisionRef} 
+                  className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg"
+                >
                   <h3 className="text-white text-center mb-3">Bölüm Seçin</h3>
                   <div className="grid grid-cols-3 gap-4">
                     {getRanksByTier(selectedCurrentTier).map(rank => (
@@ -262,7 +302,7 @@ const RankBoost = () => {
           )}
         </div>
         
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" ref={targetRankRef}>
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Hedef Rankınız</h2>
           
           {targetRank ? (
@@ -325,7 +365,10 @@ const RankBoost = () => {
                     })}
                   </div>
                   
-                  <div className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg">
+                  <div 
+                    ref={targetDivisionRef} 
+                    className="mt-4 p-4 bg-valorant-black/90 border border-valorant-green/30 rounded-lg"
+                  >
                     <h3 className="text-white text-center mb-3">Hedef Bölüm Seçin</h3>
                     <div className="grid grid-cols-3 gap-4">
                       {targetTierRanks.map(rank => {
@@ -462,7 +505,7 @@ const RankBoost = () => {
           )}
         </div>
         
-        <div className="animate-fade-in">
+        <div className="animate-fade-in" ref={targetRankRef}>
           <h3 className="text-xl font-bold text-white mb-4">Hedef Rankınız</h3>
           
           {targetRank ? (
