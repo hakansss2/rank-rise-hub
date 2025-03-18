@@ -1,3 +1,4 @@
+
 export type RankTier = 'iron' | 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'ascendant' | 'immortal' | 'radiant';
 
 export interface RankInfo {
@@ -35,50 +36,50 @@ export function getRankDivisionPrice(tier: RankTier, division: number): number {
   return Math.round(basePrice * multiplier);
 }
 
-// Updated URLs that work reliably
+// Updated URLs with real Valorant rank images
 export const rankImagesUrls = {
   // Iron ranks
-  'iron1': '/placeholder.svg',
-  'iron2': '/placeholder.svg',
-  'iron3': '/placeholder.svg',
+  'iron1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/3/smallicon.png',
+  'iron2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/4/smallicon.png',
+  'iron3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/5/smallicon.png',
   
   // Bronze ranks
-  'bronze1': '/placeholder.svg',
-  'bronze2': '/placeholder.svg',
-  'bronze3': '/placeholder.svg',
+  'bronze1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/6/smallicon.png',
+  'bronze2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/7/smallicon.png',
+  'bronze3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/8/smallicon.png',
   
   // Silver ranks
-  'silver1': '/placeholder.svg',
-  'silver2': '/placeholder.svg',
-  'silver3': '/placeholder.svg',
+  'silver1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/9/smallicon.png',
+  'silver2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/10/smallicon.png',
+  'silver3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/11/smallicon.png',
   
   // Gold ranks
-  'gold1': '/placeholder.svg',
-  'gold2': '/placeholder.svg',
-  'gold3': '/placeholder.svg',
+  'gold1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/12/smallicon.png',
+  'gold2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/13/smallicon.png',
+  'gold3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/14/smallicon.png',
   
   // Platinum ranks
-  'platinum1': '/placeholder.svg',
-  'platinum2': '/placeholder.svg',
-  'platinum3': '/placeholder.svg',
+  'platinum1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/15/smallicon.png',
+  'platinum2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/16/smallicon.png',
+  'platinum3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/17/smallicon.png',
   
   // Diamond ranks
-  'diamond1': '/placeholder.svg',
-  'diamond2': '/placeholder.svg',
-  'diamond3': '/placeholder.svg',
+  'diamond1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/18/smallicon.png',
+  'diamond2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/19/smallicon.png',
+  'diamond3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/20/smallicon.png',
   
   // Ascendant ranks
-  'ascendant1': '/placeholder.svg',
-  'ascendant2': '/placeholder.svg',
-  'ascendant3': '/placeholder.svg',
+  'ascendant1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/21/smallicon.png',
+  'ascendant2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/22/smallicon.png',
+  'ascendant3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/23/smallicon.png',
   
   // Immortal ranks
-  'immortal1': '/placeholder.svg',
-  'immortal2': '/placeholder.svg',
-  'immortal3': '/placeholder.svg',
+  'immortal1': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/24/smallicon.png',
+  'immortal2': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/25/smallicon.png',
+  'immortal3': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/26/smallicon.png',
   
   // Radiant
-  'radiant': '/placeholder.svg'
+  'radiant': 'https://media.valorant-api.com/competitivetiers/03621f52-342b-cf4e-4f86-9350a49c6d04/27/smallicon.png'
 };
 
 export const valorantRanks: RankInfo[] = [
