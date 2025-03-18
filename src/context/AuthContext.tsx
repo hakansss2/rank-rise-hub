@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -26,9 +27,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for demonstration
+// Gerçek kullanıcı verileri (Demo modundan çıkış)
 const MOCK_USERS = [
-  { id: '1', email: 'admin@valorank.com', username: 'admin', password: 'admin123', role: 'admin' as UserRole, balance: 5000 },
+  { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
   { id: '2', email: 'booster@valorank.com', username: 'booster', password: 'booster123', role: 'booster' as UserRole, balance: 1000 },
   { id: '3', email: 'customer@valorank.com', username: 'customer', password: 'customer123', role: 'customer' as UserRole, balance: 2500 },
 ];
