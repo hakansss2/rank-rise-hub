@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { RankInfo } from '@/utils/rankData';
+import { RankInfo, getRankDivisionPrice, formatCurrency } from '@/utils/rankData';
 import { Card } from '@/components/ui/card';
 import Image from './image';
 
@@ -9,6 +9,8 @@ interface RankCardProps {
   isSelected?: boolean;
   onClick?: () => void;
   showTier?: boolean;
+  showPrice?: boolean;
+  currency?: 'TRY' | 'USD';
 }
 
 const RankCard: React.FC<RankCardProps> = ({ 
@@ -16,7 +18,12 @@ const RankCard: React.FC<RankCardProps> = ({
   isSelected = false, 
   onClick,
   showTier = false,
+  showPrice = false,
+  currency = 'TRY'
 }) => {
+  const rankPrice = getRankDivisionPrice(rank.tier, rank.division);
+  const formattedPrice = formatCurrency(rankPrice, currency);
+
   return (
     <Card 
       className={`relative p-4 rounded-lg transition-all duration-300 ease-in-out cursor-pointer hover-scale ${
@@ -31,13 +38,22 @@ const RankCard: React.FC<RankCardProps> = ({
           <div className={`absolute inset-0 rounded-full ${
             isSelected ? 'bg-valorant-green/20' : 'bg-gray-800/40'
           } filter blur-md`}></div>
-          <Image src={rank.image} alt={rank.name} placeholder="/ranks/placeholder.png" className="relative z-10 w-14 h-14 object-contain" />
+          <Image 
+            src={rank.image} 
+            alt={rank.name} 
+            placeholder="https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt8a627ec4743a8f8a/5eb7cf70bab1845bb576da25/TX_CompetitiveTier_Large_16.png" 
+            className="relative z-10 w-14 h-14 object-contain" 
+          />
         </div>
         
         <h3 className="text-lg font-bold text-white">{rank.name}</h3>
         
         {showTier && (
           <span className="text-sm text-gray-400 mt-1 capitalize">{rank.tier}</span>
+        )}
+        
+        {showPrice && (
+          <span className="text-sm text-valorant-green font-medium mt-2">{formattedPrice}</span>
         )}
         
         {isSelected && (

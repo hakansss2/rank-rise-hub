@@ -9,7 +9,8 @@ export interface RankInfo {
   image: string;
 }
 
-export const rankPrices = {
+// Base prices for each rank tier
+export const rankBasePrices = {
   iron: 150,
   bronze: 200,
   silver: 250,
@@ -20,6 +21,20 @@ export const rankPrices = {
   immortal: 1000,
   radiant: 2000,
 };
+
+// Division multipliers (division 1 is cheapest, division 3 is most expensive)
+const divisionMultipliers = {
+  1: 0.8,  // 20% discount for division 1
+  2: 1.0,  // Base price for division 2
+  3: 1.2,  // 20% premium for division 3
+};
+
+// Get price for a specific rank with its division
+export function getRankDivisionPrice(tier: RankTier, division: number): number {
+  const basePrice = rankBasePrices[tier];
+  const multiplier = divisionMultipliers[division as 1 | 2 | 3] || 1.0;
+  return Math.round(basePrice * multiplier);
+}
 
 export const valorantRanks: RankInfo[] = [
   // Iron Ranks
@@ -66,6 +81,60 @@ export const valorantRanks: RankInfo[] = [
   { id: 25, name: 'Radyant', tier: 'radiant', division: 1, image: '/ranks/radiant.png' },
 ];
 
+// Generate rank images URLs for testing
+export const rankImagesUrls = {
+  // Iron ranks
+  'iron1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt825d0c86c912b0e9/5eb7cf66e6f6795e282ffffb/TX_CompetitiveTier_Large_1.png',
+  'iron2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt77fe0c7e257f5f38/5eb7cf66dd8bae6748949349/TX_CompetitiveTier_Large_2.png',
+  'iron3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt492118e24ba3372c/5eb7cf6cbd60ff0916c91dfe/TX_CompetitiveTier_Large_3.png',
+  
+  // Bronze ranks
+  'bronze1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltec0d9c162b9dd3a9/5eb7cf6d173491649f039a8a/TX_CompetitiveTier_Large_4.png',
+  'bronze2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt7262f709c88ed002/5eb7cf6d6509f3755e8f4334/TX_CompetitiveTier_Large_5.png',
+  'bronze3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltc9e6c0f65d4ea982/5eb7cf6e17dae5277e675fe4/TX_CompetitiveTier_Large_6.png',
+  
+  // Silver ranks
+  'silver1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt42e1d6a850ba60ad/5eb7cf6e17dae5277e675fe8/TX_CompetitiveTier_Large_7.png',
+  'silver2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt7f29d1aabe7c6b88/5eb7cf6e8334e1754200f8db/TX_CompetitiveTier_Large_8.png',
+  'silver3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt65d2d3fd1ab45052/5eb7cf6f17dae5277e675fec/TX_CompetitiveTier_Large_9.png',
+  
+  // Gold ranks
+  'gold1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltfcd1fa2226d0ac1b/5eb7cf6fa55acd7617b1b302/TX_CompetitiveTier_Large_10.png',
+  'gold2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt5b9ddc822506e109/5eb7cf6fe823d8752eb85dbf/TX_CompetitiveTier_Large_11.png',
+  'gold3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt5a0edb670b4e2a8c/5eb7cf6fed041c2774d4e482/TX_CompetitiveTier_Large_12.png',
+  
+  // Platinum ranks
+  'platinum1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt290d8c7da30306c0/5eb7cf70e6f6795e282fffc3/TX_CompetitiveTier_Large_13.png',
+  'platinum2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltf505c4b0880424eb/5eb7cf70bd02217d785ff221/TX_CompetitiveTier_Large_14.png',
+  'platinum3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt29d7c4f6ea159507/5eb7cf707c553f48a9b29cce/TX_CompetitiveTier_Large_15.png',
+  
+  // Diamond ranks
+  'diamond1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt8a627ec4743a8f8a/5eb7cf70bab1845bb576da25/TX_CompetitiveTier_Large_16.png',
+  'diamond2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltc7f73a2d16a1d1ac/5eb7cf70d4aeed478c011c15/TX_CompetitiveTier_Large_17.png',
+  'diamond3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt50ad97f9ede45ddf/5eb7cf6fe823d8752eb85dc3/TX_CompetitiveTier_Large_18.png',
+  
+  // Ascendant ranks
+  'ascendant1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltb43644f720525ab0/62a2805b58931557ed9f7c9e/TX_CompetitiveTier_Large_24_Ascendant1.png',
+  'ascendant2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltaa41e789316792b5/62a28081d65a145cbe803b62/TX_CompetitiveTier_Large_25_Ascendant2.png',
+  'ascendant3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt4916b1914babee74/62a28092e0a5a45026ad5c5f/TX_CompetitiveTier_Large_26_Ascendant3.png',
+  
+  // Immortal ranks
+  'immortal1': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt63ea28d4b3a76b50/62a28095e047113facdad43f/TX_CompetitiveTier_Large_27_Immortal1.png',
+  'immortal2': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt5f7aa25761a78426/5eb7cf71e6f6795e282fffc7/TX_CompetitiveTier_Large_20.png',
+  'immortal3': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/blt39a2da8f648a07e5/5eb7cf7221f0df298845a0ab/TX_CompetitiveTier_Large_21.png',
+  
+  // Radiant
+  'radiant': 'https://images.contentstack.io/v3/assets/bltb6530b271fddd0b1/bltbcf81f3a1025a91d/5eb7cf73b60a0862fe2f8e37/TX_CompetitiveTier_Large_22.png'
+};
+
+// Update rank images with actual URLs
+valorantRanks.forEach(rank => {
+  const imageKey = `${rank.tier}${rank.division}`;
+  if (rankImagesUrls[imageKey as keyof typeof rankImagesUrls]) {
+    rank.image = rankImagesUrls[imageKey as keyof typeof rankImagesUrls];
+  }
+});
+
 export function getRankById(id: number): RankInfo | undefined {
   return valorantRanks.find(rank => rank.id === id);
 }
@@ -79,15 +148,15 @@ export function getRankPrice(currentRank: number, targetRank: number): number {
   
   if (!current || !target) return 0;
   
-  // Calculate ranks between current and target
-  const ranksBetween = valorantRanks.filter(r => r.id > currentRank && r.id <= targetRank);
-  
-  // Sum up prices for each rank tier transition
-  for (const rank of ranksBetween) {
-    totalPrice += rankPrices[rank.tier] / 3; // Divide by 3 for divisions within tier
+  // Calculate prices for each rank in between
+  for (let i = currentRank + 1; i <= targetRank; i++) {
+    const rank = valorantRanks.find(r => r.id === i);
+    if (rank) {
+      totalPrice += getRankDivisionPrice(rank.tier, rank.division);
+    }
   }
   
-  return Math.round(totalPrice);
+  return totalPrice;
 }
 
 // Currency conversion (example rates)

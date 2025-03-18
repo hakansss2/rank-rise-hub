@@ -116,6 +116,8 @@ const RankBoost = () => {
                 rank={rank}
                 isSelected={currentRank === rank.id}
                 onClick={() => handleRankSelect(rank.id)}
+                showPrice={true}
+                currency={currency}
               />
             ))}
           </div>
@@ -132,6 +134,8 @@ const RankBoost = () => {
                 rank={rank}
                 isSelected={targetRank === rank.id}
                 onClick={() => handleRankSelect(rank.id)}
+                showPrice={true}
+                currency={currency}
               />
             ))}
           </div>

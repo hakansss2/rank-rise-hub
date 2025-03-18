@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +7,7 @@ import Footer from '@/components/ui/footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { valorantRanks, rankPrices } from '@/utils/rankData';
+import { valorantRanks, rankBasePrices, getRankDivisionPrice } from '@/utils/rankData';
 import { 
   Users, 
   Briefcase, 
@@ -18,16 +17,20 @@ import {
   Trash, 
   Edit,
   Save,
-  XCircle
+  XCircle,
+  Info
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import RankCard from '@/components/ui/rankCard';
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin } = useAuth();
-  const { orders } = useOrder();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
+  if (!isAuthenticated || !isAdmin) {
+    navigate('/login');
+    return null;
+  }
 
   const [boosters, setBoosters] = useState([
     { id: '2', email: 'booster@valorank.com', username: 'booster', role: 'booster' },
@@ -36,14 +39,9 @@ const AdminPanel = () => {
   
   const [newBooster, setNewBooster] = useState({ email: '', username: '', password: '' });
   
-  const [prices, setPrices] = useState({ ...rankPrices });
+  const [basePrices, setBasePrices] = useState({ ...rankBasePrices });
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [priceValue, setPriceValue] = useState<number>(0);
-
-  if (!isAuthenticated || !isAdmin) {
-    navigate('/login');
-    return null;
-  }
 
   const handleAddBooster = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +85,7 @@ const AdminPanel = () => {
   };
 
   const savePrice = (tier: string) => {
-    setPrices({ ...prices, [tier]: priceValue });
+    setBasePrices({ ...basePrices, [tier]: priceValue });
     setEditingPrice(null);
     toast({
       title: 'Fiyat güncellendi',
@@ -256,21 +254,22 @@ const AdminPanel = () => {
             
             <TabsContent value="prices" className="pt-6">
               <div className="mb-6">
-                <h3 className="text-lg font-bold mb-4">Rank Fiyatları</h3>
-                <p className="text-gray-400 text-sm">
-                  Bu fiyatlar, her rank kademesi için baz fiyat olarak kullanılacaktır. Fiyatlar Türk Lirası (₺) cinsindendir.
+                <h3 className="text-lg font-bold mb-4">Rank Baz Fiyatları</h3>
+                <p className="text-gray-400 text-sm flex items-center">
+                  <Info className="w-4 h-4 mr-2 text-valorant-green" />
+                  Bu fiyatlar, her rank kademesi için baz fiyat olarak kullanılacaktır. Division 1: %20 indirimli, Division 2: Baz fiyat, Division 3: %20 ek ücretli olarak uygulanır.
                 </p>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(prices).map(([tier, price]) => (
+                {Object.entries(basePrices).map(([tier, price]) => (
                   <div 
                     key={tier}
                     className="bg-valorant-gray/10 border border-valorant-gray/30 rounded-lg p-4 flex flex-col"
                   >
                     <div className="flex items-center mb-3">
                       <RankCard 
-                        rank={valorantRanks.find(r => r.tier === tier && r.division === 1)!}
+                        rank={valorantRanks.find(r => r.tier === tier && r.division === 2)!}
                         showTier={true}
                       />
                     </div>
@@ -307,17 +306,30 @@ const AdminPanel = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex justify-between items-center mt-2">
-                        <div className="text-xl font-bold">{price} ₺</div>
-                        <Button
-                          onClick={() => startEditingPrice(tier, price)}
-                          variant="outline"
-                          className="border-valorant-green text-valorant-green hover:bg-valorant-green/10"
-                          size="sm"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Düzenle
-                        </Button>
+                      <div className="mt-2">
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm text-gray-400">Division 1:</div>
+                            <div className="text-valorant-green">{Math.round(price * 0.8)} ₺</div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm text-gray-400">Division 2:</div>
+                            <div className="text-valorant-green">{price} ₺</div>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm text-gray-400">Division 3:</div>
+                            <div className="text-valorant-green">{Math.round(price * 1.2)} ₺</div>
+                          </div>
+                          <Button
+                            onClick={() => startEditingPrice(tier, price)}
+                            variant="outline"
+                            className="border-valorant-green text-valorant-green hover:bg-valorant-green/10 mt-2"
+                            size="sm"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Düzenle
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
