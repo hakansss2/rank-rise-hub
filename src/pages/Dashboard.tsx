@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,17 +9,20 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency, getRankById } from '@/utils/rankData';
 import { Clock, CheckCircle, XCircle, MessageCircle, ArrowRight } from 'lucide-react';
 import Image from '@/components/ui/image';
-
 const Dashboard = () => {
-  const { user, isAuthenticated } = useAuth();
-  const { getUserOrders, setActiveOrder } = useOrder();
+  const {
+    user,
+    isAuthenticated
+  } = useAuth();
+  const {
+    getUserOrders,
+    setActiveOrder
+  } = useOrder();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
-
   const orders = getUserOrders();
-
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'pending':
         return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30';
       case 'in_progress':
@@ -33,9 +35,8 @@ const Dashboard = () => {
         return 'bg-gray-500/10 text-gray-500 border-gray-500/30';
     }
   };
-
   const getStatusIcon = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'pending':
         return <Clock className="w-4 h-4 mr-1" />;
       case 'in_progress':
@@ -48,9 +49,8 @@ const Dashboard = () => {
         return null;
     }
   };
-
   const getStatusText = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'pending':
         return 'Bekleniyor';
       case 'in_progress':
@@ -63,7 +63,6 @@ const Dashboard = () => {
         return status;
     }
   };
-
   const handleViewOrder = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
@@ -71,18 +70,14 @@ const Dashboard = () => {
       navigate(`/order/${orderId}`);
     }
   };
-
   const toggleCurrency = () => {
     setCurrency(prev => prev === 'TRY' ? 'USD' : 'TRY');
   };
-
   if (!isAuthenticated) {
     navigate('/login');
     return null;
   }
-
-  return (
-    <div className="min-h-screen bg-valorant-black text-white">
+  return <div className="min-h-screen bg-valorant-black text-white">
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -120,33 +115,21 @@ const Dashboard = () => {
         <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-6 shadow-xl mb-12">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Siparişlerim</h2>
-            <Button 
-              onClick={toggleCurrency}
-              variant="outline"
-              className="border-valorant-gray/30 text-white hover:bg-valorant-gray/20"
-            >
+            <Button onClick={toggleCurrency} variant="outline" className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-green-600">
               {currency === 'TRY' ? '₺ TRY' : '$ USD'}
             </Button>
           </div>
           
-          {orders.length === 0 ? (
-            <div className="text-center py-12">
+          {orders.length === 0 ? <div className="text-center py-12">
               <div className="text-gray-400 mb-4">Henüz hiç sipariş vermediniz.</div>
-              <Button 
-                onClick={() => navigate('/ranks')}
-                className="bg-valorant-green hover:bg-valorant-darkGreen text-white"
-              >
+              <Button onClick={() => navigate('/ranks')} className="bg-valorant-green hover:bg-valorant-darkGreen text-white">
                 Rank Boost Satın Al
               </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {orders.map((order) => {
-                const currentRank = getRankById(order.currentRank);
-                const targetRank = getRankById(order.targetRank);
-                
-                return (
-                  <div key={order.id} className="border border-valorant-gray/30 rounded-lg p-4 hover:border-valorant-green/30 transition-all duration-300">
+            </div> : <div className="space-y-4">
+              {orders.map(order => {
+            const currentRank = getRankById(order.currentRank);
+            const targetRank = getRankById(order.targetRank);
+            return <div key={order.id} className="border border-valorant-gray/30 rounded-lg p-4 hover:border-valorant-green/30 transition-all duration-300">
                     <div className="flex flex-col md:flex-row justify-between md:items-center">
                       <div className="flex flex-col mb-4 md:mb-0">
                         <div className="flex items-center mb-2">
@@ -163,14 +146,7 @@ const Dashboard = () => {
                           <div className="flex flex-col items-center mr-6">
                             <span className="text-xs text-gray-400 mb-1">Mevcut</span>
                             <div className="flex items-center">
-                              {currentRank && (
-                                <Image 
-                                  src={currentRank.image} 
-                                  alt={currentRank.name} 
-                                  className="w-10 h-10 mr-2"
-                                  placeholder="/ranks/placeholder.png"
-                                />
-                              )}
+                              {currentRank && <Image src={currentRank.image} alt={currentRank.name} className="w-10 h-10 mr-2" placeholder="/ranks/placeholder.png" />}
                               <span className="font-medium">{currentRank?.name}</span>
                             </div>
                           </div>
@@ -180,14 +156,7 @@ const Dashboard = () => {
                           <div className="flex flex-col items-center ml-2">
                             <span className="text-xs text-gray-400 mb-1">Hedef</span>
                             <div className="flex items-center">
-                              {targetRank && (
-                                <Image 
-                                  src={targetRank.image} 
-                                  alt={targetRank.name} 
-                                  className="w-10 h-10 mr-2"
-                                  placeholder="/ranks/placeholder.png"
-                                />
-                              )}
+                              {targetRank && <Image src={targetRank.image} alt={targetRank.name} className="w-10 h-10 mr-2" placeholder="/ranks/placeholder.png" />}
                               <span className="font-medium">{targetRank?.name}</span>
                             </div>
                           </div>
@@ -199,32 +168,21 @@ const Dashboard = () => {
                           {formatCurrency(order.price, currency)}
                         </div>
                         
-                        <Button 
-                          onClick={() => handleViewOrder(order.id)}
-                          className="bg-valorant-green hover:bg-valorant-darkGreen text-white"
-                        >
-                          {order.status === 'in_progress' ? (
-                            <>
+                        <Button onClick={() => handleViewOrder(order.id)} className="bg-valorant-green hover:bg-valorant-darkGreen text-white">
+                          {order.status === 'in_progress' ? <>
                               <MessageCircle className="w-4 h-4 mr-2" />
                               Mesajlar ({order.messages.length})
-                            </>
-                          ) : (
-                            'Detaylar'
-                          )}
+                            </> : 'Detaylar'}
                         </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  </div>;
+          })}
+            </div>}
         </div>
       </div>
       
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
