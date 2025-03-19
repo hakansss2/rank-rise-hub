@@ -33,6 +33,21 @@ const BoosterPanel = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   
   useEffect(() => {
+    refreshOrders();
+    console.log("Refreshing orders in BoosterPanel");
+  }, [refreshOrders, refreshKey]);
+  
+  const boosterOrders = getBoosterOrders();
+  const availableOrders = getAvailableOrders();
+  
+  console.log('Available Orders in BoosterPanel:', availableOrders);
+  console.log('Booster Orders in BoosterPanel:', boosterOrders);
+  
+  const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
+  const completedOrders = boosterOrders.filter(o => o.status === 'completed');
+  const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
+
+  useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
       navigate('/login');
@@ -48,28 +63,7 @@ const BoosterPanel = () => {
     console.log('Current user in BoosterPanel:', user);
     console.log('isAuthenticated:', isAuthenticated);
     console.log('isBooster:', isBooster);
-    
-    // Ensure orders are loaded when the component mounts
-    refreshOrders();
-    console.log("Refreshing orders in BoosterPanel");
-  }, [isAuthenticated, isBooster, navigate, user, refreshOrders]);
-  
-  // Get orders whenever refreshKey changes (to force re-render)
-  useEffect(() => {
-    refreshOrders();
-    console.log("Refreshing orders due to refreshKey change");
-  }, [refreshKey, refreshOrders]);
-  
-  // Get the orders after each render to ensure we have the latest data
-  const boosterOrders = getBoosterOrders();
-  const availableOrders = getAvailableOrders();
-  
-  console.log('Available Orders in BoosterPanel:', availableOrders);
-  console.log('Booster Orders in BoosterPanel:', boosterOrders);
-  
-  const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
-  const completedOrders = boosterOrders.filter(o => o.status === 'completed');
-  const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
+  }, [isAuthenticated, isBooster, navigate, user]);
 
   const handleRefresh = () => {
     refreshOrders();
