@@ -6,7 +6,9 @@ import {
   setData, 
   addStorageListener, 
   removeData,
-  refreshData
+  refreshData,
+  syncAllTabs,
+  initializeStorageHealthCheck
 } from '@/utils/storageService';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -56,25 +58,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(0);
+  
+  // Set up health check on mount
+  useEffect(() => {
+    const cleanupHealthCheck = initializeStorageHealthCheck();
+    return () => cleanupHealthCheck();
+  }, []);
 
   // Load all users and current user on mount
   useEffect(() => {
     console.log('🔄 AuthProvider - Initial mount, loading data and checking session');
     
-    // Load registered users
-    const loadedUsers = getData(STORAGE_KEYS.USERS, []);
-    setRegisteredUsers(loadedUsers);
-    setRegisteredUsersCount(loadedUsers.length);
-    console.log('📌 Initial loading of registered users:', loadedUsers.length, loadedUsers);
-    
-    // Check for existing user session
-    const storedUser = getData(STORAGE_KEYS.CURRENT_USER, null);
-    if (storedUser) {
-      setUser(storedUser);
-      console.log('User session restored:', storedUser.username);
+    try {
+      // Load registered users with validation and recovery
+      const loadedUsers = refreshData(STORAGE_KEYS.USERS, []);
+      setRegisteredUsers(loadedUsers);
+      setRegisteredUsersCount(loadedUsers.length);
+      console.log('📌 Initial loading of registered users:', loadedUsers.length, loadedUsers);
+      
+      // Check for existing user session
+      const storedUser = refreshData(STORAGE_KEYS.CURRENT_USER, null);
+      if (storedUser) {
+        setUser(storedUser);
+        console.log('User session restored:', storedUser.username);
+      }
+      
+      // Force sync across tabs
+      syncAllTabs();
+    } catch (error) {
+      console.error('❌ Error loading initial data:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   }, []);
 
   // Setup storage event listeners

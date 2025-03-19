@@ -1,8 +1,15 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  STORAGE_KEYS, 
+  getData, 
+  setData, 
+  refreshData, 
+  syncAllTabs,
+  initializeStorageHealthCheck
+} from '@/utils/storageService';
 
 export interface Order {
   id: string;
@@ -101,9 +108,6 @@ const MOCK_ORDERS: Order[] = [
   },
 ];
 
-// Constants for localStorage keys
-const ORDERS_STORAGE_KEY = 'valorant_orders';
-
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -113,93 +117,96 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [initialized, setInitialized] = useState(false);
 
-  // Load orders from localStorage on component mount
+  // Setup health check on mount
   useEffect(() => {
-    console.log('🔄 OrderProvider - Initial mount, attempting to load orders');
-    refreshOrders();
-    setInitialized(true);
+    const cleanupHealthCheck = initializeStorageHealthCheck();
+    return () => cleanupHealthCheck();
   }, []);
 
-  // Periodically refresh orders from localStorage (every 5 seconds)
+  // Load orders from localStorage on component mount with enhanced reliability
+  useEffect(() => {
+    console.log('🔄 OrderProvider - Initial mount, attempting to load orders');
+    
+    try {
+      // Use refreshData for enhanced validation and recovery
+      const loadedOrders = refreshData(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
+      console.log('✅ OrderProvider - Successfully loaded orders from localStorage:', loadedOrders.length);
+      
+      // Validate and ensure all orders have the correct status type
+      const validatedOrders = loadedOrders.map((order: any) => {
+        // Ensure status is one of the valid types
+        let validStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' = 'pending';
+        
+        if (order.status === 'pending' || 
+            order.status === 'in_progress' || 
+            order.status === 'completed' || 
+            order.status === 'cancelled') {
+          validStatus = order.status;
+        } else {
+          console.warn(`⚠️ OrderProvider - Invalid status found: ${order.status}. Defaulting to 'pending'`);
+        }
+        
+        return {
+          ...order,
+          status: validStatus
+        } as Order;
+      });
+      
+      setOrders(validatedOrders);
+      
+      // Force sync across tabs
+      syncAllTabs();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error loading initial orders:', error);
+      setOrders(MOCK_ORDERS);
+      setData(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
+    } finally {
+      setInitialized(true);
+    }
+  }, []);
+
+  // Setup periodic refresh for orders
   useEffect(() => {
     console.log('🔄 OrderProvider - Setting up periodic order refresh');
     
     const intervalId = setInterval(() => {
-      console.log('🔄 OrderProvider - Periodic refresh of orders');
-      refreshOrders();
+      try {
+        console.log('🔄 OrderProvider - Periodic refresh of orders');
+        const latestOrders = refreshData(STORAGE_KEYS.ORDERS, orders);
+        
+        // Only update state if different to avoid unnecessary renders
+        if (JSON.stringify(latestOrders) !== JSON.stringify(orders)) {
+          setOrders(latestOrders);
+        }
+      } catch (error) {
+        console.error('❌ OrderProvider - Error in periodic refresh:', error);
+      }
     }, 5000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [orders]);
 
-  // Save orders to localStorage when they change
+  // Save orders to localStorage when they change with enhanced reliability
   useEffect(() => {
     if (initialized) {
       try {
-        console.log('🔄 OrderProvider - Saving orders to localStorage:', orders.length, orders);
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-        console.log('✅ OrderProvider - Saved orders to localStorage successfully');
+        console.log('🔄 OrderProvider - Saving orders to localStorage:', orders.length);
         
-        // Verify the save operation
-        const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
-        if (storedOrders) {
-          const parsedOrders = JSON.parse(storedOrders);
-          console.log('🔍 OrderProvider - Verification: localStorage has', parsedOrders.length, 'orders');
+        // Use setData from our enhanced storage service
+        const success = setData(STORAGE_KEYS.ORDERS, orders);
+        
+        if (success) {
+          console.log('✅ OrderProvider - Saved orders to localStorage successfully');
+          // Force sync across tabs
+          syncAllTabs();
+        } else {
+          console.error('❌ OrderProvider - Failed to save orders to localStorage');
         }
       } catch (error) {
         console.error('❌ OrderProvider - Failed to save orders to localStorage:', error);
       }
     }
   }, [orders, initialized]);
-
-  const refreshOrders = () => {
-    console.log('🔄 OrderProvider - refreshOrders called');
-    try {
-      const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
-      console.log('🔍 OrderProvider - Raw localStorage data for orders:', storedOrders);
-      
-      if (storedOrders) {
-        try {
-          const parsedOrders = JSON.parse(storedOrders);
-          console.log('✅ OrderProvider - Successfully loaded orders from localStorage:', parsedOrders.length);
-          console.log('📊 OrderProvider - Order details:', parsedOrders);
-          
-          // Validate and ensure all orders have the correct status type
-          const validatedOrders = parsedOrders.map((order: any) => {
-            // Ensure status is one of the valid types
-            let validStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' = 'pending';
-            
-            if (order.status === 'pending' || 
-                order.status === 'in_progress' || 
-                order.status === 'completed' || 
-                order.status === 'cancelled') {
-              validStatus = order.status;
-            } else {
-              console.warn(`⚠️ OrderProvider - Invalid status found: ${order.status}. Defaulting to 'pending'`);
-            }
-            
-            return {
-              ...order,
-              status: validStatus
-            } as Order;
-          });
-          
-          setOrders(validatedOrders);
-        } catch (error) {
-          console.error('❌ OrderProvider - Failed to parse stored orders:', error);
-          console.log('⚠️ OrderProvider - Falling back to mock orders');
-          setOrders(MOCK_ORDERS);
-          localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(MOCK_ORDERS));
-        }
-      } else {
-        console.log('ℹ️ OrderProvider - No saved orders found, using mock data');
-        setOrders(MOCK_ORDERS);
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(MOCK_ORDERS));
-      }
-    } catch (error) {
-      console.error('❌ OrderProvider - Error in refreshOrders:', error);
-    }
-  };
 
   const createOrder = async (currentRank: number, targetRank: number, price: number, gameUsername: string, gamePassword: string) => {
     if (!user) throw new Error('User must be logged in to create an order');
@@ -228,12 +235,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Save to localStorage immediately
       console.log('🔄 OrderProvider - Saving orders after adding new order');
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
-      
-      // Verify the update
-      const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
-      const parsedOrders = storedOrders ? JSON.parse(storedOrders) : [];
-      console.log('🔍 OrderProvider - Verification: localStorage now has', parsedOrders.length, 'orders');
+      setData(STORAGE_KEYS.ORDERS, updatedOrders);
       
       return Promise.resolve();
     } catch (error) {
@@ -282,7 +284,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Save to localStorage
       console.log('🔄 OrderProvider - Saving orders after claiming order');
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      setData(STORAGE_KEYS.ORDERS, updatedOrders);
       
       return Promise.resolve();
     } catch (error) {
@@ -350,7 +352,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         
         // Save to localStorage
         console.log('🔄 OrderProvider - Saving orders after completing order');
-        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+        setData(STORAGE_KEYS.ORDERS, updatedOrders);
         
         return Promise.resolve();
       } else {
@@ -392,7 +394,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Save to localStorage
       console.log('🔄 OrderProvider - Saving orders after cancelling order');
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      setData(STORAGE_KEYS.ORDERS, updatedOrders);
       
       return Promise.resolve();
     } catch (error) {
@@ -484,12 +486,48 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Save to localStorage
       console.log('🔄 OrderProvider - Saving orders after adding message');
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      setData(STORAGE_KEYS.ORDERS, updatedOrders);
       
       return Promise.resolve();
     } catch (error) {
       console.error('❌ OrderProvider - Error sending message:', error);
       throw error;
+    }
+  };
+  
+  const refreshOrders = () => {
+    console.log('🔄 OrderProvider - refreshOrders called');
+    try {
+      // Use our enhanced refreshData method
+      const refreshedOrders = refreshData(STORAGE_KEYS.ORDERS, MOCK_ORDERS);
+      console.log('✅ OrderProvider - Successfully refreshed orders:', refreshedOrders.length);
+      
+      // Validate and ensure all orders have the correct status type
+      const validatedOrders = refreshedOrders.map((order: any) => {
+        // Ensure status is one of the valid types
+        let validStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' = 'pending';
+        
+        if (order.status === 'pending' || 
+            order.status === 'in_progress' || 
+            order.status === 'completed' || 
+            order.status === 'cancelled') {
+          validStatus = order.status;
+        } else {
+          console.warn(`⚠️ OrderProvider - Invalid status found: ${order.status}. Defaulting to 'pending'`);
+        }
+        
+        return {
+          ...order,
+          status: validStatus
+        } as Order;
+      });
+      
+      setOrders(validatedOrders);
+      
+      // Force sync across tabs
+      syncAllTabs();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error in refreshOrders:', error);
     }
   };
 

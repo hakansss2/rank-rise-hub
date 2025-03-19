@@ -1,4 +1,3 @@
-
 /**
  * Centralized storage service for consistent data handling across browser sessions
  */
@@ -11,7 +10,8 @@ export const STORAGE_KEYS = {
   USERS: `${STORAGE_PREFIX}registered_users`,
   CURRENT_USER: `${STORAGE_PREFIX}user`,
   ORDERS: `${STORAGE_PREFIX}orders`,
-  STORAGE_VERSION: `${STORAGE_PREFIX}storage_version`
+  STORAGE_VERSION: `${STORAGE_PREFIX}storage_version`,
+  INITIALIZED: `${STORAGE_PREFIX}initialized`
 };
 
 // Check and initialize storage version
@@ -22,6 +22,23 @@ const initializeStorage = () => {
       localStorage.setItem(STORAGE_KEYS.STORAGE_VERSION, STORAGE_VERSION);
       console.log('🔧 Storage initialized with version:', STORAGE_VERSION);
     }
+    
+    const initialized = localStorage.getItem(STORAGE_KEYS.INITIALIZED);
+    if (!initialized) {
+      const defaultUsers = [];
+      const defaultOrders = [];
+      
+      if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(defaultUsers));
+      }
+      
+      if (!localStorage.getItem(STORAGE_KEYS.ORDERS)) {
+        localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(defaultOrders));
+      }
+      
+      localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
+      console.log('🔧 Storage initialized with default data');
+    }
   } catch (e) {
     console.error('❌ Failed to initialize storage version:', e);
   }
@@ -31,24 +48,40 @@ const initializeStorage = () => {
 initializeStorage();
 
 /**
- * Get data from localStorage with validation
+ * Get data from localStorage with validation and fallback
  * @param key Storage key 
  * @param defaultValue Default value if not found or invalid
  */
 export const getData = <T>(key: string, defaultValue: T): T => {
   try {
     const data = localStorage.getItem(key);
-    if (!data) return defaultValue;
+    if (!data) {
+      console.warn(`⚠️ No data found for ${key}, using default value`);
+      
+      if (key === STORAGE_KEYS.USERS || key === STORAGE_KEYS.ORDERS) {
+        setData(key, defaultValue);
+        console.log(`🔄 Re-initialized missing key: ${key}`);
+      }
+      
+      return defaultValue;
+    }
     
     try {
       const parsedData = JSON.parse(data);
       if (Array.isArray(defaultValue) && !Array.isArray(parsedData)) {
         console.warn(`⚠️ Expected array for ${key} but got:`, typeof parsedData);
+        setData(key, defaultValue);
         return defaultValue;
       }
       return parsedData;
     } catch (parseError) {
       console.error(`❌ Error parsing ${key}:`, parseError);
+      
+      if (key === STORAGE_KEYS.USERS || key === STORAGE_KEYS.ORDERS) {
+        setData(key, defaultValue);
+        console.log(`🔄 Recovered corrupted key: ${key}`);
+      }
+      
       return defaultValue;
     }
   } catch (e) {
@@ -58,13 +91,12 @@ export const getData = <T>(key: string, defaultValue: T): T => {
 };
 
 /**
- * Store data in localStorage with safeguards
+ * Store data in localStorage with safeguards and redundancy
  * @param key Storage key
  * @param data Data to store
  */
 export const setData = <T>(key: string, data: T): boolean => {
   try {
-    // Validate data before storing
     if (data === undefined || data === null) {
       console.error(`❌ Attempted to store invalid data in ${key}:`, data);
       return false;
@@ -73,7 +105,26 @@ export const setData = <T>(key: string, data: T): boolean => {
     const json = JSON.stringify(data);
     localStorage.setItem(key, json);
     
-    // Storage event won't fire in same tab, so manually dispatch
+    const verificationCheck = localStorage.getItem(key);
+    if (!verificationCheck) {
+      console.error(`❌ Verification failed: Could not read back data for ${key}`);
+      return false;
+    }
+    
+    if (key === STORAGE_KEYS.USERS || key === STORAGE_KEYS.ORDERS) {
+      const backupKey = `${key}_backup_${Date.now()}`;
+      localStorage.setItem(backupKey, json);
+      
+      const allKeys = Object.keys(localStorage);
+      const backupKeys = allKeys.filter(k => k.startsWith(`${key}_backup_`)).sort();
+      
+      if (backupKeys.length > 2) {
+        for (let i = 0; i < backupKeys.length - 2; i++) {
+          localStorage.removeItem(backupKeys[i]);
+        }
+      }
+    }
+    
     window.dispatchEvent(new StorageEvent('storage', {
       key,
       newValue: json,
@@ -85,6 +136,22 @@ export const setData = <T>(key: string, data: T): boolean => {
     return true;
   } catch (e) {
     console.error(`❌ Failed to save data to ${key}:`, e);
+    
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      try {
+        const allKeys = Object.keys(localStorage);
+        const backupKeys = allKeys.filter(k => k.includes('_backup_'));
+        
+        backupKeys.forEach(bk => localStorage.removeItem(bk));
+        
+        localStorage.setItem(key, JSON.stringify(data));
+        console.log(`🔄 Recovered from storage quota exceeded by clearing backups`);
+        return true;
+      } catch (recoveryError) {
+        console.error(`❌ Failed to recover from storage quota exceeded:`, recoveryError);
+      }
+    }
+    
     return false;
   }
 };
@@ -107,7 +174,6 @@ export const addStorageListener = (
     }
   };
   
-  // Listen for storage events (other tabs)
   window.addEventListener('storage', handleStorage);
   
   return () => {
@@ -140,20 +206,132 @@ export const clearAllData = (): void => {
 };
 
 /**
- * Force refresh for specific key
+ * Force refresh for specific key with additional verification
  */
 export const refreshData = <T>(key: string, defaultValue: T): T => {
-  const data = getData(key, defaultValue);
+  console.log(`🔄 Refreshing data for ${key}`);
   
-  // Notify listeners about the refresh
-  const json = JSON.stringify(data);
-  window.dispatchEvent(new StorageEvent('storage', {
-    key,
-    newValue: json,
-    oldValue: localStorage.getItem(key) || null,
-    storageArea: localStorage,
-    url: window.location.href
-  }));
+  try {
+    const dataStr = localStorage.getItem(key);
+    if (!dataStr) {
+      console.warn(`⚠️ No data found during refresh for ${key}, using default`);
+      setData(key, defaultValue);
+      return defaultValue;
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(dataStr);
+    } catch (e) {
+      console.error(`❌ Error parsing data during refresh for ${key}:`, e);
+      
+      if (key === STORAGE_KEYS.USERS || key === STORAGE_KEYS.ORDERS) {
+        const allKeys = Object.keys(localStorage);
+        const backupKeys = allKeys
+          .filter(k => k.startsWith(`${key}_backup_`))
+          .sort()
+          .reverse();
+        
+        let recovered = false;
+        for (const backupKey of backupKeys) {
+          try {
+            const backupData = localStorage.getItem(backupKey);
+            if (backupData) {
+              const parsedBackupData = JSON.parse(backupData);
+              setData(key, parsedBackupData);
+              data = parsedBackupData;
+              recovered = true;
+              console.log(`🔄 Recovered ${key} from backup: ${backupKey}`);
+              break;
+            }
+          } catch (backupError) {
+            console.error(`❌ Error recovering from backup ${backupKey}:`, backupError);
+          }
+        }
+        
+        if (!recovered) {
+          setData(key, defaultValue);
+          return defaultValue;
+        }
+      } else {
+        setData(key, defaultValue);
+        return defaultValue;
+      }
+    }
+    
+    if (Array.isArray(defaultValue) && !Array.isArray(data)) {
+      console.warn(`⚠️ Expected array during refresh for ${key} but got:`, typeof data);
+      setData(key, defaultValue);
+      return defaultValue;
+    }
+    
+    const json = JSON.stringify(data);
+    window.dispatchEvent(new StorageEvent('storage', {
+      key,
+      newValue: json,
+      oldValue: localStorage.getItem(key) || null,
+      storageArea: localStorage,
+      url: window.location.href
+    }));
+    
+    return data;
+  } catch (e) {
+    console.error(`❌ Storage error during refresh for ${key}:`, e);
+    return defaultValue;
+  }
+};
+
+/**
+ * Synchronize data across all tabs by force
+ * Call this function after important data changes
+ */
+export const syncAllTabs = (): void => {
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key,
+          newValue: data,
+          oldValue: null,
+          storageArea: localStorage,
+          url: window.location.href
+        }));
+      }
+    });
+    console.log('🔄 Forced cross-tab synchronization');
+  } catch (e) {
+    console.error('❌ Failed to force cross-tab synchronization:', e);
+  }
+};
+
+/**
+ * Initialize periodic storage health check and synchronization
+ * Call this in your app initialization
+ */
+export const initializeStorageHealthCheck = (): (() => void) => {
+  console.log('🔄 Setting up storage health check');
   
-  return data;
+  const intervalId = setInterval(() => {
+    try {
+      const usersExists = localStorage.getItem(STORAGE_KEYS.USERS) !== null;
+      const ordersExists = localStorage.getItem(STORAGE_KEYS.ORDERS) !== null;
+      
+      if (!usersExists) {
+        console.warn('⚠️ Users data missing, restoring default');
+        setData(STORAGE_KEYS.USERS, []);
+      }
+      
+      if (!ordersExists) {
+        console.warn('⚠️ Orders data missing, restoring default');
+        setData(STORAGE_KEYS.ORDERS, []);
+      }
+      
+      syncAllTabs();
+    } catch (e) {
+      console.error('❌ Error in storage health check:', e);
+    }
+  }, 60000);
+  
+  return () => clearInterval(intervalId);
 };

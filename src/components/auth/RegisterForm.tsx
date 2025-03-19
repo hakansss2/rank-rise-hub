@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,8 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { STORAGE_KEYS, refreshData } from '@/utils/storageService';
+import { STORAGE_KEYS, refreshData, syncAllTabs } from '@/utils/storageService';
 
-// Form schema with validations
 const formSchema = z.object({
   email: z.string().email('Geçerli bir e-posta adresi girin.'),
   username: z.string().min(3, 'Kullanıcı adı en az 3 karakter olmalı.'),
@@ -37,7 +36,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Set up form with validation
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -48,35 +46,56 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
     },
   });
 
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      try {
+        const latestUsers = refreshData(STORAGE_KEYS.USERS, []);
+        console.log('📌 RegisterForm - Periodic refresh of users count:', latestUsers.length);
+      } catch (error) {
+        console.error('❌ Error in periodic refresh:', error);
+      }
+    }, 3000); // Check every 3 seconds
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
 
     try {
       console.log(`📌 Attempting to register user: ${data.username}, ${data.email}`);
       
-      // Check storage before registration
-      console.log('📌 Refreshing users data before registration');
-      refreshData(STORAGE_KEYS.USERS, []);
+      for (let i = 0; i < 3; i++) {
+        console.log(`📌 Pre-registration check ${i+1}: Refreshing users data`);
+        refreshData(STORAGE_KEYS.USERS, []);
+        if (i < 2) await new Promise(resolve => setTimeout(resolve, 200));
+      }
       
-      // Attempt registration
       await registerUser(data.email, data.username, data.password);
       
-      // Force multiple immediate checks after registration for consistency
-      const verifyRegistration = () => {
-        const usersAfterRegistration = refreshData(STORAGE_KEYS.USERS, []);
-        console.log('📌 Verification check - users after registration:', usersAfterRegistration.length);
-        
-        // Check if user was properly added
-        const userExists = usersAfterRegistration.some((u: any) => u.email === data.email);
-        console.log('📌 New user verification:', { found: userExists, email: data.email });
-        
-        // Manually trigger storage event to notify other tabs/components
-        window.dispatchEvent(new Event('storage'));
+      syncAllTabs();
+      
+      const verifyRegistration = async () => {
+        try {
+          const usersAfterRegistration = refreshData(STORAGE_KEYS.USERS, []);
+          console.log('📌 Verification check - users after registration:', usersAfterRegistration.length);
+          
+          const userExists = usersAfterRegistration.some((u: any) => u.email === data.email);
+          console.log('📌 New user verification:', { found: userExists, email: data.email });
+          
+          if (!userExists) {
+            console.error('❌ User registration verification failed - user not found in storage');
+          }
+          
+          syncAllTabs();
+        } catch (error) {
+          console.error('❌ Error in registration verification:', error);
+        }
       };
       
-      // Run multiple verification checks
-      verifyRegistration();
-      setTimeout(verifyRegistration, 300);
+      await verifyRegistration();
+      setTimeout(() => verifyRegistration(), 500);
+      setTimeout(() => verifyRegistration(), 1500);
       
       toast({
         title: 'Kayıt başarılı',
