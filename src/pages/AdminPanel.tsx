@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AdminPanel = () => {
-  const { user, isAuthenticated, isAdmin, getAllUsers, removeAllExceptAdmin } = useAuth();
+  const { user, isAuthenticated, isAdmin, getAllUsers, removeAllExceptAdmin, registeredUsersCount } = useAuth();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -33,6 +34,7 @@ const AdminPanel = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   
+  // Whenever admin panel loads, refresh users
   useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
@@ -47,7 +49,7 @@ const AdminPanel = () => {
     }
     
     refreshUsers();
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]);
 
   const refreshUsers = useCallback(() => {
     setLoading(true);

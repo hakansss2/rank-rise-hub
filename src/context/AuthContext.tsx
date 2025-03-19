@@ -28,6 +28,7 @@ interface AuthContextType {
   updateUser: (updatedUser: User, newPassword?: string) => Promise<void>;
   removeAllExceptAdmin: () => Promise<void>;
   removeUsersByEmails: (emails: string[]) => Promise<void>;
+  registeredUsersCount: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -401,6 +402,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   };
+  
+  // Calculate the registered users count (excluding admin)
+  const registeredUsersCount = registeredUsers.length;
 
   const value = {
     user,
@@ -419,6 +423,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUser,
     removeAllExceptAdmin,
     removeUsersByEmails,
+    registeredUsersCount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

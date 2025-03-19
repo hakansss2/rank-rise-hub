@@ -31,8 +31,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [registeredUsers, setRegisteredUsers] = useState<number>(0);
-  const { register: registerUser, getAllUsers } = useAuth();
+  const { register: registerUser, registeredUsersCount } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -47,42 +46,12 @@ const Register = () => {
     },
   });
 
-  // Get registered users count
-  useEffect(() => {
-    const loadRegisteredUsersCount = () => {
-      try {
-        // Get all users and subtract 1 for the admin user
-        const allUsers = getAllUsers();
-        const adminUserCount = 1; // Just the default admin
-        const registeredCount = Math.max(0, allUsers.length - adminUserCount);
-        
-        console.log('Register page - registered users count calculation:');
-        console.log('- Total users:', allUsers.length);
-        console.log('- Admin users:', adminUserCount);
-        console.log('- Registered users:', registeredCount);
-        
-        setRegisteredUsers(registeredCount);
-      } catch (error) {
-        console.error('Error loading registered users count:', error);
-        setRegisteredUsers(0);
-      }
-    };
-
-    loadRegisteredUsersCount();
-  }, [getAllUsers]);
-
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
 
     try {
       console.log(`Attempting to register user: ${data.username}, ${data.email}`);
       await registerUser(data.email, data.username, data.password);
-      
-      // Update the registered users count after successful registration
-      const allUsers = getAllUsers();
-      const adminUserCount = 1;
-      const registeredCount = Math.max(0, allUsers.length - adminUserCount);
-      setRegisteredUsers(registeredCount);
       
       toast({
         title: 'Kayıt başarılı',
@@ -110,8 +79,8 @@ const Register = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2 font-heading">Hemen <span className="gradient-text">Kayıt Olun</span></h1>
             <p className="text-gray-400">Valorant boost hizmetimize erişim için hesap oluşturun</p>
-            {registeredUsers > 0 && (
-              <p className="text-sm text-valorant-green mt-2">Şu ana kadar {registeredUsers} kişi kayıt oldu!</p>
+            {registeredUsersCount > 0 && (
+              <p className="text-sm text-valorant-green mt-2">Şu ana kadar {registeredUsersCount} kişi kayıt oldu!</p>
             )}
           </div>
           
