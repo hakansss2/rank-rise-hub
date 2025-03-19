@@ -11,7 +11,7 @@ const app = express();
 // Production için CORS ayarları
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://sizin-frontend-url-adresiniz.netlify.app', 'https://www.sizin-frontend-url-adresiniz.netlify.app'] 
+    ? ['https://rankrisehub.netlify.app', 'https://www.rankrisehub.netlify.app'] 
     : 'http://localhost:5173', // Vite'ın varsayılan portu
   optionsSuccessStatus: 200
 };
