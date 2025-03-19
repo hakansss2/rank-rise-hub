@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -27,12 +28,19 @@ const DeleteSpecificUsers: React.FC = () => {
     try {
       console.log("DeleteSpecificUsers - Refreshing user list from localStorage");
       const rawData = localStorage.getItem('valorant_registered_users');
+      console.log("DeleteSpecificUsers - Raw localStorage data:", rawData);
       
       if (rawData) {
-        console.log("DeleteSpecificUsers - Raw localStorage data:", rawData);
         try {
           const parsedUsers = JSON.parse(rawData);
           console.log("DeleteSpecificUsers - Parsed users:", parsedUsers.length, parsedUsers);
+          
+          // Validate if users array is valid
+          if (!Array.isArray(parsedUsers)) {
+            console.error("DeleteSpecificUsers - localStorage data is not an array:", parsedUsers);
+            setEmailsToRemove([]);
+            return;
+          }
           
           // Filter out the admin user (we never want to delete the admin)
           const usersWithoutAdmin = parsedUsers.filter((user: any) => 
@@ -65,7 +73,30 @@ const DeleteSpecificUsers: React.FC = () => {
   // Prepare the list of registered users for deletion
   useEffect(() => {
     refreshUserList();
-  }, []);
+    
+    // Add a debug check of localStorage on mount
+    console.log("DeleteSpecificUsers - Initial localStorage check:", localStorage.getItem('valorant_registered_users'));
+    
+    // Check if we can get more users through the getAllUsers function
+    const allUsers = getAllUsers();
+    console.log("DeleteSpecificUsers - All users from getAllUsers:", allUsers.length, allUsers);
+
+    // Add a global debug check on localStorage every 10 seconds
+    const intervalId = setInterval(() => {
+      console.log("DeleteSpecificUsers - Periodic localStorage check:", localStorage.getItem('valorant_registered_users'));
+      
+      // Manually try to parse the localStorage data
+      try {
+        const data = JSON.parse(localStorage.getItem('valorant_registered_users') || '[]');
+        console.log("DeleteSpecificUsers - Parsed periodic check:", data.length, data);
+      } catch (e) {
+        console.error("DeleteSpecificUsers - Error parsing JSON in periodic check:", e);
+      }
+    }, 10000); // Check every 10 seconds
+    
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [getAllUsers]);
 
   const handleDeleteSpecificUsers = async () => {
     if (emailsToRemove.length === 0) {
@@ -109,24 +140,86 @@ const DeleteSpecificUsers: React.FC = () => {
     }
   };
 
+  // Add a manual refresh button function
+  const handleManualRefresh = () => {
+    console.log("DeleteSpecificUsers - Manual refresh triggered");
+    console.log("DeleteSpecificUsers - Current localStorage:", localStorage.getItem('valorant_registered_users'));
+    
+    // Try to manually verify localStorage data
+    try {
+      const data = JSON.parse(localStorage.getItem('valorant_registered_users') || '[]');
+      console.log("DeleteSpecificUsers - Manual refresh parsed data:", data.length, data);
+      
+      // Alternative approach: Get users directly from localStorage
+      const usersFromStorage = data.filter((user: any) => 
+        user && user.email && user.email !== 'hakan200505@gmail.com'
+      );
+      
+      console.log("DeleteSpecificUsers - Manual refresh filtered users:", usersFromStorage.length, usersFromStorage);
+      
+      // Update the state with emails
+      if (usersFromStorage.length > 0) {
+        const emails = usersFromStorage.map((user: any) => user.email);
+        setEmailsToRemove(emails);
+        console.log("DeleteSpecificUsers - Manual refresh set emails:", emails);
+      } else {
+        setEmailsToRemove([]);
+        console.log("DeleteSpecificUsers - Manual refresh no users found");
+      }
+    } catch (e) {
+      console.error("DeleteSpecificUsers - Error in manual refresh:", e);
+    }
+    
+    refreshUserList();
+  };
+
   return (
-    <>
-      <Button 
-        onClick={() => {
-          refreshUserList(); // Refresh list before opening dialog
-          setDialogOpen(true);
-        }} 
-        variant="outline" 
-        className="border-valorant-gray/30 hover:bg-orange-500/20 text-orange-500 flex items-center gap-2"
-        disabled={loading || emailsToRemove.length === 0}
-      >
-        {loading ? (
-          <RefreshCw className="h-4 w-4 animate-spin" />
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <Button 
+          onClick={handleManualRefresh} 
+          variant="outline" 
+          className="border-valorant-gray/30 hover:bg-blue-500/20 text-blue-500 flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Kullanıcı Listesini Yenile
+        </Button>
+        
+        <Button 
+          onClick={() => {
+            refreshUserList(); // Refresh list before opening dialog
+            setDialogOpen(true);
+          }} 
+          variant="outline" 
+          className="border-valorant-gray/30 hover:bg-orange-500/20 text-orange-500 flex items-center gap-2"
+          disabled={loading || emailsToRemove.length === 0}
+        >
+          {loading ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+          Kayıtlı Kullanıcıları Sil ({emailsToRemove.length})
+        </Button>
+      </div>
+      
+      <div className="text-sm text-gray-400">
+        {emailsToRemove.length > 0 ? (
+          <div>
+            <p>Silinecek kullanıcı e-postaları ({emailsToRemove.length}):</p>
+            <ul className="mt-1 list-disc list-inside">
+              {emailsToRemove.slice(0, 5).map((email, index) => (
+                <li key={index}>{email}</li>
+              ))}
+              {emailsToRemove.length > 5 && (
+                <li>...ve {emailsToRemove.length - 5} kullanıcı daha</li>
+              )}
+            </ul>
+          </div>
         ) : (
-          <Trash2 className="h-4 w-4" />
+          <p>Silinecek kayıtlı kullanıcı bulunmuyor.</p>
         )}
-        Kayıtlı Kullanıcıları Sil ({emailsToRemove.length})
-      </Button>
+      </div>
       
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent className="bg-valorant-black border border-valorant-gray/30 text-white">
@@ -153,7 +246,7 @@ const DeleteSpecificUsers: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 };
 
