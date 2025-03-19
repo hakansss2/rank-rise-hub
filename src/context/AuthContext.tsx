@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -34,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Default user data
 const USERS = [
-  { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
+  { id: '1', email: 'admin@test.com', username: 'admin', password: 'password', role: 'admin' as UserRole, balance: 5000 },
   { id: '2', email: 'booster@test.com', username: 'booster', password: 'password', role: 'booster' as UserRole, balance: 1000 },
   { id: '3', email: 'customer@test.com', username: 'customer', password: 'password', role: 'customer' as UserRole, balance: 2000 },
 ];
@@ -99,7 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Map users to remove passwords
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
-    const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }) => rest);
+    
+    // Filter out any users with undefined properties
+    const registeredUsersList = latestRegisteredUsers
+      .filter((user: any) => user && user.id && user.email && user.username)
+      .map(({ password, ...rest }: any) => rest);
     
     // Log the combined users to verify
     const allUsers = [...defaultUsers, ...registeredUsersList];
@@ -346,7 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Filter to keep only the admin account if it exists
-      const adminEmail = 'hakan200505@gmail.com';
+      const adminEmail = 'admin@test.com';
       const latestRegisteredUsers = loadRegisteredUsers();
       const filteredUsers = latestRegisteredUsers.filter(u => u.email === adminEmail);
       
