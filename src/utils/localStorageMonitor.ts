@@ -9,7 +9,7 @@
 export const monitorLocalStorage = (
   key: string, 
   prefix: string = '🔎', 
-  interval: number = 1000  // Daha sık kontrol etmek için 3000'den 1000'e düşürüldü
+  interval: number = 500  // Daha sık kontrol için 1 saniyeden 500ms'ye düşürüldü
 ): (() => void) => {
   const checkLocalStorage = () => {
     console.log(`${prefix} Checking localStorage for ${key}...`);
@@ -177,4 +177,35 @@ export const validateAndRepairLocalStorage = (key: string) => {
     console.error(`🔧 Storage error while validating ${key}:`, e);
     return null;
   }
+};
+
+// Daha sık yenilemeler için yeni bir fonksiyon
+export const setupAggressiveRefresh = (key: string, onUpdate?: (data: any) => void) => {
+  console.log(`⚡ Setting up aggressive refresh for ${key}`);
+  
+  // Önce veriyi onar
+  validateAndRepairLocalStorage(key);
+  
+  // Hemen yenile
+  const initialData = forceRefreshLocalStorage(key);
+  if (onUpdate && initialData) {
+    onUpdate(initialData);
+  }
+  
+  // 3 farklı aralıkta eşzamanlı yenileme - düşük, orta ve yüksek sıklıkta
+  const quickInterval = setInterval(() => {
+    const data = forceRefreshLocalStorage(key);
+    if (onUpdate && data) {
+      onUpdate(data);
+    }
+  }, 750); // Çok sık kontrol (750ms)
+  
+  const mediumInterval = setInterval(() => {
+    validateAndRepairLocalStorage(key);
+  }, 3000); // Düzenli doğrulama (3s)
+  
+  return () => {
+    clearInterval(quickInterval);
+    clearInterval(mediumInterval);
+  };
 };

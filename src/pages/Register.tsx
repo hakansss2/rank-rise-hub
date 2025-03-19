@@ -6,56 +6,47 @@ import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
-import { monitorLocalStorage, forceRefreshLocalStorage, validateAndRepairLocalStorage } from '@/utils/localStorageMonitor';
+import { 
+  monitorLocalStorage, 
+  forceRefreshLocalStorage, 
+  validateAndRepairLocalStorage,
+  setupAggressiveRefresh
+} from '@/utils/localStorageMonitor';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
 
   // Kayıt sayfası mount olduğunda localStorage kontrolü ve onarımı
   useEffect(() => {
-    console.log('📋 Register component mounted - Validating localStorage and setting up monitoring');
+    console.log('📋 Register component mounted - Setting up intensive localStorage monitoring');
     
     // İlk olarak localStorage'ı onar
     validateAndRepairLocalStorage('valorant_registered_users');
     
-    // Mount olduğunda localStorage'ı hemen kontrol et
-    const initialUsers = forceRefreshLocalStorage('valorant_registered_users');
-    console.log('🔍 Initial localStorage check on Register mount:', 
-      initialUsers ? 
-        `${initialUsers.length} users found: ${JSON.stringify(initialUsers)}` : 
-        'No users found or error parsing');
+    // Daha agresif yenileme kur (callback olmayan versiyon)
+    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users');
     
-    // Daha sık izleme (her 1 saniye)
-    const cleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register', 1000);
+    // Ayrıca normal izleme de kur (daha az sıklıkta)
+    const monitorCleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register', 2000);
     
-    // Asenkron işlemleri yakalamak için 1 saniye sonra ikinci bir kontrol planla
-    const secondCheckTimer = setTimeout(() => {
-      console.log('⏱️ Scheduled second localStorage check...');
-      const secondCheck = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('🔍 Secondary localStorage check result:', 
-        secondCheck ? 
-          `${secondCheck.length} users found: ${JSON.stringify(secondCheck)}` : 
-          'No users found or error parsing');
+    // Kayıt sonrası beklenen işlemleri planla
+    const postRegisterCheck = setTimeout(() => {
+      console.log('⏱️ Post-registration checks starting...');
+      
+      // localStorage'ı tekrar kontrol et ve onar
+      validateAndRepairLocalStorage('valorant_registered_users');
+      
+      // En güncel verileri al
+      const latestData = forceRefreshLocalStorage('valorant_registered_users');
+      console.log('📊 Post-registration data check:', latestData);
+      
     }, 1000);
     
-    // Başka bir kontrol daha ekle - bazen işlemler gecikebilir
-    const thirdCheckTimer = setTimeout(() => {
-      console.log('⏱️ Scheduled third localStorage check...');
-      const thirdCheck = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('🔍 Third localStorage check result:', 
-        thirdCheck ? 
-          `${thirdCheck.length} users found: ${JSON.stringify(thirdCheck)}` : 
-          'No users found or error parsing');
-          
-      // localStorage'daki verileri doğrula ve onar
-      validateAndRepairLocalStorage('valorant_registered_users');
-    }, 3000);
-    
     return () => {
-      console.log('📋 Register component unmounting - Cleaning up monitors and timers');
-      cleanup();
-      clearTimeout(secondCheckTimer);
-      clearTimeout(thirdCheckTimer);
+      console.log('📋 Register component unmounting - Cleaning up all monitors');
+      aggressiveCleanup();
+      monitorCleanup();
+      clearTimeout(postRegisterCheck);
     };
   }, []);
 

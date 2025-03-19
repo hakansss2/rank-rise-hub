@@ -1,10 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, RefreshCw } from 'lucide-react';
-import { forceRefreshLocalStorage, validateAndRepairLocalStorage } from '@/utils/localStorageMonitor';
+import { forceRefreshLocalStorage, validateAndRepairLocalStorage, setupAggressiveRefresh } from '@/utils/localStorageMonitor';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -27,52 +26,44 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
-  // Bileşen mount olduğunda localStorage'ı doğrula ve onar
+  const refreshUserData = useCallback(() => {
+    console.log('🔄 UserTable - refreshUserData executing');
+    onRefresh();
+  }, [onRefresh]);
+  
   useEffect(() => {
-    console.log('🏁 UserTable - Component mounted, validating localStorage');
-    const repairedUsers = validateAndRepairLocalStorage('valorant_registered_users');
-    if (repairedUsers && repairedUsers.length !== users.length) {
-      console.log('🔄 UserTable - Repaired users data is different, triggering refresh');
-      onRefresh();
-    }
+    console.log('🏁 UserTable - Component mounted, setting up aggressive refresh');
     
-    // İlk yükleme anında localStorage'dan doğrudan kontrol
-    console.log('🔄 UserTable - Initial direct localStorage check');
-    const directUsers = forceRefreshLocalStorage('valorant_registered_users');
+    validateAndRepairLocalStorage('valorant_registered_users');
     
-    if (directUsers && Array.isArray(directUsers)) {
-      console.log('📊 UserTable - Fresh localStorage users data:', directUsers.length, directUsers);
-      
-      // En son verileri almak için daima refresh'i tetikle
-      if (directUsers.length !== users.length) {
-        console.log('🔄 UserTable - User count different, triggering refresh');
-        onRefresh();
-      }
-    }
-  }, []);
-
-  // Daha iyi tepkimelilik için daha sık kontroller
-  useEffect(() => {
-    // Çok kısa aralıklı kontrol için
-    const quickCheckInterval = setInterval(() => {
-      console.log('🔄 UserTable - Quick direct localStorage check');
-      const directUsers = forceRefreshLocalStorage('valorant_registered_users');
-      
-      if (directUsers && Array.isArray(directUsers)) {
-        console.log('📊 UserTable - Fresh localStorage users data:', directUsers.length, directUsers);
+    const cleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
+      if (data && Array.isArray(data)) {
+        console.log('⚡ UserTable - Received fresh data from aggressive refresh:', data.length);
         
-        // En son verileri almak için daima refresh'i tetikle
-        if (directUsers.length !== localUsers.length) {
-          console.log('🔄 UserTable - User count changed, triggering refresh');
-          onRefresh();
+        if (data.length !== users.length) {
+          console.log('🔄 UserTable - Data count changed, triggering refresh');
+          refreshUserData();
         }
       }
-    }, 2000); // Her 2 saniyede kontrol et
+    });
     
-    return () => clearInterval(quickCheckInterval);
-  }, [localUsers.length, onRefresh]);
+    const directCheckInterval = setInterval(() => {
+      console.log('🔍 UserTable - Direct check');
+      
+      const directData = forceRefreshLocalStorage('valorant_registered_users');
+      if (directData && Array.isArray(directData) && directData.length !== users.length) {
+        console.log('🔄 UserTable - Direct check found data change, refreshing');
+        refreshUserData();
+      }
+    }, 1500);
+    
+    return () => {
+      console.log('🏁 UserTable - Component unmounting, cleaning up refresh');
+      cleanup();
+      clearInterval(directCheckInterval);
+    };
+  }, [users.length, refreshUserData]);
 
-  // Özellikler değiştiğinde yerel durumu güncelle
   useEffect(() => {
     console.log('📊 UserTable - Props changed, updating local state with', users.length, 'users');
     setLocalUsers(users);
@@ -106,35 +97,22 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     try {
       console.log('🔄 UserTable - Manual force refresh initiated');
       
-      // Önce localStorage'ı doğrula ve onar
       validateAndRepairLocalStorage('valorant_registered_users');
       
-      // localStorage'dan anında yenile
       const directUsers = forceRefreshLocalStorage('valorant_registered_users');
       console.log('📊 UserTable - Manual refresh data:', directUsers);
       
-      // Geçerli bir yanıt alıp almadığımızı kontrol et
-      if (directUsers && Array.isArray(directUsers)) {
-        // Ebeveyn yenilemeyi tetikle
-        onRefresh();
-        
-        toast({
-          title: "Kullanıcı verileri güncellendi",
-          description: `${directUsers.length} kullanıcı bulundu.`,
-        });
-      } else {
-        console.error('❌ UserTable - Invalid data during manual refresh');
-        toast({
-          title: "Veri yenileme başarısız",
-          description: "Yeniden deneyebilir veya sayfayı yenileyebilirsiniz.",
-          variant: "destructive",
-        });
-      }
+      refreshUserData();
+      
+      toast({
+        title: "Kullanıcı verileri yenilendi",
+        description: `${Array.isArray(directUsers) ? directUsers.length : 0} kullanıcı bulundu.`,
+      });
     } catch (error) {
       console.error('❌ UserTable - Error during manual refresh:', error);
       toast({
         title: "Veri yenileme hatası",
-        description: "Beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin.",
+        description: "Beklenmeyen bir hata oluştu. Sayfayı yenileyin.",
         variant: "destructive",
       });
     } finally {
