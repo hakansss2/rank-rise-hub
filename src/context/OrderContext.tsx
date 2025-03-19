@@ -1,7 +1,8 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { orderApi } from '@/utils/apiService';
+import { orderApi, OrderResponse, MessageResponse } from '@/utils/apiService';
 
 export interface Order {
   id: string;
@@ -45,6 +46,24 @@ interface OrderContextType {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
+// OrderResponse'dan Order'a dönüştürme yardımcı fonksiyonu
+const mapResponseToOrder = (orderResponse: OrderResponse): Order => {
+  return {
+    id: orderResponse.id,
+    userId: orderResponse.userId,
+    currentRank: orderResponse.currentRank,
+    targetRank: orderResponse.targetRank,
+    price: orderResponse.price,
+    status: orderResponse.status,
+    boosterId: orderResponse.boosterId,
+    boosterUsername: orderResponse.boosterUsername,
+    createdAt: orderResponse.createdAt,
+    messages: orderResponse.messages as Message[],
+    gameUsername: orderResponse.gameUsername,
+    gamePassword: orderResponse.gamePassword
+  };
+};
+
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAdmin, addBalance } = useAuth();
   const { toast } = useToast();
@@ -64,7 +83,10 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('🔄 OrderProvider - Fetching orders from API');
       const ordersData = await orderApi.getOrders();
       console.log('✅ OrderProvider - Successfully fetched orders:', ordersData.length);
-      setOrders(ordersData);
+      
+      // API yanıtını Order tipine dönüştürme
+      const mappedOrders = ordersData.map(mapResponseToOrder);
+      setOrders(mappedOrders);
     } catch (error) {
       console.error('❌ OrderProvider - Error fetching orders:', error);
       toast({
@@ -94,7 +116,8 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         gamePassword,
       };
       
-      const createdOrder = await orderApi.createOrder(newOrder);
+      const createdOrderResponse = await orderApi.createOrder(newOrder);
+      const createdOrder = mapResponseToOrder(createdOrderResponse);
       
       setOrders(prevOrders => [...prevOrders, createdOrder]);
       
@@ -128,11 +151,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log(`🔄 OrderProvider - Claiming order ${orderId}`);
       
-      const updatedOrder = await orderApi.updateOrder(orderId, {
+      const updatedOrderResponse = await orderApi.updateOrder(orderId, {
         status: 'in_progress',
         boosterId: user.id,
         boosterUsername: user.username
       });
+      
+      const updatedOrder = mapResponseToOrder(updatedOrderResponse);
       
       setOrders(prevOrders => 
         prevOrders.map(order => 
@@ -169,9 +194,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const order = orders.find(o => o.id === orderId);
       if (!order) throw new Error('Order not found');
       
-      const updatedOrder = await orderApi.updateOrder(orderId, {
+      const updatedOrderResponse = await orderApi.updateOrder(orderId, {
         status: 'completed'
       });
+      
+      const updatedOrder = mapResponseToOrder(updatedOrderResponse);
       
       if (order.boosterId && (order.boosterId === user.id || user.role === 'admin')) {
         const boosterCommission = Math.round(order.price * 0.6);
@@ -222,9 +249,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log(`🔄 OrderProvider - Cancelling order ${orderId}`);
       
-      const updatedOrder = await orderApi.updateOrder(orderId, {
+      const updatedOrderResponse = await orderApi.updateOrder(orderId, {
         status: 'cancelled'
       });
+      
+      const updatedOrder = mapResponseToOrder(updatedOrderResponse);
       
       setOrders(prevOrders => 
         prevOrders.map(order => 
@@ -264,7 +293,14 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         content
       };
       
-      const newMessage = await orderApi.sendMessage(orderId, messageData);
+      const newMessageResponse = await orderApi.sendMessage(orderId, messageData);
+      const newMessage: Message = {
+        id: newMessageResponse.id,
+        senderId: newMessageResponse.senderId,
+        senderName: newMessageResponse.senderName,
+        content: newMessageResponse.content,
+        timestamp: newMessageResponse.timestamp
+      };
       
       setOrders(prevOrders => 
         prevOrders.map(order => {

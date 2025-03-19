@@ -11,10 +11,43 @@ export const API_ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/users/login`,
   REGISTER: `${API_BASE_URL}/users/register`,
   USERS: `${API_BASE_URL}/users`,
+  USERS_COUNT: `${API_BASE_URL}/users/count`,
   ORDERS: `${API_BASE_URL}/orders`,
   USER_BALANCE: (userId: string) => `${API_BASE_URL}/users/${userId}/balance`,
   ORDER_MESSAGES: (orderId: string) => `${API_BASE_URL}/orders/${orderId}/messages`,
 };
+
+// API yanıt türleri için arayüzler
+export interface UserResponse {
+  id: string;
+  email: string;
+  username: string;
+  role: 'customer' | 'booster' | 'admin';
+  balance: number;
+}
+
+export interface OrderResponse {
+  id: string;
+  userId: string;
+  currentRank: number;
+  targetRank: number;
+  price: number;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  boosterId?: string;
+  boosterUsername?: string;
+  createdAt: string;
+  messages: MessageResponse[];
+  gameUsername?: string;
+  gamePassword?: string;
+}
+
+export interface MessageResponse {
+  id: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  timestamp: string;
+}
 
 // HTTP istekleri için yardımcı fonksiyonlar
 async function httpRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -41,23 +74,26 @@ async function httpRequest<T>(url: string, options: RequestInit = {}): Promise<T
 
 // Auth API istekleri
 export const authApi = {
-  login: (email: string, password: string) => 
-    httpRequest(API_ENDPOINTS.LOGIN, {
+  login: (email: string, password: string): Promise<UserResponse> => 
+    httpRequest<UserResponse>(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
   
-  register: (email: string, username: string, password: string) => 
-    httpRequest(API_ENDPOINTS.REGISTER, {
+  register: (email: string, username: string, password: string): Promise<UserResponse> => 
+    httpRequest<UserResponse>(API_ENDPOINTS.REGISTER, {
       method: 'POST',
       body: JSON.stringify({ email, username, password }),
     }),
+    
+  getUserCount: (): Promise<{count: number}> =>
+    httpRequest<{count: number}>(API_ENDPOINTS.USERS_COUNT),
 };
 
 // Kullanıcı API istekleri
 export const userApi = {
-  updateBalance: (userId: string, amount: number) => 
-    httpRequest(API_ENDPOINTS.USER_BALANCE(userId), {
+  updateBalance: (userId: string, amount: number): Promise<UserResponse> => 
+    httpRequest<UserResponse>(API_ENDPOINTS.USER_BALANCE(userId), {
       method: 'PATCH',
       body: JSON.stringify({ amount }),
     }),
@@ -65,23 +101,23 @@ export const userApi = {
 
 // Sipariş API istekleri
 export const orderApi = {
-  getOrders: () => 
-    httpRequest(API_ENDPOINTS.ORDERS),
+  getOrders: (): Promise<OrderResponse[]> => 
+    httpRequest<OrderResponse[]>(API_ENDPOINTS.ORDERS),
   
-  createOrder: (orderData: any) => 
-    httpRequest(API_ENDPOINTS.ORDERS, {
+  createOrder: (orderData: any): Promise<OrderResponse> => 
+    httpRequest<OrderResponse>(API_ENDPOINTS.ORDERS, {
       method: 'POST',
       body: JSON.stringify(orderData),
     }),
   
-  updateOrder: (orderId: string, updateData: any) => 
-    httpRequest(`${API_ENDPOINTS.ORDERS}/${orderId}`, {
+  updateOrder: (orderId: string, updateData: any): Promise<OrderResponse> => 
+    httpRequest<OrderResponse>(`${API_ENDPOINTS.ORDERS}/${orderId}`, {
       method: 'PATCH',
       body: JSON.stringify(updateData),
     }),
   
-  sendMessage: (orderId: string, messageData: any) => 
-    httpRequest(API_ENDPOINTS.ORDER_MESSAGES(orderId), {
+  sendMessage: (orderId: string, messageData: any): Promise<MessageResponse> => 
+    httpRequest<MessageResponse>(API_ENDPOINTS.ORDER_MESSAGES(orderId), {
       method: 'POST',
       body: JSON.stringify(messageData),
     }),

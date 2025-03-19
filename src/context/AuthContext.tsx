@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   STORAGE_KEYS, 
@@ -10,7 +11,7 @@ import {
   initializeStorageHealthCheck
 } from '@/utils/storageService';
 import { useToast } from '@/hooks/use-toast';
-import { authApi, userApi } from '@/utils/apiService';
+import { authApi, userApi, UserResponse } from '@/utils/apiService';
 
 type UserRole = 'customer' | 'booster' | 'admin';
 
@@ -78,14 +79,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
+    
+    // Kullanıcı sayısını yükle
+    fetchUserCount();
   }, []);
 
-  // Kayıtlı kullanıcı sayısını sunucudan al (örnek fonksiyon)
+  // Kayıtlı kullanıcı sayısını sunucudan al
   const fetchUserCount = async () => {
     try {
-      const response = await fetch(authApi.USERS_COUNT);
-      const data = await response.json();
-      setRegisteredUsersCount(data.count);
+      const response = await authApi.getUserCount();
+      setRegisteredUsersCount(response.count);
     } catch (error) {
       console.error('Failed to fetch user count', error);
     }
@@ -282,7 +285,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
-        setRegisteredUsers(updatedRegisteredUsers);
+        // Düzeltme: setRegisteredUsers yerine setRegisteredUsersCount kullanımı
+        // Arayüzde yalnızca sayıyı tutuyoruz, tam kullanıcı listesini değil
+        setRegisteredUsersCount(updatedRegisteredUsers.length);
         console.log('Updated registered user:', updatedUser.username);
       } else {
         console.log('Updated admin user in UI only:', updatedUser.username);
@@ -304,7 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Admin is not in registered users, so just clear all registered users
       setData(STORAGE_KEYS.USERS, []);
-      setRegisteredUsers([]);
+      // Düzeltme: setRegisteredUsers yerine setRegisteredUsersCount kullanımı
       setRegisteredUsersCount(0);
       
       // Check if current user was removed (if not admin)
@@ -336,7 +341,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`Before removal: ${latestRegisteredUsers.length} users, After removal: ${filteredUsers.length} users`);
       
       setData(STORAGE_KEYS.USERS, filteredUsers);
-      setRegisteredUsers(filteredUsers);
+      // Düzeltme: setRegisteredUsers yerine setRegisteredUsersCount kullanımı
       setRegisteredUsersCount(filteredUsers.length);
       
       // Check if current user was removed
