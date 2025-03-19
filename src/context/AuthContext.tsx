@@ -43,10 +43,13 @@ const DEFAULT_ADMIN = {
   balance: 5000 
 };
 
+// Constant for localStorage key
+const USERS_STORAGE_KEY = 'valorant_registered_users';
+
 // Function to load registered users from localStorage
 const loadRegisteredUsers = () => {
   try {
-    const storedUsers = localStorage.getItem('valorant_registered_users');
+    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     console.log('Loading registered users from localStorage:', storedUsers);
     
     if (storedUsers) {
@@ -60,14 +63,14 @@ const loadRegisteredUsers = () => {
   
   // Initialize with empty array if no users found
   console.log('No registered users found, initializing with empty array');
-  localStorage.setItem('valorant_registered_users', JSON.stringify([]));
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
   return [];
 };
 
 // Function to save registered users to localStorage
 const saveRegisteredUsers = (users: any[]) => {
   try {
-    localStorage.setItem('valorant_registered_users', JSON.stringify(users));
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     console.log('Saved registered users to localStorage:', users.length, users);
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
@@ -206,6 +209,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { password: _, ...userWithoutPassword } = newUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
+      
+      // Testing localStorage after registration
+      const testStoredUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      console.log('TEST: localStorage after registration:', testStoredUsers);
     } catch (error) {
       console.error('Registration failed', error);
       throw error;

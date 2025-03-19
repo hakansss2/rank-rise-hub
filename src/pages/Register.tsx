@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -51,7 +51,13 @@ const Register = () => {
 
     try {
       console.log(`Attempting to register user: ${data.username}, ${data.email}`);
+      // Track localStorage before registration
+      console.log('localStorage before registration:', localStorage.getItem('valorant_registered_users'));
+      
       await registerUser(data.email, data.username, data.password);
+      
+      // Track localStorage after registration
+      console.log('localStorage after registration:', localStorage.getItem('valorant_registered_users'));
       
       toast({
         title: 'Kayıt başarılı',
