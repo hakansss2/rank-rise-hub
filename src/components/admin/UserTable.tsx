@@ -4,8 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, RefreshCw } from 'lucide-react';
-import { forceRefreshLocalStorage, validateAndRepairLocalStorage, setupAggressiveRefresh } from '@/utils/localStorageMonitor';
 import { useToast } from '@/hooks/use-toast';
+import { STORAGE_KEYS, refreshData, addStorageListener } from '@/utils/storageService';
 
 interface User {
   id: string;
@@ -27,14 +27,12 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
   
+  // Function to refresh the user data
   const refreshUserData = useCallback(() => {
     console.log('🔄 UserTable - refreshUserData executing');
     setIsRefreshing(true);
     
-    // Force immediate localStorage update before calling parent refresh
-    const directData = forceRefreshLocalStorage('valorant_registered_users');
-    console.log('🔍 UserTable - Direct refresh before parent refresh:', directData);
-    
+    // Trigger parent refresh which will get latest data
     onRefresh();
     
     setTimeout(() => {
@@ -42,54 +40,39 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     }, 500);
   }, [onRefresh]);
   
+  // Set up storage event listener
   useEffect(() => {
-    console.log('🏁 UserTable - Component mounted, setting up aggressive refresh');
+    console.log('🏁 UserTable - Component mounted, setting up storage listener');
     
-    // Run initial validation and repair
-    validateAndRepairLocalStorage('valorant_registered_users');
-    
-    // Setup more frequent data checking
-    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
-      if (data && Array.isArray(data)) {
-        console.log('⚡ UserTable - Received fresh data from aggressive refresh:', data.length);
-        
-        if (data.length !== localUsers.length) {
-          console.log('🔄 UserTable - Data count changed, triggering refresh');
-          refreshUserData();
-        }
+    // Listen for changes to the users data in storage
+    const cleanupListener = addStorageListener(STORAGE_KEYS.USERS, (data) => {
+      console.log('🔄 UserTable - Storage event received, users count:', data?.length);
+      if (Array.isArray(data) && data.length !== localUsers.length) {
+        console.log('🔄 UserTable - Data count changed, triggering refresh');
+        refreshUserData();
       }
-    }, 500); // Check every 500ms
+    });
     
-    // Double-check mechanism with direct localStorage access
-    const directCheckInterval = setInterval(() => {
-      console.log('🔍 UserTable - Direct check');
-      
-      try {
-        const rawData = localStorage.getItem('valorant_registered_users');
-        if (rawData) {
-          const directData = JSON.parse(rawData);
-          if (directData && Array.isArray(directData) && directData.length !== localUsers.length) {
-            console.log('🔄 UserTable - Direct check found data change, refreshing');
-            refreshUserData();
-          }
-        }
-      } catch (error) {
-        console.error('❌ UserTable - Error during direct check:', error);
-      }
-    }, 750);
+    // Manual refresh on interval as backup
+    const refreshInterval = setInterval(() => {
+      console.log('🔍 UserTable - Scheduled refresh check');
+      refreshData(STORAGE_KEYS.USERS, []);
+    }, 10000); // Check every 10 seconds
     
     return () => {
-      console.log('🏁 UserTable - Component unmounting, cleaning up refresh');
-      aggressiveCleanup();
-      clearInterval(directCheckInterval);
+      console.log('🏁 UserTable - Component unmounting, cleaning up');
+      cleanupListener();
+      clearInterval(refreshInterval);
     };
   }, [localUsers.length, refreshUserData]);
 
+  // Update local state when props change
   useEffect(() => {
     console.log('📊 UserTable - Props changed, updating local state with', users.length, 'users');
     setLocalUsers(users);
   }, [users]);
 
+  // Format balance with currency
   const formatBalance = (balance: number): string => {
     if (currency === 'TRY') {
       return `${balance.toLocaleString('tr-TR')} ₺`;
@@ -99,6 +82,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     }
   };
 
+  // Get badge for user role
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin':
@@ -112,23 +96,23 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     }
   };
 
+  // Handle manual refresh button
   const handleForceRefresh = async () => {
     setIsRefreshing(true);
     
     try {
       console.log('🔄 UserTable - Manual force refresh initiated');
       
-      // Run full validation and repair cycle
-      validateAndRepairLocalStorage('valorant_registered_users');
+      // Refresh data directly from storage
+      const userData = refreshData(STORAGE_KEYS.USERS, []);
+      console.log('📊 UserTable - Manual refresh data count:', userData.length);
       
-      const directUsers = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('📊 UserTable - Manual refresh data:', directUsers);
-      
+      // Trigger parent refresh
       refreshUserData();
       
       toast({
         title: "Kullanıcı verileri yenilendi",
-        description: `${Array.isArray(directUsers) ? directUsers.length : 0} kullanıcı bulundu.`,
+        description: `${userData.length} kullanıcı bulundu.`,
       });
     } catch (error) {
       console.error('❌ UserTable - Error during manual refresh:', error);
@@ -138,7 +122,9 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
         variant: "destructive",
       });
     } finally {
-      setIsRefreshing(false);
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
     }
   };
 
@@ -212,7 +198,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
                     className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500"
                     disabled={isRefreshing}
                   >
-                    {isRefreshing ? 'Kontrol Ediliyor...' : 'localStorage\'ı Kontrol Et'}
+                    {isRefreshing ? 'Kontrol Ediliyor...' : 'Verileri Kontrol Et'}
                   </Button>
                 </div>
               </TableCell>

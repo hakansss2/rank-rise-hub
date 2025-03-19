@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -10,7 +9,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { forceRefreshLocalStorage, validateAndRepairLocalStorage } from '@/utils/localStorageMonitor';
+import { STORAGE_KEYS, refreshData } from '@/utils/storageService';
 
 // Form schema with validations
 const formSchema = z.object({
@@ -55,80 +54,29 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
     try {
       console.log(`📌 Attempting to register user: ${data.username}, ${data.email}`);
       
-      // Validate and repair localStorage before registration
-      validateAndRepairLocalStorage('valorant_registered_users');
-      
-      // Check localStorage before registration
-      console.log('📌 localStorage BEFORE registration:', localStorage.getItem('valorant_registered_users'));
-      
-      // Force a check of current users before registration
-      const usersBeforeRegistration = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('📌 Users BEFORE registration:', 
-        Array.isArray(usersBeforeRegistration) ? usersBeforeRegistration.length : 0);
+      // Check storage before registration
+      console.log('📌 Refreshing users data before registration');
+      refreshData(STORAGE_KEYS.USERS, []);
       
       // Attempt registration
       await registerUser(data.email, data.username, data.password);
       
       // Force multiple immediate checks after registration for consistency
-      const checkAfterRegistration = () => {
-        // Force immediate check after registration 
-        const usersAfterRegistration = forceRefreshLocalStorage('valorant_registered_users');
-        console.log('📌 IMMEDIATE CHECK - localStorage after registration:', usersAfterRegistration);
+      const verifyRegistration = () => {
+        const usersAfterRegistration = refreshData(STORAGE_KEYS.USERS, []);
+        console.log('📌 Verification check - users after registration:', usersAfterRegistration.length);
         
-        // Check if user was properly added with improved verification
-        try {
-          if (usersAfterRegistration && Array.isArray(usersAfterRegistration)) {
-            const userExists = usersAfterRegistration.some((u: any) => u.email === data.email);
-            
-            console.log('📌 Verification of new user in localStorage:', {
-              found: userExists,
-              totalUsers: usersAfterRegistration.length,
-              userEmail: data.email
-            });
-            
-            if (!userExists) {
-              console.error('⚠️ User not found in localStorage after registration!');
-              
-              // Try one more time
-              setTimeout(() => {
-                const finalUsers = forceRefreshLocalStorage('valorant_registered_users');
-                const userFoundInFinal = finalUsers && Array.isArray(finalUsers) && 
-                  finalUsers.some((u: any) => u.email === data.email);
-                
-                console.log('📌 FINAL verification check:', {
-                  found: userFoundInFinal,
-                  totalUsers: Array.isArray(finalUsers) ? finalUsers.length : 0
-                });
-                
-                // Attempt to trigger storage event for other tabs
-                try {
-                  window.dispatchEvent(new Event('storage'));
-                } catch (e) {
-                  console.error('Failed to dispatch storage event:', e);
-                }
-              }, 500);
-            } else {
-              console.log('✅ User successfully verified in localStorage!');
-              
-              // Attempt to trigger storage event for other tabs
-              try {
-                window.dispatchEvent(new Event('storage'));
-              } catch (e) {
-                console.error('Failed to dispatch storage event:', e);
-              }
-            }
-          } else {
-            console.error('⚠️ Invalid or no users in localStorage after registration!');
-          }
-        } catch (verificationError) {
-          console.error('⚠️ Registration verification error:', verificationError);
-        }
+        // Check if user was properly added
+        const userExists = usersAfterRegistration.some((u: any) => u.email === data.email);
+        console.log('📌 New user verification:', { found: userExists, email: data.email });
+        
+        // Manually trigger storage event to notify other tabs/components
+        window.dispatchEvent(new Event('storage'));
       };
       
-      // Run multiple checks with increasing delays for better reliability
-      checkAfterRegistration();
-      setTimeout(checkAfterRegistration, 300);
-      setTimeout(checkAfterRegistration, 800);
+      // Run multiple verification checks
+      verifyRegistration();
+      setTimeout(verifyRegistration, 300);
       
       toast({
         title: 'Kayıt başarılı',
@@ -139,10 +87,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
     } catch (error) {
       console.error('Registration error:', error);
       
-      // Check localStorage after error with more detailed info
-      const usersAfterError = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('⚠️ localStorage after registration ERROR:', usersAfterError);
-      
       toast({
         title: 'Kayıt başarısız',
         description: 'Bir hata oluştu. Lütfen tekrar deneyin.',
@@ -150,11 +94,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
       });
     } finally {
       setIsLoading(false);
-      
-      // Final check of localStorage with detailed logging
-      const finalUsers = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('📌 Final localStorage check after registration process:', 
-        finalUsers ? `${finalUsers.length} users found` : 'No users found');
     }
   };
 

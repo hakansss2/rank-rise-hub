@@ -1,5 +1,13 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { 
+  STORAGE_KEYS, 
+  getData, 
+  setData, 
+  addStorageListener, 
+  removeData,
+  refreshData
+} from '@/utils/storageService';
 
 type UserRole = 'customer' | 'booster' | 'admin';
 
@@ -43,158 +51,65 @@ const DEFAULT_ADMIN = {
   balance: 5000 
 };
 
-// Constant for localStorage key
-const USERS_STORAGE_KEY = 'valorant_registered_users';
-
-// Function to load registered users from localStorage
-const loadRegisteredUsers = () => {
-  try {
-    console.log('📌 DEBUG: loadRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
-    
-    // Get the raw data from localStorage
-    const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    console.log('📌 Loading registered users from localStorage:', storedUsers);
-    console.log('📤 loadRegisteredUsers - Raw localStorage data:', storedUsers);
-    
-    if (storedUsers) {
-      try {
-        // Parse the JSON data
-        const parsedUsers = JSON.parse(storedUsers);
-        console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
-        console.log('📤 loadRegisteredUsers - Parsed Users:', parsedUsers.length, parsedUsers);
-        
-        // Verify each user has required fields
-        const validUsers = parsedUsers.filter((user: any) => 
-          user && user.id && user.email && user.username && user.role);
-        
-        if (validUsers.length !== parsedUsers.length) {
-          console.error('📌 Found invalid users in localStorage, filtering them out:', 
-            parsedUsers.length - validUsers.length);
-          
-          // Save the filtered users back to localStorage
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(validUsers));
-          return validUsers;
-        }
-        
-        return parsedUsers;
-      } catch (err) {
-        console.error('📤 loadRegisteredUsers - JSON.parse error:', err);
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
-        return [];
-      }
-    } else {
-      console.log('📤 loadRegisteredUsers - No data in localStorage, initializing with empty array');
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
-    }
-  } catch (error) {
-    console.error('Failed to parse stored users', error);
-  }
-  
-  // Initialize with empty array if no users found
-  console.log('📌 No registered users found, initializing with empty array');
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
-  return [];
-};
-
-// Function to save registered users to localStorage
-const saveRegisteredUsers = (users: any[]) => {
-  try {
-    console.log('📌 DEBUG: saveRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
-    console.log('📌 Attempting to save users to localStorage:', users.length, users);
-    
-    // Make sure we're saving a valid array
-    if (!Array.isArray(users)) {
-      console.error('📌 ERROR: Attempted to save non-array to localStorage', users);
-      return;
-    }
-    
-    // Verify all users have required fields
-    const validUsers = users.filter(user => 
-      user && user.id && user.email && user.username && user.role);
-    
-    if (validUsers.length !== users.length) {
-      console.error('📌 Found invalid users, filtering them out:', 
-        users.length - validUsers.length);
-      users = validUsers;
-    }
-    
-    // Stringify with pretty formatting for easier debugging
-    const jsonData = JSON.stringify(users);
-    localStorage.setItem(USERS_STORAGE_KEY, jsonData);
-    
-    // Verify that the data was saved correctly
-    const storedData = localStorage.getItem(USERS_STORAGE_KEY);
-    console.log('📌 Saved registered users to localStorage, verification:', storedData);
-    console.log('📌 Saved user count:', JSON.parse(storedData || '[]').length);
-    
-    // Double-check by parsing back
-    try {
-      const parsedBack = JSON.parse(storedData || '[]');
-      console.log('📌 Parse back verification:', parsedBack.length === users.length ? 'SUCCESS' : 'FAILED');
-    } catch (e) {
-      console.error('📌 Parse back verification failed:', e);
-    }
-  } catch (error) {
-    console.error('Failed to save registered users to localStorage', error);
-  }
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(0);
 
-  // Load registered users and check for existing session on mount
+  // Load all users and current user on mount
   useEffect(() => {
-    console.log('🔄 AuthProvider - Initial mount, loading registered users and checking session');
+    console.log('🔄 AuthProvider - Initial mount, loading data and checking session');
     
     // Load registered users
-    const loadedUsers = loadRegisteredUsers();
+    const loadedUsers = getData(STORAGE_KEYS.USERS, []);
     setRegisteredUsers(loadedUsers);
+    setRegisteredUsersCount(loadedUsers.length);
     console.log('📌 Initial loading of registered users:', loadedUsers.length, loadedUsers);
     
     // Check for existing user session
-    const storedUser = localStorage.getItem('valorant_user');
+    const storedUser = getData(STORAGE_KEYS.CURRENT_USER, null);
     if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        console.log('User session restored from localStorage:', parsedUser.username);
-      } catch (error) {
-        console.error('Failed to parse stored user', error);
-        localStorage.removeItem('valorant_user');
-      }
+      setUser(storedUser);
+      console.log('User session restored:', storedUser.username);
     }
+    
     setIsLoading(false);
   }, []);
 
-  // Periodically check for registered users updates (every 5 seconds)
+  // Setup storage event listeners
   useEffect(() => {
-    console.log('🔄 Setting up periodic check for registered users');
+    console.log('🔄 Setting up storage event listeners');
     
-    const intervalId = setInterval(() => {
-      console.log('🔄 Periodic check - Checking registered users in localStorage');
-      const latestRegisteredUsers = loadRegisteredUsers();
-      
-      // Only update state if there's a difference in user count
-      if (latestRegisteredUsers.length !== registeredUsers.length) {
-        console.log('🔄 Periodic check - User count changed, updating state:', 
-          registeredUsers.length, '->', latestRegisteredUsers.length);
-        setRegisteredUsers(latestRegisteredUsers);
+    // Listen for registered users changes
+    const usersCleanup = addStorageListener(STORAGE_KEYS.USERS, (data) => {
+      console.log('🔄 Storage event - Registered users updated:', data?.length);
+      if (Array.isArray(data)) {
+        setRegisteredUsers(data);
+        setRegisteredUsersCount(data.length);
       }
-    }, 5000);
+    });
     
-    return () => clearInterval(intervalId);
-  }, [registeredUsers.length]);
+    // Listen for current user changes
+    const userCleanup = addStorageListener(STORAGE_KEYS.CURRENT_USER, (data) => {
+      console.log('🔄 Storage event - Current user updated:', data?.username);
+      setUser(data);
+    });
+    
+    return () => {
+      usersCleanup();
+      userCleanup();
+    };
+  }, []);
 
   // Get all users (default admin + registered users)
   const getAllUsers = () => {
-    // Always fetch the latest registered users from localStorage
+    // Always fetch the latest registered users from storage
     console.log('🔄 DEBUG: getAllUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
-    const latestRegisteredUsers = loadRegisteredUsers();
-    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length, latestRegisteredUsers);
+    const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
+    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length);
     
-    // Map users to exclude passwords
+    // Map admin user (exclude password)
     const adminUser = { 
       id: DEFAULT_ADMIN.id, 
       email: DEFAULT_ADMIN.email, 
@@ -208,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Combine admin and registered users
     const allUsers = [adminUser, ...registeredUsersList];
-    console.log("📢 getAllUsers - Final User List:", allUsers.length, allUsers);
+    console.log("📢 getAllUsers - Final User List:", allUsers.length);
     
     return allUsers;
   };
@@ -217,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       // Get the latest registered users
-      const latestRegisteredUsers = loadRegisteredUsers();
+      const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -242,12 +157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Extract user info without password
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
-      localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
+      setData(STORAGE_KEYS.CURRENT_USER, userWithoutPassword);
       console.log('User logged in successfully:', userWithoutPassword.username);
-      
-      // Force refresh registered users count
-      const updatedUsers = loadRegisteredUsers();
-      setRegisteredUsers(updatedUsers);
     } catch (error) {
       console.error('Login failed', error);
       throw error;
@@ -263,11 +174,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 800));
       
       console.log('📢 Registration - Starting process for:', email);
-      console.log('📌 localStorage before registration attempt:', localStorage.getItem(USERS_STORAGE_KEY));
       
-      // Get the latest registered users directly from localStorage to ensure we have the most recent data
-      const latestRegisteredUsers = loadRegisteredUsers();
-      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length, latestRegisteredUsers);
+      // Get the latest registered users directly from storage
+      const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
+      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length);
       
       // Check for duplicate email
       if (email === DEFAULT_ADMIN.email || latestRegisteredUsers.some(u => u.email === email)) {
@@ -286,23 +196,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       console.log("📢 Registering user:", newUser);
-      console.log("🔍 Existing users before save:", localStorage.getItem(USERS_STORAGE_KEY));
       
       // Add to registered users
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
       
-      console.log("📌 Registration - Before saving to localStorage:", {
+      console.log("📌 Registration - Before saving users:", {
         oldLength: latestRegisteredUsers.length,
-        newLength: updatedRegisteredUsers.length,
-        newUsers: updatedRegisteredUsers
+        newLength: updatedRegisteredUsers.length
       });
       
-      // IMPORTANT: Save to localStorage BEFORE updating state to ensure data is persisted
-      saveRegisteredUsers(updatedRegisteredUsers);
-      console.log("📌 Registration - After saving to localStorage:", localStorage.getItem(USERS_STORAGE_KEY));
+      // IMPORTANT: Save to storage BEFORE updating state
+      setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
       
       // Then update state
       setRegisteredUsers(updatedRegisteredUsers);
+      setRegisteredUsersCount(updatedRegisteredUsers.length);
       
       console.log('User registered successfully:', { email, username, id: newUser.id });
       console.log('Total registered users after registration:', updatedRegisteredUsers.length);
@@ -310,21 +218,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Log in the new user
       const { password: _, ...userWithoutPassword } = newUser;
       setUser(userWithoutPassword);
-      localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
+      setData(STORAGE_KEYS.CURRENT_USER, userWithoutPassword);
       
-      // Verify localStorage after registration
-      const storedUsersAfter = loadRegisteredUsers();
-      console.log('📌 Verification - Users in localStorage after registration:', storedUsersAfter.length, storedUsersAfter);
-      
-      if (storedUsersAfter.length !== updatedRegisteredUsers.length) {
-        console.error('ERROR: User count mismatch after registration!', {
-          expected: updatedRegisteredUsers.length,
-          actual: storedUsersAfter.length
-        });
-      }
-
-      // Double verification 
-      console.log('📌 Double verification - localStorage at end of registration:', localStorage.getItem(USERS_STORAGE_KEY));
+      // Verify storage after registration
+      const storedUsersAfter = refreshData(STORAGE_KEYS.USERS, []);
+      console.log('📌 Verification - Users after registration:', storedUsersAfter.length);
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
@@ -335,7 +233,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('valorant_user');
+    removeData(STORAGE_KEYS.CURRENT_USER);
     console.log('User logged out');
   };
   
@@ -353,11 +251,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       setUser(updatedUser);
-      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      setData(STORAGE_KEYS.CURRENT_USER, updatedUser);
       
       // Update balance in registered users if not admin
       if (user.email !== DEFAULT_ADMIN.email) {
-        const latestRegisteredUsers = loadRegisteredUsers();
+        const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === user.id) {
             return { ...u, balance: updatedUser.balance };
@@ -365,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return u;
         });
         
-        saveRegisteredUsers(updatedRegisteredUsers);
+        setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
         setRegisteredUsers(updatedRegisteredUsers);
       }
     } catch (error) {
@@ -393,11 +291,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       
       setUser(updatedUser);
-      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      setData(STORAGE_KEYS.CURRENT_USER, updatedUser);
       
       // Update balance in registered users if not admin
       if (user.email !== DEFAULT_ADMIN.email) {
-        const latestRegisteredUsers = loadRegisteredUsers();
+        const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === user.id) {
             return { ...u, balance: updatedUser.balance };
@@ -405,7 +303,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return u;
         });
         
-        saveRegisteredUsers(updatedRegisteredUsers);
+        setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
         setRegisteredUsers(updatedRegisteredUsers);
       }
       
@@ -437,13 +335,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update current user if it's the same one
       if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
-        localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+        setData(STORAGE_KEYS.CURRENT_USER, updatedUser);
       }
       
       // Check if updating admin (which is not stored in registered users)
       if (updatedUser.email !== DEFAULT_ADMIN.email) {
         // Update in registered users
-        const latestRegisteredUsers = loadRegisteredUsers();
+        const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === updatedUser.id) {
             return {
@@ -454,7 +352,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return u;
         });
         
-        saveRegisteredUsers(updatedRegisteredUsers);
+        setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
         setRegisteredUsers(updatedRegisteredUsers);
         console.log('Updated registered user:', updatedUser.username);
       } else {
@@ -475,13 +373,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      console.log('📌 removeAllExceptAdmin - Before clearing:', localStorage.getItem(USERS_STORAGE_KEY));
-      
       // Admin is not in registered users, so just clear all registered users
-      saveRegisteredUsers([]);
+      setData(STORAGE_KEYS.USERS, []);
       setRegisteredUsers([]);
-      
-      console.log('📌 removeAllExceptAdmin - After clearing:', localStorage.getItem(USERS_STORAGE_KEY));
+      setRegisteredUsersCount(0);
       
       // Check if current user was removed (if not admin)
       if (user && user.email !== DEFAULT_ADMIN.email) {
@@ -503,7 +398,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Get the latest registered users
-      const latestRegisteredUsers = loadRegisteredUsers();
+      const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
       
       // Filter out users with specified emails
       const filteredUsers = latestRegisteredUsers.filter(u => !emails.includes(u.email));
@@ -511,11 +406,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log(`Removing users with emails:`, emails);
       console.log(`Before removal: ${latestRegisteredUsers.length} users, After removal: ${filteredUsers.length} users`);
       
-      saveRegisteredUsers(filteredUsers);
+      setData(STORAGE_KEYS.USERS, filteredUsers);
       setRegisteredUsers(filteredUsers);
-      
-      // Verify after removal
-      console.log('📌 After removal - localStorage:', localStorage.getItem(USERS_STORAGE_KEY));
+      setRegisteredUsersCount(filteredUsers.length);
       
       // Check if current user was removed
       if (user && emails.includes(user.email)) {
@@ -528,9 +421,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     }
   };
-  
-  // Update the registeredUsersCount to directly check localStorage
-  const registeredUsersCount = loadRegisteredUsers().length;
 
   const value = {
     user,
