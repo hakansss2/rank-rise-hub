@@ -33,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Default user data
 const USERS = [
-  { id: '1', email: 'admin@test.com', username: 'admin', password: 'password', role: 'admin' as UserRole, balance: 5000 },
+  { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
   { id: '2', email: 'booster@test.com', username: 'booster', password: 'password', role: 'booster' as UserRole, balance: 1000 },
   { id: '3', email: 'customer@test.com', username: 'customer', password: 'password', role: 'customer' as UserRole, balance: 2000 },
 ];
@@ -349,7 +349,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Filter to keep only the admin account if it exists
-      const adminEmail = 'admin@test.com';
+      const adminEmail = 'hakan200505@gmail.com';
       const latestRegisteredUsers = loadRegisteredUsers();
       const filteredUsers = latestRegisteredUsers.filter(u => u.email === adminEmail);
       
