@@ -34,7 +34,7 @@ const AdminPanel = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
   
-  // Whenever admin panel loads, refresh users
+  // Whenever admin panel loads or registeredUsersCount changes, refresh users
   useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
@@ -48,13 +48,15 @@ const AdminPanel = () => {
       return;
     }
     
+    console.log('AdminPanel - Refreshing users, registeredUsersCount:', registeredUsersCount);
     refreshUsers();
-  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]);
+  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]); // Added registeredUsersCount as dependency
 
   const refreshUsers = useCallback(() => {
     setLoading(true);
     
     try {
+      console.log('AdminPanel - Calling getAllUsers() to refresh user list');
       const users = getAllUsers();
       console.log("Admin panel - Total users fetched:", users.length);
       

@@ -174,7 +174,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Get the latest registered users
+      console.log('Registration - Starting process for:', email);
+      
+      // Get the latest registered users directly from localStorage to ensure we have the most recent data
       const latestRegisteredUsers = loadRegisteredUsers();
       console.log("Registration - Current registered users:", latestRegisteredUsers.length);
       
@@ -194,12 +196,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         balance: 0,
       };
       
+      console.log("Registration - Created new user object:", { ...newUser, password: '***' });
+      
       // Add to registered users and save to localStorage
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
-      console.log("Registration - Saving new user:", newUser);
-      console.log("Registration - Updated users list:", updatedRegisteredUsers);
       
+      // IMPORTANT: Save to localStorage BEFORE updating state to ensure data is persisted
       saveRegisteredUsers(updatedRegisteredUsers);
+      console.log("Registration - Saved users to localStorage. New count:", updatedRegisteredUsers.length);
+      
+      // Then update state
       setRegisteredUsers(updatedRegisteredUsers);
       
       console.log('User registered successfully:', { email, username, id: newUser.id });
@@ -210,9 +216,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
       
-      // Testing localStorage after registration
-      const testStoredUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      console.log('TEST: localStorage after registration:', testStoredUsers);
+      // Verify localStorage after registration
+      const storedUsersAfter = loadRegisteredUsers();
+      console.log('Verification - Users in localStorage after registration:', storedUsersAfter.length, storedUsersAfter);
+      
+      if (storedUsersAfter.length !== updatedRegisteredUsers.length) {
+        console.error('ERROR: User count mismatch after registration!', {
+          expected: updatedRegisteredUsers.length,
+          actual: storedUsersAfter.length
+        });
+      }
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
