@@ -6,15 +6,24 @@ import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
-import { monitorLocalStorage } from '@/utils/localStorageMonitor';
+import { monitorLocalStorage, forceRefreshLocalStorage } from '@/utils/localStorageMonitor';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
 
   // Periodic check of localStorage for debugging
   useEffect(() => {
+    console.log('📋 Register component mounted - Setting up localStorage monitoring');
     const cleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register');
-    return cleanup;
+    
+    // Force an immediate refresh to verify data
+    const initialUsers = forceRefreshLocalStorage('valorant_registered_users');
+    console.log('📊 Initial users data on Register mount:', initialUsers);
+    
+    return () => {
+      console.log('📋 Register component unmounting - Cleaning up localStorage monitor');
+      cleanup();
+    };
   }, []);
 
   return (
