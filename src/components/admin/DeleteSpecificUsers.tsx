@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -31,22 +30,27 @@ const DeleteSpecificUsers: React.FC = () => {
       
       if (rawData) {
         console.log("DeleteSpecificUsers - Raw localStorage data:", rawData);
-        const parsedUsers = JSON.parse(rawData);
-        console.log("DeleteSpecificUsers - Parsed users:", parsedUsers.length, parsedUsers);
-        
-        // Filter out the admin user (we never want to delete the admin)
-        const usersWithoutAdmin = parsedUsers.filter((user: any) => 
-          user && user.email && user.email !== 'hakan200505@gmail.com'
-        );
-        
-        console.log("DeleteSpecificUsers - Users without admin:", usersWithoutAdmin.length, usersWithoutAdmin);
-        
-        if (usersWithoutAdmin.length > 0) {
-          setEmailsToRemove(usersWithoutAdmin.map((user: any) => user.email));
-          console.log("DeleteSpecificUsers - Set emails to remove:", usersWithoutAdmin.map((user: any) => user.email));
-        } else {
+        try {
+          const parsedUsers = JSON.parse(rawData);
+          console.log("DeleteSpecificUsers - Parsed users:", parsedUsers.length, parsedUsers);
+          
+          // Filter out the admin user (we never want to delete the admin)
+          const usersWithoutAdmin = parsedUsers.filter((user: any) => 
+            user && user.email && user.email !== 'hakan200505@gmail.com'
+          );
+          
+          console.log("DeleteSpecificUsers - Users without admin:", usersWithoutAdmin.length, usersWithoutAdmin);
+          
+          if (usersWithoutAdmin.length > 0) {
+            setEmailsToRemove(usersWithoutAdmin.map((user: any) => user.email));
+            console.log("DeleteSpecificUsers - Set emails to remove:", usersWithoutAdmin.map((user: any) => user.email));
+          } else {
+            setEmailsToRemove([]);
+            console.log("DeleteSpecificUsers - No registered users to remove");
+          }
+        } catch (e) {
+          console.error("DeleteSpecificUsers - Error parsing JSON:", e);
           setEmailsToRemove([]);
-          console.log("DeleteSpecificUsers - No registered users to remove");
         }
       } else {
         console.log("DeleteSpecificUsers - No data in localStorage");

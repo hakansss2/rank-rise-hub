@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -34,6 +33,19 @@ const Register = () => {
   const { register: registerUser, registeredUsersCount } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check localStorage on component mount
+  useEffect(() => {
+    // Immediately check localStorage for existing users
+    console.log('🔎 Register - Initial localStorage check:', localStorage.getItem('valorant_registered_users'));
+    try {
+      const storedData = localStorage.getItem('valorant_registered_users');
+      const parsedData = storedData ? JSON.parse(storedData) : [];
+      console.log('🔎 Register - Parsed user count:', parsedData.length);
+    } catch (e) {
+      console.error('🔎 Register - Error parsing localStorage:', e);
+    }
+  }, []);
 
   // Set up form with validation
   const form = useForm<FormValues>({
@@ -97,6 +109,9 @@ const Register = () => {
       });
     } finally {
       setIsLoading(false);
+      
+      // Final check of localStorage
+      console.log('📌 Final localStorage check after registration:', localStorage.getItem('valorant_registered_users'));
     }
   };
 

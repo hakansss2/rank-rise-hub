@@ -52,25 +52,35 @@ const loadRegisteredUsers = () => {
     
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     console.log('📌 Loading registered users from localStorage:', storedUsers);
+    console.log('📤 loadRegisteredUsers - Raw localStorage data:', storedUsers);
     
     if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
-      
-      // Verify each user has required fields
-      const validUsers = parsedUsers.filter((user: any) => 
-        user && user.id && user.email && user.username && user.role);
-      
-      if (validUsers.length !== parsedUsers.length) {
-        console.error('📌 Found invalid users in localStorage, filtering them out:', 
-          parsedUsers.length - validUsers.length);
+      try {
+        const parsedUsers = JSON.parse(storedUsers);
+        console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
+        console.log('📤 loadRegisteredUsers - Parsed Users:', parsedUsers.length, parsedUsers);
         
-        // Save the filtered users back to localStorage
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(validUsers));
-        return validUsers;
+        // Verify each user has required fields
+        const validUsers = parsedUsers.filter((user: any) => 
+          user && user.id && user.email && user.username && user.role);
+        
+        if (validUsers.length !== parsedUsers.length) {
+          console.error('📌 Found invalid users in localStorage, filtering them out:', 
+            parsedUsers.length - validUsers.length);
+          
+          // Save the filtered users back to localStorage
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(validUsers));
+          return validUsers;
+        }
+        
+        return parsedUsers;
+      } catch (err) {
+        console.error('📤 loadRegisteredUsers - JSON.parse error:', err);
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
+        return [];
       }
-      
-      return parsedUsers;
+    } else {
+      console.log('📤 loadRegisteredUsers - No data in localStorage');
     }
   } catch (error) {
     console.error('Failed to parse stored users', error);
@@ -104,12 +114,22 @@ const saveRegisteredUsers = (users: any[]) => {
       users = validUsers;
     }
     
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    // Stringify with pretty formatting for easier debugging
+    const jsonData = JSON.stringify(users);
+    localStorage.setItem(USERS_STORAGE_KEY, jsonData);
     
     // Verify that the data was saved correctly
     const storedData = localStorage.getItem(USERS_STORAGE_KEY);
     console.log('📌 Saved registered users to localStorage, verification:', storedData);
     console.log('📌 Saved user count:', JSON.parse(storedData || '[]').length);
+    
+    // Double-check by parsing back
+    try {
+      const parsedBack = JSON.parse(storedData || '[]');
+      console.log('📌 Parsed back verification:', parsedBack.length === users.length ? 'SUCCESS' : 'FAILED');
+    } catch (e) {
+      console.error('📌 Parse back verification failed:', e);
+    }
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
   }
@@ -273,6 +293,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           actual: storedUsersAfter.length
         });
       }
+
+      // Double verification 
+      console.log('📌 Double verification - localStorage at end of registration:', localStorage.getItem(USERS_STORAGE_KEY));
     } catch (error) {
       console.error('Registration failed', error);
       throw error;
@@ -423,9 +446,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      console.log('📌 removeAllExceptAdmin - Before clearing:', localStorage.getItem(USERS_STORAGE_KEY));
+      
       // Admin is not in registered users, so just clear all registered users
       saveRegisteredUsers([]);
       setRegisteredUsers([]);
+      
+      console.log('📌 removeAllExceptAdmin - After clearing:', localStorage.getItem(USERS_STORAGE_KEY));
       
       // Check if current user was removed (if not admin)
       if (user && user.email !== DEFAULT_ADMIN.email) {
@@ -457,6 +484,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       saveRegisteredUsers(filteredUsers);
       setRegisteredUsers(filteredUsers);
+      
+      // Verify after removal
+      console.log('📌 After removal - localStorage:', localStorage.getItem(USERS_STORAGE_KEY));
       
       // Check if current user was removed
       if (user && emails.includes(user.email)) {
