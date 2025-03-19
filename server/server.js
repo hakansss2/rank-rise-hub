@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -10,7 +11,7 @@ const app = express();
 // Production için CORS ayarları
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-url.com', 'https://www.your-frontend-url.com'] 
+    ? ['https://sizin-frontend-url-adresiniz.netlify.app', 'https://www.sizin-frontend-url-adresiniz.netlify.app'] 
     : 'http://localhost:5173', // Vite'ın varsayılan portu
   optionsSuccessStatus: 200
 };
