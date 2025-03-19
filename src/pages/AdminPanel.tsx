@@ -48,17 +48,22 @@ const AdminPanel = () => {
       return;
     }
     
-    console.log('AdminPanel - Refreshing users, registeredUsersCount:', registeredUsersCount);
+    console.log('AdminPanel - Refreshing users in Admin Panel...');
+    console.log('AdminPanel - Current localStorage contents:', localStorage.getItem('valorant_registered_users'));
+    console.log('AdminPanel - Current registeredUsersCount:', registeredUsersCount);
+    
     refreshUsers();
-  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]); // Added registeredUsersCount as dependency
+  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]); // Include registeredUsersCount as dependency
 
   const refreshUsers = useCallback(() => {
     setLoading(true);
     
     try {
       console.log('AdminPanel - Calling getAllUsers() to refresh user list');
+      console.log('AdminPanel - Current localStorage before getAllUsers():', localStorage.getItem('valorant_registered_users'));
+      
       const users = getAllUsers();
-      console.log("Admin panel - Total users fetched:", users.length);
+      console.log("Admin panel - Total users fetched:", users.length, users);
       
       setAllUsers(users);
       
@@ -170,8 +175,19 @@ const AdminPanel = () => {
           <div>
             <h1 className="text-3xl font-bold mb-2 font-heading">Admin <span className="text-valorant-green">Paneli</span></h1>
             <p className="text-gray-400">Tüm kullanıcıları yönetin ve bakiyeleri görüntüleyin.</p>
+            <p className="text-sm text-valorant-green mt-1">Kayıtlı kullanıcı sayısı: {registeredUsersCount}</p>
           </div>
           <div className="flex space-x-4">
+            <Button 
+              onClick={() => {
+                console.log('Manual localStorage check:', localStorage.getItem('valorant_registered_users'));
+                refreshUsers();
+              }} 
+              variant="outline" 
+              className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-red-500 flex items-center gap-2"
+            >
+              Yerel Depolamayı Kontrol Et
+            </Button>
             <DeleteSpecificUsers />
             <Button 
               onClick={() => setCleanupDialogOpen(true)} 

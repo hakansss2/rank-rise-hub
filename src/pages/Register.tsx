@@ -51,13 +51,15 @@ const Register = () => {
 
     try {
       console.log(`Attempting to register user: ${data.username}, ${data.email}`);
-      // Track localStorage before registration
+      
+      // Check localStorage before registration
       console.log('localStorage before registration:', localStorage.getItem('valorant_registered_users'));
       
       await registerUser(data.email, data.username, data.password);
       
-      // Track localStorage after registration
+      // Check localStorage after registration
       console.log('localStorage after registration:', localStorage.getItem('valorant_registered_users'));
+      console.log('Current registered users count:', registeredUsersCount);
       
       toast({
         title: 'Kayıt başarılı',
