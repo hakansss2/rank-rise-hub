@@ -6,7 +6,16 @@ const bcrypt = require("bcrypt");
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+
+// Production için CORS ayarları
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://your-frontend-url.com', 'https://www.your-frontend-url.com'] 
+    : 'http://localhost:5173', // Vite'ın varsayılan portu
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // MongoDB'ye bağlan
@@ -202,6 +211,16 @@ app.patch("/api/users/:id/balance", async (req, res) => {
 app.get("/", (req, res) => {
   res.send("Rank Rise Hub Backend Çalışıyor!");
 });
+
+// Production için statik dosyaları serv et (opsiyonel - eğer backend ve frontend aynı sunucuda olacaksa)
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path');
+  app.use(express.static(path.join(__dirname, '../dist')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server ${PORT} portunda çalışıyor.`));

@@ -1,10 +1,8 @@
-
 // API çağrıları için merkezi bir servis dosyası
+import { getApiBaseUrl } from './environment';
 
 // API_BASE_URL, ortama göre değişiklik gösterebilir
-export const API_BASE_URL = process.env.NODE_ENV === 'production'
-  ? 'https://your-production-api.com/api'
-  : 'http://localhost:5000/api';
+export const API_BASE_URL = getApiBaseUrl();
 
 // Tüm endpoint'leri tek bir yerde toplama
 export const API_ENDPOINTS = {
@@ -52,6 +50,8 @@ export interface MessageResponse {
 // HTTP istekleri için yardımcı fonksiyonlar
 async function httpRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
   try {
+    console.log(`🔄 API isteği yapılıyor: ${url}`);
+    
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -65,9 +65,11 @@ async function httpRequest<T>(url: string, options: RequestInit = {}): Promise<T
       throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`✅ API yanıtı alındı:`, data);
+    return data;
   } catch (error) {
-    console.error('API isteği başarısız:', error);
+    console.error('❌ API isteği başarısız:', error);
     throw error;
   }
 }
