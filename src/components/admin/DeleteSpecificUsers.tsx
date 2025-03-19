@@ -21,6 +21,12 @@ const DeleteSpecificUsers: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailsToRemove, setEmailsToRemove] = useState<string[]>([]);
+  const [lastRefreshTime, setLastRefreshTime] = useState<string>('');
+
+  // Function to get the current timestamp
+  const getCurrentTimestamp = () => {
+    return new Date().toLocaleTimeString();
+  };
 
   // Function to refresh the list of registered users
   const refreshUserList = () => {
@@ -56,6 +62,9 @@ const DeleteSpecificUsers: React.FC = () => {
             setEmailsToRemove([]);
             console.log("DeleteSpecificUsers - No registered users to remove");
           }
+          
+          // Update last refresh time
+          setLastRefreshTime(getCurrentTimestamp());
         } catch (e) {
           console.error("DeleteSpecificUsers - Error parsing JSON:", e);
           setEmailsToRemove([]);
