@@ -53,9 +53,9 @@ const AdminPanel = () => {
       return;
     }
     
-    console.log('AdminPanel - Refreshing users in Admin Panel...');
-    console.log('AdminPanel - Current localStorage contents:', localStorage.getItem('valorant_registered_users'));
-    console.log('AdminPanel - Current registeredUsersCount:', registeredUsersCount);
+    console.log('🛠 AdminPanel - Refreshing users in Admin Panel...');
+    console.log('🛠 AdminPanel - Current localStorage contents:', localStorage.getItem('valorant_registered_users'));
+    console.log('🛠 AdminPanel - Current registeredUsersCount:', registeredUsersCount);
     
     refreshUsers();
     refreshOrders();
@@ -65,11 +65,11 @@ const AdminPanel = () => {
     setLoading(true);
     
     try {
-      console.log('AdminPanel - Calling getAllUsers() to refresh user list');
-      console.log('AdminPanel - Current localStorage before getAllUsers():', localStorage.getItem('valorant_registered_users'));
+      console.log('🛠 AdminPanel - Calling getAllUsers() to refresh user list');
+      console.log('🛠 AdminPanel - Current localStorage before getAllUsers():', localStorage.getItem('valorant_registered_users'));
       
       const users = getAllUsers();
-      console.log("Admin panel - Total users fetched:", users.length, users);
+      console.log("🛠 AdminPanel - Total Users to Display:", users.length, users);
       
       setAllUsers(users);
       
@@ -265,7 +265,9 @@ const AdminPanel = () => {
           <div className="flex space-x-4">
             <Button 
               onClick={() => {
-                console.log('Manual localStorage check:', localStorage.getItem('valorant_registered_users'));
+                console.log('🛠 Manual localStorage check:', localStorage.getItem('valorant_registered_users'));
+                const parsedUsers = JSON.parse(localStorage.getItem('valorant_registered_users') || '[]');
+                console.log('🛠 Parsed users from localStorage:', parsedUsers.length, parsedUsers);
                 refreshUsers();
               }} 
               variant="outline" 
@@ -794,4 +796,3 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
-

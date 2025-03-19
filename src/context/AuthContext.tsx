@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -48,13 +49,13 @@ const USERS_STORAGE_KEY = 'valorant_registered_users';
 // Function to load registered users from localStorage
 const loadRegisteredUsers = () => {
   try {
-    console.log('DEBUG: loadRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
+    console.log('📌 DEBUG: loadRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-    console.log('Loading registered users from localStorage:', storedUsers);
+    console.log('📌 Loading registered users from localStorage:', storedUsers);
     
     if (storedUsers) {
       const parsedUsers = JSON.parse(storedUsers);
-      console.log('Successfully loaded registered users:', parsedUsers.length, parsedUsers);
+      console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
       return parsedUsers;
     }
   } catch (error) {
@@ -62,7 +63,7 @@ const loadRegisteredUsers = () => {
   }
   
   // Initialize with empty array if no users found
-  console.log('No registered users found, initializing with empty array');
+  console.log('📌 No registered users found, initializing with empty array');
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
   return [];
 };
@@ -70,13 +71,14 @@ const loadRegisteredUsers = () => {
 // Function to save registered users to localStorage
 const saveRegisteredUsers = (users: any[]) => {
   try {
-    console.log('DEBUG: saveRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
-    console.log('Attempting to save users to localStorage:', users.length, users);
+    console.log('📌 DEBUG: saveRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
+    console.log('📌 Attempting to save users to localStorage:', users.length, users);
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
     // Verify that the data was saved correctly
     const storedData = localStorage.getItem(USERS_STORAGE_KEY);
-    console.log('Saved registered users to localStorage, verification:', storedData);
+    console.log('📌 Saved registered users to localStorage, verification:', storedData);
+    console.log('📌 Saved user count:', JSON.parse(storedData || '[]').length);
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
   }
@@ -92,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Load registered users
     const loadedUsers = loadRegisteredUsers();
     setRegisteredUsers(loadedUsers);
-    console.log('Initial loading of registered users:', loadedUsers.length, loadedUsers);
+    console.log('📌 Initial loading of registered users:', loadedUsers.length, loadedUsers);
     
     // Check for existing user session
     const storedUser = localStorage.getItem('valorant_user');
@@ -112,9 +114,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get all users (default admin + registered users)
   const getAllUsers = () => {
     // Always fetch the latest registered users from localStorage
-    console.log('DEBUG: getAllUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
+    console.log('🔄 DEBUG: getAllUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
     const latestRegisteredUsers = loadRegisteredUsers();
-    console.log("getAllUsers - Fetched registered users count:", latestRegisteredUsers.length, "Raw data:", latestRegisteredUsers);
+    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length);
     
     // Map users to exclude passwords
     const adminUser = { 
@@ -130,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Combine admin and registered users
     const allUsers = [adminUser, ...registeredUsersList];
-    console.log("getAllUsers - Returning total users:", allUsers.length, allUsers);
+    console.log("📢 getAllUsers - Final User List:", allUsers.length, allUsers);
     
     return allUsers;
   };
@@ -180,12 +182,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      console.log('Registration - Starting process for:', email);
-      console.log('localStorage before registration attempt:', localStorage.getItem(USERS_STORAGE_KEY));
+      console.log('📢 Registration - Starting process for:', email);
+      console.log('📌 localStorage before registration attempt:', localStorage.getItem(USERS_STORAGE_KEY));
       
       // Get the latest registered users directly from localStorage to ensure we have the most recent data
       const latestRegisteredUsers = loadRegisteredUsers();
-      console.log("Registration - Current registered users:", latestRegisteredUsers.length);
+      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length);
       
       // Check for duplicate email
       if (email === DEFAULT_ADMIN.email || latestRegisteredUsers.some(u => u.email === email)) {
@@ -203,12 +205,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         balance: 0,
       };
       
-      console.log("Registration - Created new user object:", { ...newUser, password: '***' });
+      console.log("📢 Registering user:", newUser);
+      console.log("🔍 Existing users before save:", localStorage.getItem(USERS_STORAGE_KEY));
       
       // Add to registered users
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
       
-      console.log("Registration - Before saving to localStorage:", {
+      console.log("📌 Registration - Before saving to localStorage:", {
         oldLength: latestRegisteredUsers.length,
         newLength: updatedRegisteredUsers.length,
         newUsers: updatedRegisteredUsers
@@ -216,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // IMPORTANT: Save to localStorage BEFORE updating state to ensure data is persisted
       saveRegisteredUsers(updatedRegisteredUsers);
-      console.log("Registration - After saving to localStorage:", localStorage.getItem(USERS_STORAGE_KEY));
+      console.log("📌 Registration - After saving to localStorage:", localStorage.getItem(USERS_STORAGE_KEY));
       
       // Then update state
       setRegisteredUsers(updatedRegisteredUsers);
@@ -231,7 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Verify localStorage after registration
       const storedUsersAfter = loadRegisteredUsers();
-      console.log('Verification - Users in localStorage after registration:', storedUsersAfter.length, storedUsersAfter);
+      console.log('📌 Verification - Users in localStorage after registration:', storedUsersAfter.length, storedUsersAfter);
       
       if (storedUsersAfter.length !== updatedRegisteredUsers.length) {
         console.error('ERROR: User count mismatch after registration!', {
