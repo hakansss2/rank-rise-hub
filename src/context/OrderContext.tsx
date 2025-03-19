@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
@@ -290,12 +291,17 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) return [];
     
     if (user.role === 'admin') {
+      console.log('Admin user - showing all in_progress and completed orders');
       return orders.filter(order => order.status === 'in_progress' || order.status === 'completed');
     }
     
     console.log(`Checking booster orders for user ${user.username} with ID ${user.id} and role ${user.role}`);
     
-    const filteredOrders = orders.filter(order => order.boosterId === user.id);
+    // Fix: Ensure we're correctly filtering orders based on boosterId
+    const filteredOrders = orders.filter(order => {
+      console.log(`Checking order ${order.id}, boosterId: ${order.boosterId}, user.id: ${user.id}`);
+      return order.boosterId === user.id;
+    });
     
     console.log(`Found ${filteredOrders.length} orders for booster ${user.username}`);
     return filteredOrders;
