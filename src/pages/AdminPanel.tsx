@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useOrder } from '@/context/OrderContext';
 import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import { Button } from '@/components/ui/button';
@@ -10,9 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Toaster } from '@/components/ui/toaster';
 import { toast } from '@/hooks/use-toast';
-import { RefreshCw, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Edit, Trash2, AlertTriangle, MessageCircle, CheckCircle, Activity } from 'lucide-react';
 import UserEditDialog from '@/components/admin/UserEditDialog';
 import DeleteSpecificUsers from '@/components/admin/DeleteSpecificUsers';
+import { getRankById } from '@/utils/rankData';
+import BoostMessagesDialog from '@/components/admin/BoostMessagesDialog';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +28,7 @@ import {
 
 const AdminPanel = () => {
   const { user, isAuthenticated, isAdmin, getAllUsers, updateUser, removeAllExceptAdmin, registeredUsersCount } = useAuth();
+  const { orders, refreshOrders, completeOrder, cancelOrder } = useOrder();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -33,8 +36,9 @@ const AdminPanel = () => {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cleanupDialogOpen, setCleanupDialogOpen] = useState(false);
+  const [selectedBoost, setSelectedBoost] = useState<any | null>(null);
+  const [messagesDialogOpen, setMessagesDialogOpen] = useState(false);
   
-  // Whenever admin panel loads or registeredUsersCount changes, refresh users
   useEffect(() => {
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
@@ -53,7 +57,8 @@ const AdminPanel = () => {
     console.log('AdminPanel - Current registeredUsersCount:', registeredUsersCount);
     
     refreshUsers();
-  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]); // Include registeredUsersCount as dependency
+    refreshOrders();
+  }, [isAuthenticated, isAdmin, navigate, registeredUsersCount]);
 
   const refreshUsers = useCallback(() => {
     setLoading(true);
@@ -137,6 +142,54 @@ const AdminPanel = () => {
     }
   };
 
+  const handleViewMessages = (boost: any) => {
+    console.log("Viewing messages for boost:", boost);
+    setSelectedBoost(boost);
+    setMessagesDialogOpen(true);
+  };
+
+  const handleCompleteBoost = async (orderId: string) => {
+    try {
+      console.log("AdminPanel - Completing boost:", orderId);
+      await completeOrder(orderId);
+      
+      toast({
+        title: "Boost Tamamlandı",
+        description: "Boost başarıyla tamamlandı ve booster'a ödeme yapıldı.",
+      });
+      
+      refreshOrders();
+    } catch (error) {
+      console.error('Error completing boost:', error);
+      toast({
+        title: "İşlem Başarısız",
+        description: "Boost tamamlanırken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelBoost = async (orderId: string) => {
+    try {
+      console.log("AdminPanel - Canceling boost:", orderId);
+      await cancelOrder(orderId);
+      
+      toast({
+        title: "Boost İptal Edildi",
+        description: "Boost başarıyla iptal edildi.",
+      });
+      
+      refreshOrders();
+    } catch (error) {
+      console.error('Error canceling boost:', error);
+      toast({
+        title: "İşlem Başarısız",
+        description: "Boost iptal edilirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!isAuthenticated || !isAdmin) {
     return null;
   }
@@ -169,6 +222,26 @@ const AdminPanel = () => {
         return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/30">{role}</Badge>;
     }
   };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/30">Devam Ediyor</Badge>;
+      case 'completed':
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/30">Tamamlandı</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/30">Bekliyor</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-500/10 text-red-500 border-red-500/30">İptal Edildi</Badge>;
+      default:
+        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/30">{status}</Badge>;
+    }
+  };
+
+  const activeBoosts = orders.filter(order => order.status === 'in_progress');
+  const completedBoosts = orders.filter(order => order.status === 'completed');
+  const pendingBoosts = orders.filter(order => order.status === 'pending');
+  const allBoosts = [...activeBoosts, ...completedBoosts, ...pendingBoosts];
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">
@@ -226,7 +299,7 @@ const AdminPanel = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-6 shadow-xl hover-scale">
             <h2 className="text-lg font-bold mb-4">Toplam Kullanıcı</h2>
             <div className="text-3xl font-bold">{allUsers.length}</div>
@@ -241,6 +314,11 @@ const AdminPanel = () => {
             <h2 className="text-lg font-bold mb-4">Boosterlar</h2>
             <div className="text-3xl font-bold">{boosters.length}</div>
           </div>
+          
+          <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-6 shadow-xl hover-scale">
+            <h2 className="text-lg font-bold mb-4">Toplam Boost</h2>
+            <div className="text-3xl font-bold">{allBoosts.length}</div>
+          </div>
         </div>
         
         <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-6 shadow-xl mb-12">
@@ -254,6 +332,9 @@ const AdminPanel = () => {
               </TabsTrigger>
               <TabsTrigger value="boosters" className="data-[state=active]:bg-valorant-green data-[state=active]:text-white">
                 Boosterlar ({boosters.length})
+              </TabsTrigger>
+              <TabsTrigger value="boosts" className="data-[state=active]:bg-valorant-green data-[state=active]:text-white">
+                Boostlar ({allBoosts.length})
               </TabsTrigger>
             </TabsList>
             
@@ -386,6 +467,285 @@ const AdminPanel = () => {
                 </TableBody>
               </Table>
             </TabsContent>
+            
+            <TabsContent value="boosts" className="pt-6">
+              <Tabs defaultValue="all-boosts">
+                <TabsList className="bg-valorant-gray/10 border border-valorant-gray/20">
+                  <TabsTrigger value="all-boosts" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                    Tüm Boostlar ({allBoosts.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="active-boosts" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                    Aktif ({activeBoosts.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="completed-boosts" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                    Tamamlanan ({completedBoosts.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="pending-boosts" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                    Bekleyen ({pendingBoosts.length})
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all-boosts" className="pt-4">
+                  <Button 
+                    onClick={refreshOrders} 
+                    variant="outline"
+                    className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500 flex items-center gap-2 mb-4"
+                  >
+                    <RefreshCw className="h-4 w-4" /> Boostları Yenile
+                  </Button>
+                  
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Durumu</TableHead>
+                        <TableHead>Başlangıç Rank</TableHead>
+                        <TableHead>Hedef Rank</TableHead>
+                        <TableHead>Müşteri</TableHead>
+                        <TableHead>Booster</TableHead>
+                        <TableHead className="text-right">Fiyat</TableHead>
+                        <TableHead className="text-right">Mesajlar</TableHead>
+                        <TableHead className="text-right">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allBoosts.length > 0 ? (
+                        allBoosts.map((boost) => {
+                          const currentRankName = getRankById(boost.currentRank);
+                          const targetRankName = getRankById(boost.targetRank);
+                          return (
+                            <TableRow key={boost.id}>
+                              <TableCell className="font-mono text-xs">{boost.id}</TableCell>
+                              <TableCell>{getStatusBadge(boost.status)}</TableCell>
+                              <TableCell>{currentRankName}</TableCell>
+                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{boost.userId}</TableCell>
+                              <TableCell>{boost.boosterUsername || "-"}</TableCell>
+                              <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge className="bg-valorant-green/10 text-valorant-green border-valorant-green/30">
+                                  {boost.messages.length}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleViewMessages(boost)}
+                                    className="hover:bg-valorant-gray/20 text-blue-500"
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                  {boost.status === 'in_progress' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleCompleteBoost(boost.id)}
+                                      className="hover:bg-valorant-gray/20 text-green-500"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  {boost.status === 'pending' && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleCancelBoost(boost.id)}
+                                      className="hover:bg-valorant-gray/20 text-red-500"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-8 text-gray-400">
+                            Henüz boost bulunmuyor
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+                
+                <TabsContent value="active-boosts" className="pt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Başlangıç Rank</TableHead>
+                        <TableHead>Hedef Rank</TableHead>
+                        <TableHead>Müşteri</TableHead>
+                        <TableHead>Booster</TableHead>
+                        <TableHead>Oyun Kullanıcı Adı</TableHead>
+                        <TableHead className="text-right">Fiyat</TableHead>
+                        <TableHead className="text-right">Mesajlar</TableHead>
+                        <TableHead className="text-right">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {activeBoosts.length > 0 ? (
+                        activeBoosts.map((boost) => {
+                          const currentRankName = getRankById(boost.currentRank);
+                          const targetRankName = getRankById(boost.targetRank);
+                          return (
+                            <TableRow key={boost.id}>
+                              <TableCell className="font-mono text-xs">{boost.id}</TableCell>
+                              <TableCell>{currentRankName}</TableCell>
+                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{boost.userId}</TableCell>
+                              <TableCell>{boost.boosterUsername || "-"}</TableCell>
+                              <TableCell>{boost.gameUsername}</TableCell>
+                              <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge className="bg-valorant-green/10 text-valorant-green border-valorant-green/30">
+                                  {boost.messages.length}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleViewMessages(boost)}
+                                    className="hover:bg-valorant-gray/20 text-blue-500"
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleCompleteBoost(boost.id)}
+                                    className="hover:bg-valorant-gray/20 text-green-500"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-8 text-gray-400">
+                            Henüz aktif boost bulunmuyor
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+                
+                <TabsContent value="completed-boosts" className="pt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Başlangıç Rank</TableHead>
+                        <TableHead>Hedef Rank</TableHead>
+                        <TableHead>Müşteri</TableHead>
+                        <TableHead>Booster</TableHead>
+                        <TableHead className="text-right">Fiyat</TableHead>
+                        <TableHead className="text-right">Mesajlar</TableHead>
+                        <TableHead className="text-right">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {completedBoosts.length > 0 ? (
+                        completedBoosts.map((boost) => {
+                          const currentRankName = getRankById(boost.currentRank);
+                          const targetRankName = getRankById(boost.targetRank);
+                          return (
+                            <TableRow key={boost.id}>
+                              <TableCell className="font-mono text-xs">{boost.id}</TableCell>
+                              <TableCell>{currentRankName}</TableCell>
+                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{boost.userId}</TableCell>
+                              <TableCell>{boost.boosterUsername || "-"}</TableCell>
+                              <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge className="bg-valorant-green/10 text-valorant-green border-valorant-green/30">
+                                  {boost.messages.length}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewMessages(boost)}
+                                  className="hover:bg-valorant-gray/20 text-blue-500"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-gray-400">
+                            Henüz tamamlanmış boost bulunmuyor
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+                
+                <TabsContent value="pending-boosts" className="pt-4">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Başlangıç Rank</TableHead>
+                        <TableHead>Hedef Rank</TableHead>
+                        <TableHead>Müşteri</TableHead>
+                        <TableHead className="text-right">Fiyat</TableHead>
+                        <TableHead className="text-right">İşlemler</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingBoosts.length > 0 ? (
+                        pendingBoosts.map((boost) => {
+                          const currentRankName = getRankById(boost.currentRank);
+                          const targetRankName = getRankById(boost.targetRank);
+                          return (
+                            <TableRow key={boost.id}>
+                              <TableCell className="font-mono text-xs">{boost.id}</TableCell>
+                              <TableCell>{currentRankName}</TableCell>
+                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{boost.userId}</TableCell>
+                              <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleCancelBoost(boost.id)}
+                                  className="hover:bg-valorant-gray/20 text-red-500"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                            Henüz bekleyen boost bulunmuyor
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TabsContent>
+              </Tabs>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
@@ -395,6 +755,12 @@ const AdminPanel = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSave={handleUserEdit}
+      />
+      
+      <BoostMessagesDialog
+        boost={selectedBoost}
+        open={messagesDialogOpen}
+        onOpenChange={setMessagesDialogOpen}
       />
       
       <AlertDialog open={cleanupDialogOpen} onOpenChange={setCleanupDialogOpen}>
