@@ -151,7 +151,28 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           const parsedOrders = JSON.parse(storedOrders);
           console.log('✅ OrderProvider - Successfully loaded orders from localStorage:', parsedOrders.length);
           console.log('📊 OrderProvider - Order details:', parsedOrders);
-          setOrders(parsedOrders);
+          
+          // Validate and ensure all orders have the correct status type
+          const validatedOrders = parsedOrders.map((order: any) => {
+            // Ensure status is one of the valid types
+            let validStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' = 'pending';
+            
+            if (order.status === 'pending' || 
+                order.status === 'in_progress' || 
+                order.status === 'completed' || 
+                order.status === 'cancelled') {
+              validStatus = order.status;
+            } else {
+              console.warn(`⚠️ OrderProvider - Invalid status found: ${order.status}. Defaulting to 'pending'`);
+            }
+            
+            return {
+              ...order,
+              status: validStatus
+            } as Order;
+          });
+          
+          setOrders(validatedOrders);
         } catch (error) {
           console.error('❌ OrderProvider - Failed to parse stored orders:', error);
           console.log('⚠️ OrderProvider - Falling back to mock orders');
@@ -237,7 +258,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         order.id === orderId 
           ? { 
               ...order, 
-              status: 'in_progress', 
+              status: 'in_progress' as const, 
               boosterId: user.id,
               boosterUsername: user.username,
             } 
@@ -308,7 +329,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Update the order status
         const updatedOrders = orders.map(order => 
           order.id === orderId 
-            ? { ...order, status: 'completed' } 
+            ? { ...order, status: 'completed' as const } 
             : order
         );
         
@@ -350,7 +371,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // Update the order status
       const updatedOrders = orders.map(order => 
         order.id === orderId 
-          ? { ...order, status: 'cancelled' } 
+          ? { ...order, status: 'cancelled' as const } 
           : order
       );
       
