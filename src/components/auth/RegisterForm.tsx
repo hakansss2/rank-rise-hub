@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { STORAGE_KEYS, refreshData, syncAllTabs } from '@/utils/storageService';
 
 const formSchema = z.object({
   email: z.string().email('Geçerli bir e-posta adresi girin.'),
@@ -46,56 +45,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
     },
   });
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      try {
-        const latestUsers = refreshData(STORAGE_KEYS.USERS, []);
-        console.log('📌 RegisterForm - Periodic refresh of users count:', latestUsers.length);
-      } catch (error) {
-        console.error('❌ Error in periodic refresh:', error);
-      }
-    }, 3000); // Check every 3 seconds
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
 
     try {
       console.log(`📌 Attempting to register user: ${data.username}, ${data.email}`);
       
-      for (let i = 0; i < 3; i++) {
-        console.log(`📌 Pre-registration check ${i+1}: Refreshing users data`);
-        refreshData(STORAGE_KEYS.USERS, []);
-        if (i < 2) await new Promise(resolve => setTimeout(resolve, 200));
-      }
-      
       await registerUser(data.email, data.username, data.password);
-      
-      syncAllTabs();
-      
-      const verifyRegistration = async () => {
-        try {
-          const usersAfterRegistration = refreshData(STORAGE_KEYS.USERS, []);
-          console.log('📌 Verification check - users after registration:', usersAfterRegistration.length);
-          
-          const userExists = usersAfterRegistration.some((u: any) => u.email === data.email);
-          console.log('📌 New user verification:', { found: userExists, email: data.email });
-          
-          if (!userExists) {
-            console.error('❌ User registration verification failed - user not found in storage');
-          }
-          
-          syncAllTabs();
-        } catch (error) {
-          console.error('❌ Error in registration verification:', error);
-        }
-      };
-      
-      await verifyRegistration();
-      setTimeout(() => verifyRegistration(), 500);
-      setTimeout(() => verifyRegistration(), 1500);
       
       toast({
         title: 'Kayıt başarılı',

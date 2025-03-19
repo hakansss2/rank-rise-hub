@@ -1,8 +1,8 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const bcrypt = require("bcrypt");
 require("dotenv").config();
 
 const app = express();
@@ -31,11 +31,15 @@ app.post("/api/users/register", async (req, res) => {
       return res.status(400).json({ message: "Bu e-posta adresi zaten kullanılıyor." });
     }
     
+    // Şifreyi hashle
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
     // Yeni kullanıcı oluştur
     const newUser = new User({
       email,
       username,
-      password,  // Gerçek uygulamada şifre hashlenmeli!
+      password: hashedPassword,
       role: "customer",
       balance: 0
     });
@@ -69,7 +73,13 @@ app.post("/api/users/login", async (req, res) => {
     
     // Normal kullanıcı kontrolü
     const user = await User.findOne({ email });
-    if (!user || user.password !== password) {
+    if (!user) {
+      return res.status(401).json({ message: "Geçersiz e-posta veya şifre." });
+    }
+    
+    // Şifre doğrulama
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: "Geçersiz e-posta veya şifre." });
     }
     
@@ -78,6 +88,16 @@ app.post("/api/users/login", async (req, res) => {
     delete userResponse.password;
     
     res.status(200).json(userResponse);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Kullanıcı sayısını getir
+app.get("/api/users/count", async (req, res) => {
+  try {
+    const count = await User.countDocuments({ role: "customer" });
+    res.json({ count });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

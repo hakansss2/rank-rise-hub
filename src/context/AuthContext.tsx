@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   STORAGE_KEYS, 
@@ -10,6 +9,8 @@ import {
   syncAllTabs,
   initializeStorageHealthCheck
 } from '@/utils/storageService';
+import { useToast } from '@/hooks/use-toast';
+import { authApi, userApi } from '@/utils/apiService';
 
 type UserRole = 'customer' | 'booster' | 'admin';
 
@@ -56,75 +57,46 @@ const DEFAULT_ADMIN = {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
   const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(0);
+  const { toast } = useToast();
   
-  // Set up health check on mount
+  // Sayfa yüklendiğinde oturum kontrolü yap
   useEffect(() => {
-    const cleanupHealthCheck = initializeStorageHealthCheck();
-    return () => cleanupHealthCheck();
-  }, []);
-
-  // Load all users and current user on mount
-  useEffect(() => {
-    console.log('🔄 AuthProvider - Initial mount, loading data and checking session');
+    console.log('🔄 AuthProvider - Initial mount, checking session');
     
     try {
-      // Load registered users with validation and recovery
-      const loadedUsers = refreshData(STORAGE_KEYS.USERS, []);
-      setRegisteredUsers(loadedUsers);
-      setRegisteredUsersCount(loadedUsers.length);
-      console.log('📌 Initial loading of registered users:', loadedUsers.length, loadedUsers);
-      
-      // Check for existing user session
-      const storedUser = refreshData(STORAGE_KEYS.CURRENT_USER, null);
+      // Tarayıcı depolamasında oturum bilgisi var mı kontrol et
+      const storedUser = localStorage.getItem('valorant_user');
       if (storedUser) {
-        setUser(storedUser);
-        console.log('User session restored:', storedUser.username);
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log('User session restored:', parsedUser.username);
       }
-      
-      // Force sync across tabs
-      syncAllTabs();
     } catch (error) {
-      console.error('❌ Error loading initial data:', error);
+      console.error('❌ Error loading user session:', error);
+      localStorage.removeItem('valorant_user');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Setup storage event listeners
-  useEffect(() => {
-    console.log('🔄 Setting up storage event listeners');
-    
-    // Listen for registered users changes
-    const usersCleanup = addStorageListener(STORAGE_KEYS.USERS, (data) => {
-      console.log('🔄 Storage event - Registered users updated:', data?.length);
-      if (Array.isArray(data)) {
-        setRegisteredUsers(data);
-        setRegisteredUsersCount(data.length);
-      }
-    });
-    
-    // Listen for current user changes
-    const userCleanup = addStorageListener(STORAGE_KEYS.CURRENT_USER, (data) => {
-      console.log('🔄 Storage event - Current user updated:', data?.username);
-      setUser(data);
-    });
-    
-    return () => {
-      usersCleanup();
-      userCleanup();
-    };
-  }, []);
+  // Kayıtlı kullanıcı sayısını sunucudan al (örnek fonksiyon)
+  const fetchUserCount = async () => {
+    try {
+      const response = await fetch(authApi.USERS_COUNT);
+      const data = await response.json();
+      setRegisteredUsersCount(data.count);
+    } catch (error) {
+      console.error('Failed to fetch user count', error);
+    }
+  };
 
-  // Get all users (default admin + registered users)
+  // Tüm kullanıcıları getir 
   const getAllUsers = () => {
-    // Always fetch the latest registered users from storage
-    console.log('🔄 DEBUG: getAllUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
-    const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
-    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length);
+    // NOT: Backend API'ye bağlandığında burada gerçek bir API çağrısı yapmalısınız
+    console.log('🔄 DEBUG: getAllUsers - API çağrısı yapılacak');
     
-    // Map admin user (exclude password)
+    // Şimdilik default admin'i döndür
     const adminUser = { 
       id: DEFAULT_ADMIN.id, 
       email: DEFAULT_ADMIN.email, 
@@ -133,49 +105,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       balance: DEFAULT_ADMIN.balance 
     };
     
-    // Map registered users to exclude passwords
-    const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }: any) => rest);
-    
-    // Combine admin and registered users
-    const allUsers = [adminUser, ...registeredUsersList];
-    console.log("📢 getAllUsers - Final User List:", allUsers.length);
-    
-    return allUsers;
+    // Sonradan API çağrısı ile gerçek kullanıcıları alacağız
+    return [adminUser];
   };
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Get the latest registered users
-      const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
+      console.log('Logging in user:', email);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // API üzerinden giriş yap
+      const userData = await authApi.login(email, password);
       
-      // Check if admin login
-      let foundUser = null;
-      if (email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password) {
-        foundUser = DEFAULT_ADMIN;
-      } else {
-        // Check registered users
-        console.log('Checking registered users for:', email);
-        foundUser = latestRegisteredUsers.find(
-          u => u.email === email && u.password === password
-        );
-      }
+      // Kullanıcı bilgilerini state'e kaydet
+      setUser(userData);
       
-      if (!foundUser) {
-        console.error('Login failed: Invalid credentials for', email);
-        throw new Error('Invalid credentials');
-      }
+      // Oturum bilgisini tarayıcı depolamasına kaydet
+      localStorage.setItem('valorant_user', JSON.stringify(userData));
       
-      // Extract user info without password
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      setData(STORAGE_KEYS.CURRENT_USER, userWithoutPassword);
-      console.log('User logged in successfully:', userWithoutPassword.username);
+      console.log('User logged in successfully:', userData.username);
     } catch (error) {
       console.error('Login failed', error);
+      toast({
+        title: "Giriş Başarısız",
+        description: "E-posta veya şifre hatalı.",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setIsLoading(false);
@@ -185,61 +140,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, username: string, password: string) => {
     setIsLoading(true);
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
       console.log('📢 Registration - Starting process for:', email);
       
-      // Get the latest registered users directly from storage
-      const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
-      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length);
+      // API üzerinden kayıt ol
+      const userData = await authApi.register(email, username, password);
       
-      // Check for duplicate email
-      if (email === DEFAULT_ADMIN.email || latestRegisteredUsers.some(u => u.email === email)) {
-        console.error('Registration failed: Email already in use -', email);
-        throw new Error('Email already in use');
-      }
+      // Kullanıcı bilgilerini state'e kaydet
+      setUser(userData);
       
-      // Create new user
-      const newUser = {
-        id: `u-${Date.now()}`,
-        email,
-        username,
-        password,
-        role: 'customer' as UserRole,
-        balance: 0,
-      };
+      // Oturum bilgisini tarayıcı depolamasına kaydet
+      localStorage.setItem('valorant_user', JSON.stringify(userData));
       
-      console.log("📢 Registering user:", newUser);
+      console.log('User registered successfully:', userData.username);
       
-      // Add to registered users
-      const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
+      // Kayıtlı kullanıcı sayısını güncelle
+      setRegisteredUsersCount(prev => prev + 1);
       
-      console.log("📌 Registration - Before saving users:", {
-        oldLength: latestRegisteredUsers.length,
-        newLength: updatedRegisteredUsers.length
+      toast({
+        title: "Kayıt Başarılı",
+        description: "Hesabınız başarıyla oluşturuldu!",
       });
-      
-      // IMPORTANT: Save to storage BEFORE updating state
-      setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
-      
-      // Then update state
-      setRegisteredUsers(updatedRegisteredUsers);
-      setRegisteredUsersCount(updatedRegisteredUsers.length);
-      
-      console.log('User registered successfully:', { email, username, id: newUser.id });
-      console.log('Total registered users after registration:', updatedRegisteredUsers.length);
-      
-      // Log in the new user
-      const { password: _, ...userWithoutPassword } = newUser;
-      setUser(userWithoutPassword);
-      setData(STORAGE_KEYS.CURRENT_USER, userWithoutPassword);
-      
-      // Verify storage after registration
-      const storedUsersAfter = refreshData(STORAGE_KEYS.USERS, []);
-      console.log('📌 Verification - Users after registration:', storedUsersAfter.length);
     } catch (error) {
       console.error('Registration failed', error);
+      toast({
+        title: "Kayıt Başarısız",
+        description: "Bu e-posta adresi zaten kullanılıyor olabilir.",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setIsLoading(false);
@@ -248,88 +175,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
-    removeData(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem('valorant_user');
     console.log('User logged out');
   };
   
-  // Add balance to user account
+  // Kullanıcı bakiyesine ekleme yap
   const addBalance = async (amount: number) => {
     if (!user) throw new Error('User must be logged in to add balance');
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Bakiye güncelleme API çağrısı
+      const updatedUser = await userApi.updateBalance(user.id, amount);
       
-      const updatedUser = {
-        ...user,
-        balance: user.balance + amount
-      };
-      
+      // State güncelleme
       setUser(updatedUser);
-      setData(STORAGE_KEYS.CURRENT_USER, updatedUser);
       
-      // Update balance in registered users if not admin
-      if (user.email !== DEFAULT_ADMIN.email) {
-        const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
-        const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
-          if (u.id === user.id) {
-            return { ...u, balance: updatedUser.balance };
-          }
-          return u;
-        });
-        
-        setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
-        setRegisteredUsers(updatedRegisteredUsers);
-      }
+      // Kullanıcı bilgisini localStorage'da güncelle
+      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      
+      toast({
+        title: "Bakiye Eklendi",
+        description: `Hesabınıza ${amount}₺ eklendi.`,
+      });
     } catch (error) {
       console.error('Failed to add balance', error);
+      toast({
+        title: "İşlem Başarısız",
+        description: "Bakiye eklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
   
-  // Deduct balance from user account
+  // Kullanıcı bakiyesinden düşme yap
   const deductBalance = async (amount: number): Promise<boolean> => {
     if (!user) throw new Error('User must be logged in to make a purchase');
     
-    // Check if user has sufficient balance
+    // Yeterli bakiye kontrolü
     if (user.balance < amount) {
+      toast({
+        title: "Yetersiz Bakiye",
+        description: "Bu işlem için yeterli bakiyeniz bulunmuyor.",
+        variant: "destructive",
+      });
       return false;
     }
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Bakiye güncelleme API çağrısı (negatif değer göndererek düşme işlemi)
+      const updatedUser = await userApi.updateBalance(user.id, -amount);
       
-      const updatedUser = {
-        ...user,
-        balance: user.balance - amount
-      };
-      
+      // State güncelleme
       setUser(updatedUser);
-      setData(STORAGE_KEYS.CURRENT_USER, updatedUser);
       
-      // Update balance in registered users if not admin
-      if (user.email !== DEFAULT_ADMIN.email) {
-        const latestRegisteredUsers = refreshData(STORAGE_KEYS.USERS, []);
-        const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
-          if (u.id === user.id) {
-            return { ...u, balance: updatedUser.balance };
-          }
-          return u;
-        });
-        
-        setData(STORAGE_KEYS.USERS, updatedRegisteredUsers);
-        setRegisteredUsers(updatedRegisteredUsers);
-      }
+      // Kullanıcı bilgisini localStorage'da güncelle
+      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
       
       return true;
     } catch (error) {
       console.error('Failed to deduct balance', error);
+      toast({
+        title: "İşlem Başarısız",
+        description: "Bakiye düşülürken bir hata oluştu.",
+        variant: "destructive",
+      });
       throw error;
     }
   };
   
-  // Format user balance with currency
   const formatBalance = (currency: 'TRY' | 'USD' = 'TRY'): string => {
     if (!user) return currency === 'TRY' ? '0 ₺' : '$0.00';
     
