@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -80,53 +79,39 @@ const Register = () => {
       
       // Check localStorage before registration
       console.log('📌 localStorage BEFORE registration:', localStorage.getItem('valorant_registered_users'));
-      console.log('📌 Current registered users count BEFORE registration:', registeredUsersCount);
-      
-      // Manually verify localStorage content for debugging
-      try {
-        const rawData = localStorage.getItem('valorant_registered_users');
-        const parsedUsers = rawData ? JSON.parse(rawData) : [];
-        console.log('📌 Manual parsing of localStorage BEFORE registration:', 
-          Array.isArray(parsedUsers) ? parsedUsers.length : 'Not an array', parsedUsers);
-      } catch (e) {
-        console.error('📌 Error parsing localStorage BEFORE registration:', e);
-      }
       
       await registerUser(data.email, data.username, data.password);
       
-      // Check localStorage after registration
-      console.log('📌 localStorage AFTER registration:', localStorage.getItem('valorant_registered_users'));
+      // ⚠️ Add immediate verification check after registration
+      console.log('📌 IMMEDIATE CHECK - localStorage after registration:', localStorage.getItem('valorant_registered_users'));
       
-      // Manually verify localStorage content after registration
+      // Check if user was properly added
       try {
-        const rawData = localStorage.getItem('valorant_registered_users');
-        const parsedUsers = rawData ? JSON.parse(rawData) : [];
-        console.log('📌 Manual parsing of localStorage AFTER registration:', 
-          Array.isArray(parsedUsers) ? parsedUsers.length : 'Not an array', parsedUsers);
-      } catch (e) {
-        console.error('📌 Error parsing localStorage AFTER registration:', e);
+        const usersAfterRegistration = localStorage.getItem('valorant_registered_users');
+        if (usersAfterRegistration) {
+          const parsedUsers = JSON.parse(usersAfterRegistration);
+          const userExists = parsedUsers.some((u: any) => u.email === data.email);
+          
+          console.log('📌 Verification of new user in localStorage:', {
+            found: userExists,
+            totalUsers: parsedUsers.length,
+            userEmail: data.email
+          });
+          
+          if (!userExists) {
+            console.error('⚠️ User not found in localStorage after registration!');
+            throw new Error('Registration verification failed');
+          } else {
+            console.log('✅ User successfully verified in localStorage!');
+          }
+        } else {
+          console.error('⚠️ No users in localStorage after registration!');
+          throw new Error('No users found after registration');
+        }
+      } catch (verificationError) {
+        console.error('⚠️ Registration verification error:', verificationError);
+        throw new Error('Failed to verify registration');
       }
-      
-      // Verify registration worked by checking localStorage directly
-      const verificationCheck = localStorage.getItem('valorant_registered_users');
-      if (!verificationCheck || verificationCheck === '[]') {
-        console.error('⚠️ Warning: Registration may have failed - No users in localStorage after registration!');
-        // Try to save again manually
-        const mockUser = {
-          id: `u-${Date.now()}`,
-          email: data.email,
-          username: data.username,
-          password: data.password,
-          role: 'customer',
-          balance: 0,
-        };
-        
-        const usersArray = [mockUser];
-        localStorage.setItem('valorant_registered_users', JSON.stringify(usersArray));
-        console.log('📌 Manual retry of saving user to localStorage');
-      }
-      
-      console.log('📌 Updated registered users count AFTER registration:', registeredUsersCount);
       
       toast({
         title: 'Kayıt başarılı',
@@ -135,6 +120,10 @@ const Register = () => {
       navigate('/dashboard');
     } catch (error) {
       console.error('Registration error:', error);
+      
+      // Check localStorage after error
+      console.log('⚠️ localStorage after registration ERROR:', localStorage.getItem('valorant_registered_users'));
+      
       toast({
         title: 'Kayıt başarısız',
         description: 'Bir hata oluştu. Lütfen tekrar deneyin.',
@@ -144,7 +133,7 @@ const Register = () => {
       setIsLoading(false);
       
       // Final check of localStorage
-      console.log('📌 Final localStorage check after registration:', localStorage.getItem('valorant_registered_users'));
+      console.log('📌 Final localStorage check after registration process:', localStorage.getItem('valorant_registered_users'));
     }
   };
 
