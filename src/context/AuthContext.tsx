@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -50,12 +51,14 @@ const loadRegisteredUsers = () => {
   try {
     console.log('📌 DEBUG: loadRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
     
+    // Get the raw data from localStorage
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     console.log('📌 Loading registered users from localStorage:', storedUsers);
     console.log('📤 loadRegisteredUsers - Raw localStorage data:', storedUsers);
     
     if (storedUsers) {
       try {
+        // Parse the JSON data
         const parsedUsers = JSON.parse(storedUsers);
         console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
         console.log('📤 loadRegisteredUsers - Parsed Users:', parsedUsers.length, parsedUsers);

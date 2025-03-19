@@ -224,6 +224,7 @@ const DeleteSpecificUsers: React.FC = () => {
                 <li>...ve {emailsToRemove.length - 5} kullanıcı daha</li>
               )}
             </ul>
+            <p className="mt-1 text-xs text-blue-400">Son yenileme: {lastRefreshTime || 'Henüz yenilenmedi'}</p>
           </div>
         ) : (
           <p>Silinecek kayıtlı kullanıcı bulunmuyor.</p>

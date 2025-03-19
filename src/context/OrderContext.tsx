@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { getRankById, formatCurrency } from '../utils/rankData';
@@ -100,6 +101,9 @@ const MOCK_ORDERS: Order[] = [
   },
 ];
 
+// Constants for localStorage keys
+const ORDERS_STORAGE_KEY = 'valorant_orders';
+
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -109,63 +113,107 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  // Load orders from localStorage on component mount
   useEffect(() => {
+    console.log('🔄 OrderProvider - Initial mount, attempting to load orders');
     refreshOrders();
     setInitialized(true);
   }, []);
 
+  // Save orders to localStorage when they change
   useEffect(() => {
     if (initialized) {
-      localStorage.setItem('valorant_orders', JSON.stringify(orders));
-      console.log('Saved orders to localStorage:', orders.length);
+      try {
+        console.log('🔄 OrderProvider - Saving orders to localStorage:', orders.length, orders);
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+        console.log('✅ OrderProvider - Saved orders to localStorage successfully');
+        
+        // Verify the save operation
+        const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
+        if (storedOrders) {
+          const parsedOrders = JSON.parse(storedOrders);
+          console.log('🔍 OrderProvider - Verification: localStorage has', parsedOrders.length, 'orders');
+        }
+      } catch (error) {
+        console.error('❌ OrderProvider - Failed to save orders to localStorage:', error);
+      }
     }
   }, [orders, initialized]);
 
   const refreshOrders = () => {
-    const storedOrders = localStorage.getItem('valorant_orders');
-    console.log('Attempting to load orders from localStorage');
-    
-    if (storedOrders) {
-      try {
-        const parsedOrders = JSON.parse(storedOrders);
-        console.log('Loaded orders from localStorage:', parsedOrders.length);
-        console.log('Order details:', parsedOrders);
-        setOrders(parsedOrders);
-      } catch (error) {
-        console.error('Failed to parse stored orders', error);
+    console.log('🔄 OrderProvider - refreshOrders called');
+    try {
+      const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
+      console.log('🔍 OrderProvider - Raw localStorage data for orders:', storedOrders);
+      
+      if (storedOrders) {
+        try {
+          const parsedOrders = JSON.parse(storedOrders);
+          console.log('✅ OrderProvider - Successfully loaded orders from localStorage:', parsedOrders.length);
+          console.log('📊 OrderProvider - Order details:', parsedOrders);
+          setOrders(parsedOrders);
+        } catch (error) {
+          console.error('❌ OrderProvider - Failed to parse stored orders:', error);
+          console.log('⚠️ OrderProvider - Falling back to mock orders');
+          setOrders(MOCK_ORDERS);
+          localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(MOCK_ORDERS));
+        }
+      } else {
+        console.log('ℹ️ OrderProvider - No saved orders found, using mock data');
         setOrders(MOCK_ORDERS);
-        localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(MOCK_ORDERS));
       }
-    } else {
-      console.log('No saved orders found, using mock data');
-      setOrders(MOCK_ORDERS);
-      localStorage.setItem('valorant_orders', JSON.stringify(MOCK_ORDERS));
+    } catch (error) {
+      console.error('❌ OrderProvider - Error in refreshOrders:', error);
     }
   };
 
   const createOrder = async (currentRank: number, targetRank: number, price: number, gameUsername: string, gamePassword: string) => {
     if (!user) throw new Error('User must be logged in to create an order');
 
-    const newOrder: Order = {
-      id: Date.now().toString(),
-      userId: user.id,
-      currentRank,
-      targetRank,
-      price,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      messages: [],
-      gameUsername,
-      gamePassword,
-    };
-
-    setOrders(prev => [...prev, newOrder]);
-    console.log('Created new order:', newOrder);
-    return Promise.resolve();
+    console.log('🔄 OrderProvider - createOrder called with:', { currentRank, targetRank, price });
+    
+    try {
+      const newOrder: Order = {
+        id: Date.now().toString(),
+        userId: user.id,
+        currentRank,
+        targetRank,
+        price,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        messages: [],
+        gameUsername,
+        gamePassword,
+      };
+      
+      console.log('✅ OrderProvider - Created new order object:', newOrder);
+      
+      // Update state
+      const updatedOrders = [...orders, newOrder];
+      setOrders(updatedOrders);
+      
+      // Save to localStorage immediately
+      console.log('🔄 OrderProvider - Saving orders after adding new order');
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      
+      // Verify the update
+      const storedOrders = localStorage.getItem(ORDERS_STORAGE_KEY);
+      const parsedOrders = storedOrders ? JSON.parse(storedOrders) : [];
+      console.log('🔍 OrderProvider - Verification: localStorage now has', parsedOrders.length, 'orders');
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error creating order:', error);
+      throw error;
+    }
   };
 
   const getOrderById = (id: string) => {
-    return orders.find(order => order.id === id);
+    console.log('🔍 OrderProvider - getOrderById called for:', id);
+    const order = orders.find(order => order.id === id);
+    console.log('🔍 OrderProvider - Found order:', order);
+    return order;
   };
 
   const claimOrder = async (orderId: string) => {
@@ -181,10 +229,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Admin accounts cannot claim orders');
     }
 
-    console.log(`Claiming order ${orderId} by user ${user.username} with ID ${user.id}`);
+    console.log(`🔄 OrderProvider - Claiming order ${orderId} by user ${user.username} with ID ${user.id}`);
     
-    setOrders(prev => 
-      prev.map(order => 
+    try {
+      // Update the order
+      const updatedOrders = orders.map(order => 
         order.id === orderId 
           ? { 
               ...order, 
@@ -193,71 +242,95 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               boosterUsername: user.username,
             } 
           : order
-      )
-    );
-    
-    return Promise.resolve();
+      );
+      
+      // Set the state
+      setOrders(updatedOrders);
+      
+      // Save to localStorage
+      console.log('🔄 OrderProvider - Saving orders after claiming order');
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error claiming order:', error);
+      throw error;
+    }
   };
 
   const completeOrder = async (orderId: string) => {
     if (!user) throw new Error('User must be logged in to complete an order');
     
-    const order = orders.find(o => o.id === orderId);
+    console.log(`🔄 OrderProvider - Completing order ${orderId}`);
     
-    if (order && (order.boosterId === user.id || user.role === 'admin')) {
-      const boosterCommission = Math.round(order.price * 0.6);
+    try {
+      const order = orders.find(o => o.id === orderId);
       
-      if (order.boosterId && order.boosterId !== user.id && user.role === 'admin') {
-        try {
-          const storedUsers = localStorage.getItem('valorant_registered_users');
-          if (storedUsers) {
-            const parsedUsers = JSON.parse(storedUsers);
-            const booster = parsedUsers.find((u: any) => u.id === order.boosterId);
-            
-            if (booster) {
-              booster.balance = (booster.balance || 0) + boosterCommission;
-              localStorage.setItem('valorant_registered_users', JSON.stringify(parsedUsers));
+      if (order && (order.boosterId === user.id || user.role === 'admin')) {
+        const boosterCommission = Math.round(order.price * 0.6);
+        
+        if (order.boosterId && order.boosterId !== user.id && user.role === 'admin') {
+          try {
+            const storedUsers = localStorage.getItem('valorant_registered_users');
+            if (storedUsers) {
+              const parsedUsers = JSON.parse(storedUsers);
+              const booster = parsedUsers.find((u: any) => u.id === order.boosterId);
               
-              console.log(`Admin completed order. Added ${boosterCommission}₺ to booster ${booster.username}'s account`);
-              
-              toast({
-                title: "Sipariş Tamamlandı",
-                description: `${booster.username} hesabına ${boosterCommission}₺ komisyon eklendi.`,
-              });
+              if (booster) {
+                booster.balance = (booster.balance || 0) + boosterCommission;
+                localStorage.setItem('valorant_registered_users', JSON.stringify(parsedUsers));
+                
+                console.log(`✅ OrderProvider - Admin completed order. Added ${boosterCommission}₺ to booster ${booster.username}'s account`);
+                
+                toast({
+                  title: "Sipariş Tamamlandı",
+                  description: `${booster.username} hesabına ${boosterCommission}₺ komisyon eklendi.`,
+                });
+              }
             }
+          } catch (error) {
+            console.error('❌ OrderProvider - Failed to add commission to booster:', error);
           }
-        } catch (error) {
-          console.error('Failed to add commission to booster', error);
+        } else if (user.id === order.boosterId) {
+          try {
+            await addBalance(boosterCommission);
+            console.log(`✅ OrderProvider - Booster earned ${boosterCommission}₺ commission`);
+            
+            toast({
+              title: "Komisyon Eklendi",
+              description: `Hesabınıza ${boosterCommission}₺ komisyon eklendi.`,
+            });
+          } catch (error) {
+            console.error('❌ OrderProvider - Failed to add commission to booster:', error);
+          }
         }
-      } else if (user.id === order.boosterId) {
-        try {
-          await addBalance(boosterCommission);
-          console.log(`Booster earned ${boosterCommission}₺ commission`);
-          
-          toast({
-            title: "Komisyon Eklendi",
-            description: `Hesabınıza ${boosterCommission}₺ komisyon eklendi.`,
-          });
-        } catch (error) {
-          console.error('Failed to add commission to booster', error);
-        }
-      }
-      
-      setOrders(prev => 
-        prev.map(order => 
+        
+        // Update the order status
+        const updatedOrders = orders.map(order => 
           order.id === orderId 
             ? { ...order, status: 'completed' } 
             : order
-        )
-      );
-      return Promise.resolve();
-    } else {
-      toast({
-        title: "İşlem Reddedildi",
-        description: "Bu siparişi sadece atanmış booster veya admin tamamlayabilir.",
-        variant: "destructive",
-      });
-      throw new Error('Only the assigned booster or an admin can complete this order');
+        );
+        
+        // Update state
+        setOrders(updatedOrders);
+        
+        // Save to localStorage
+        console.log('🔄 OrderProvider - Saving orders after completing order');
+        localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+        
+        return Promise.resolve();
+      } else {
+        toast({
+          title: "İşlem Reddedildi",
+          description: "Bu siparişi sadece atanmış booster veya admin tamamlayabilir.",
+          variant: "destructive",
+        });
+        throw new Error('Only the assigned booster or an admin can complete this order');
+      }
+    } catch (error) {
+      console.error('❌ OrderProvider - Error completing order:', error);
+      throw error;
     }
   };
 
@@ -271,52 +344,78 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw new Error('Only admins can cancel orders');
     }
     
-    setOrders(prev => 
-      prev.map(order => 
+    console.log(`🔄 OrderProvider - Cancelling order ${orderId}`);
+    
+    try {
+      // Update the order status
+      const updatedOrders = orders.map(order => 
         order.id === orderId 
           ? { ...order, status: 'cancelled' } 
           : order
-      )
-    );
-    return Promise.resolve();
+      );
+      
+      // Update state
+      setOrders(updatedOrders);
+      
+      // Save to localStorage
+      console.log('🔄 OrderProvider - Saving orders after cancelling order');
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error cancelling order:', error);
+      throw error;
+    }
   };
 
   const getUserOrders = () => {
     if (!user) return [];
-    return orders.filter(order => order.userId === user.id);
+    
+    console.log(`🔍 OrderProvider - Getting orders for user ${user.username} with ID ${user.id}`);
+    const userOrders = orders.filter(order => order.userId === user.id);
+    console.log(`🔍 OrderProvider - Found ${userOrders.length} orders for user ${user.username}`);
+    
+    return userOrders;
   };
 
   const getBoosterOrders = () => {
     if (!user) return [];
     
+    console.log(`🔍 OrderProvider - Getting booster orders for user ${user.username} with role ${user.role}`);
+    
     if (user.role === 'admin') {
-      return orders.filter(order => order.status === 'in_progress' || order.status === 'completed');
+      const adminOrders = orders.filter(order => order.status === 'in_progress' || order.status === 'completed');
+      console.log(`🔍 OrderProvider - Admin user - Found ${adminOrders.length} in-progress or completed orders`);
+      return adminOrders;
     }
     
-    console.log(`Checking booster orders for user ${user.username} with ID ${user.id} and role ${user.role}`);
+    console.log(`🔍 OrderProvider - Checking booster orders for user ${user.username} with ID ${user.id}`);
     
     const filteredOrders = orders.filter(order => order.boosterId === user.id);
     
-    console.log(`Found ${filteredOrders.length} orders for booster ${user.username}`);
+    console.log(`🔍 OrderProvider - Found ${filteredOrders.length} orders for booster ${user.username}`);
     return filteredOrders;
   };
 
   const getAvailableOrders = () => {
     if (!user) return [];
     
+    console.log(`🔍 OrderProvider - Getting available orders for user ${user.username} with role ${user.role}`);
+    
     if (user.role === 'admin') {
-      console.log('Admin user - showing all pending orders');
-      return orders.filter(order => order.status === 'pending');
+      const pendingOrders = orders.filter(order => order.status === 'pending');
+      console.log(`🔍 OrderProvider - Admin user - Found ${pendingOrders.length} pending orders`);
+      return pendingOrders;
     }
     
     if (user.role === 'booster') {
-      console.log('Getting available orders for booster');
+      console.log('🔍 OrderProvider - Getting available orders for booster');
       
       const availableOrders = orders.filter(order => {
         return order.status === 'pending' && order.userId !== user.id;
       });
       
-      console.log(`Found ${availableOrders.length} pending orders for boosters:`, availableOrders);
+      console.log(`🔍 OrderProvider - Found ${availableOrders.length} pending orders for boosters`);
       return availableOrders;
     }
     
@@ -326,25 +425,39 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const sendMessage = async (orderId: string, content: string) => {
     if (!user) throw new Error('User must be logged in to send a message');
 
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      senderId: user.id,
-      senderName: user.username,
-      content,
-      timestamp: new Date().toISOString(),
-    };
-
-    setOrders(prev => 
-      prev.map(order => 
+    console.log(`🔄 OrderProvider - Sending message to order ${orderId}: ${content}`);
+    
+    try {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        senderId: user.id,
+        senderName: user.username,
+        content,
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Update the order with the new message
+      const updatedOrders = orders.map(order => 
         order.id === orderId 
           ? { 
               ...order, 
               messages: [...order.messages, newMessage] 
             } 
           : order
-      )
-    );
-    return Promise.resolve();
+      );
+      
+      // Update state
+      setOrders(updatedOrders);
+      
+      // Save to localStorage
+      console.log('🔄 OrderProvider - Saving orders after adding message');
+      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(updatedOrders));
+      
+      return Promise.resolve();
+    } catch (error) {
+      console.error('❌ OrderProvider - Error sending message:', error);
+      throw error;
+    }
   };
 
   const value = {
