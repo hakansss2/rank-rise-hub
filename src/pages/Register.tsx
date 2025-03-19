@@ -23,8 +23,11 @@ const Register = () => {
     // İlk olarak localStorage'ı onar
     validateAndRepairLocalStorage('valorant_registered_users');
     
-    // Daha agresif yenileme kur (callback olmayan versiyon)
-    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users');
+    // Daha agresif yenileme kur (verilerle callback)
+    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
+      console.log('⚡ Register - Aggressive refresh returned users data:', 
+        Array.isArray(data) ? `${data.length} users` : 'Invalid data');
+    }, 500); // Run every 500ms for immediate updates
     
     // Ayrıca normal izleme de kur (daha az sıklıkta)
     const monitorCleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register', 2000);
@@ -40,6 +43,13 @@ const Register = () => {
       const latestData = forceRefreshLocalStorage('valorant_registered_users');
       console.log('📊 Post-registration data check:', latestData);
       
+      // Manual storage event trigger to notify other tabs
+      try {
+        // This attempts to notify other browser tabs about the change
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {
+        console.error('Failed to dispatch storage event:', e);
+      }
     }, 1000);
     
     return () => {

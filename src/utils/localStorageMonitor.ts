@@ -9,7 +9,7 @@
 export const monitorLocalStorage = (
   key: string, 
   prefix: string = '🔎', 
-  interval: number = 500  // Daha sık kontrol için 1 saniyeden 500ms'ye düşürüldü
+  interval: number = 1000
 ): (() => void) => {
   const checkLocalStorage = () => {
     console.log(`${prefix} Checking localStorage for ${key}...`);
@@ -83,7 +83,6 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
     const storedData = localStorage.getItem(key);
     if (storedData) {
       try {
-        // Parse data and create an initial copy
         const parsedData = JSON.parse(storedData);
         console.log(`✅ Successfully refreshed ${key}:`, 
           Array.isArray(parsedData) ? `${parsedData.length} items found` : 'Object found', 
@@ -98,7 +97,7 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
           if (nonNullUsers.length !== parsedData.length) {
             console.warn(`⚠️ Found ${parsedData.length - nonNullUsers.length} null users, removing them`);
             localStorage.setItem(key, JSON.stringify(nonNullUsers));
-            // Return the cleaned data instead of trying to reassign parsedData
+            // FIX: Return immediately instead of reassigning to const variable
             return nonNullUsers;
           }
           
@@ -111,6 +110,8 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
             localStorage.setItem(key, JSON.stringify(validUsers));
             return validUsers;
           }
+          
+          return nonNullUsers; // Return filtered users
         }
         
         return parsedData;
@@ -136,7 +137,11 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
   }
 };
 
-// Veri doğrulama ve onarma fonksiyonu
+/**
+ * Veri doğrulama ve onarma fonksiyonu
+ * @param key - The localStorage key to validate and repair
+ * @returns The cleaned data or null if error
+ */
 export const validateAndRepairLocalStorage = (key: string) => {
   console.log(`🔧 Validating and repairing ${key} in localStorage...`);
   try {
@@ -179,33 +184,39 @@ export const validateAndRepairLocalStorage = (key: string) => {
   }
 };
 
-// Daha sık yenilemeler için yeni bir fonksiyon
-export const setupAggressiveRefresh = (key: string, onUpdate?: (data: any) => void) => {
-  console.log(`⚡ Setting up aggressive refresh for ${key}`);
+/**
+ * Daha agresif yenileme için localStorage'ı izle
+ * @param key - The localStorage key to watch
+ * @param callback - Optional callback that receives the refreshed data
+ * @param interval - Refresh interval in milliseconds
+ * @returns Cleanup function
+ */
+export const setupAggressiveRefresh = (
+  key: string,
+  callback?: (data: any) => void,
+  interval: number = 750
+): (() => void) => {
+  console.log(`⚡ Setting up aggressive refresh for ${key} every ${interval}ms`);
   
-  // Önce veriyi onar
+  // İlk kontrol et
   validateAndRepairLocalStorage(key);
   
-  // Hemen yenile
-  const initialData = forceRefreshLocalStorage(key);
-  if (onUpdate && initialData) {
-    onUpdate(initialData);
-  }
-  
-  // 3 farklı aralıkta eşzamanlı yenileme - düşük, orta ve yüksek sıklıkta
-  const quickInterval = setInterval(() => {
-    const data = forceRefreshLocalStorage(key);
-    if (onUpdate && data) {
-      onUpdate(data);
+  const refreshInterval = setInterval(() => {
+    try {
+      const refreshedData = forceRefreshLocalStorage(key);
+      console.log(`⚡ Aggressive refresh cycle for ${key}:`, 
+        Array.isArray(refreshedData) ? `${refreshedData.length} items` : 'Object');
+      
+      if (callback && refreshedData) {
+        callback(refreshedData);
+      }
+    } catch (error) {
+      console.error(`⚡ Error in aggressive refresh for ${key}:`, error);
     }
-  }, 750); // Çok sık kontrol (750ms)
-  
-  const mediumInterval = setInterval(() => {
-    validateAndRepairLocalStorage(key);
-  }, 3000); // Düzenli doğrulama (3s)
+  }, interval);
   
   return () => {
-    clearInterval(quickInterval);
-    clearInterval(mediumInterval);
+    console.log(`⚡ Cleaning up aggressive refresh for ${key}`);
+    clearInterval(refreshInterval);
   };
 };

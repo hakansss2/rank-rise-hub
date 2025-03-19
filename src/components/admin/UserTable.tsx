@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -28,41 +29,61 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
   
   const refreshUserData = useCallback(() => {
     console.log('🔄 UserTable - refreshUserData executing');
+    setIsRefreshing(true);
+    
+    // Force immediate localStorage update before calling parent refresh
+    const directData = forceRefreshLocalStorage('valorant_registered_users');
+    console.log('🔍 UserTable - Direct refresh before parent refresh:', directData);
+    
     onRefresh();
+    
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
   }, [onRefresh]);
   
   useEffect(() => {
     console.log('🏁 UserTable - Component mounted, setting up aggressive refresh');
     
+    // Run initial validation and repair
     validateAndRepairLocalStorage('valorant_registered_users');
     
-    const cleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
+    // Setup more frequent data checking
+    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
       if (data && Array.isArray(data)) {
         console.log('⚡ UserTable - Received fresh data from aggressive refresh:', data.length);
         
-        if (data.length !== users.length) {
+        if (data.length !== localUsers.length) {
           console.log('🔄 UserTable - Data count changed, triggering refresh');
           refreshUserData();
         }
       }
-    });
+    }, 500); // Check every 500ms
     
+    // Double-check mechanism with direct localStorage access
     const directCheckInterval = setInterval(() => {
       console.log('🔍 UserTable - Direct check');
       
-      const directData = forceRefreshLocalStorage('valorant_registered_users');
-      if (directData && Array.isArray(directData) && directData.length !== users.length) {
-        console.log('🔄 UserTable - Direct check found data change, refreshing');
-        refreshUserData();
+      try {
+        const rawData = localStorage.getItem('valorant_registered_users');
+        if (rawData) {
+          const directData = JSON.parse(rawData);
+          if (directData && Array.isArray(directData) && directData.length !== localUsers.length) {
+            console.log('🔄 UserTable - Direct check found data change, refreshing');
+            refreshUserData();
+          }
+        }
+      } catch (error) {
+        console.error('❌ UserTable - Error during direct check:', error);
       }
-    }, 1500);
+    }, 750);
     
     return () => {
       console.log('🏁 UserTable - Component unmounting, cleaning up refresh');
-      cleanup();
+      aggressiveCleanup();
       clearInterval(directCheckInterval);
     };
-  }, [users.length, refreshUserData]);
+  }, [localUsers.length, refreshUserData]);
 
   useEffect(() => {
     console.log('📊 UserTable - Props changed, updating local state with', users.length, 'users');
@@ -97,6 +118,7 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     try {
       console.log('🔄 UserTable - Manual force refresh initiated');
       
+      // Run full validation and repair cycle
       validateAndRepairLocalStorage('valorant_registered_users');
       
       const directUsers = forceRefreshLocalStorage('valorant_registered_users');
