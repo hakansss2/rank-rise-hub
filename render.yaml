@@ -1,0 +1,15 @@
+
+services:
+  - type: web
+    name: rank-rise-hub-api
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # Bu, hassas bilgi olduğu için Render dashboard'dan manuel olarak ayarlanmalı
+      - key: PORT
+        value: 10000
+    autoDeploy: true
