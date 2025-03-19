@@ -83,6 +83,7 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
     const storedData = localStorage.getItem(key);
     if (storedData) {
       try {
+        // Parse data and create an initial copy
         const parsedData = JSON.parse(storedData);
         console.log(`✅ Successfully refreshed ${key}:`, 
           Array.isArray(parsedData) ? `${parsedData.length} items found` : 'Object found', 
@@ -97,7 +98,8 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
           if (nonNullUsers.length !== parsedData.length) {
             console.warn(`⚠️ Found ${parsedData.length - nonNullUsers.length} null users, removing them`);
             localStorage.setItem(key, JSON.stringify(nonNullUsers));
-            parsedData = nonNullUsers;
+            // Return the cleaned data instead of trying to reassign parsedData
+            return nonNullUsers;
           }
           
           // Gerekli alanları olan kullanıcıları filtrele
