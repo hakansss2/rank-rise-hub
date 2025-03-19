@@ -22,28 +22,46 @@ const DeleteSpecificUsers: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [emailsToRemove, setEmailsToRemove] = useState<string[]>([]);
 
+  // Function to refresh the list of registered users
+  const refreshUserList = () => {
+    // Get all users from localStorage
+    try {
+      console.log("DeleteSpecificUsers - Refreshing user list from localStorage");
+      const rawData = localStorage.getItem('valorant_registered_users');
+      
+      if (rawData) {
+        console.log("DeleteSpecificUsers - Raw localStorage data:", rawData);
+        const parsedUsers = JSON.parse(rawData);
+        console.log("DeleteSpecificUsers - Parsed users:", parsedUsers.length, parsedUsers);
+        
+        // Filter out the admin user (we never want to delete the admin)
+        const usersWithoutAdmin = parsedUsers.filter((user: any) => 
+          user && user.email && user.email !== 'hakan200505@gmail.com'
+        );
+        
+        console.log("DeleteSpecificUsers - Users without admin:", usersWithoutAdmin.length, usersWithoutAdmin);
+        
+        if (usersWithoutAdmin.length > 0) {
+          setEmailsToRemove(usersWithoutAdmin.map((user: any) => user.email));
+          console.log("DeleteSpecificUsers - Set emails to remove:", usersWithoutAdmin.map((user: any) => user.email));
+        } else {
+          setEmailsToRemove([]);
+          console.log("DeleteSpecificUsers - No registered users to remove");
+        }
+      } else {
+        console.log("DeleteSpecificUsers - No data in localStorage");
+        setEmailsToRemove([]);
+      }
+    } catch (error) {
+      console.error("DeleteSpecificUsers - Error parsing localStorage:", error);
+      setEmailsToRemove([]);
+    }
+  };
+
   // Prepare the list of registered users for deletion
   useEffect(() => {
-    const fetchUsers = () => {
-      // Get all users
-      const allUsers = getAllUsers();
-      
-      // Filter out the admin user (we never want to delete the admin)
-      const registeredUsers = allUsers.filter(user => 
-        user.email !== 'hakan200505@gmail.com'
-      );
-      
-      if (registeredUsers.length > 0) {
-        setEmailsToRemove(registeredUsers.map(user => user.email));
-        console.log("DeleteSpecificUsers - Found registered users to remove:", registeredUsers.length, registeredUsers);
-      } else {
-        setEmailsToRemove([]);
-        console.log("DeleteSpecificUsers - No registered users to remove");
-      }
-    };
-    
-    fetchUsers();
-  }, [getAllUsers]);
+    refreshUserList();
+  }, []);
 
   const handleDeleteSpecificUsers = async () => {
     if (emailsToRemove.length === 0) {
@@ -58,15 +76,22 @@ const DeleteSpecificUsers: React.FC = () => {
     setLoading(true);
     try {
       console.log("Attempting to remove users with emails:", emailsToRemove);
+      
+      // Check localStorage before deletion
+      console.log("LocalStorage BEFORE deletion:", localStorage.getItem('valorant_registered_users'));
+      
       await removeUsersByEmails(emailsToRemove);
+      
+      // Check localStorage after deletion
+      console.log("LocalStorage AFTER deletion:", localStorage.getItem('valorant_registered_users'));
       
       toast({
         title: "Kullanıcılar Silindi",
         description: `${emailsToRemove.length} kullanıcı başarıyla silindi.`,
       });
       
-      // Clear emails after successful removal
-      setEmailsToRemove([]);
+      // Refresh the list after deletion
+      refreshUserList();
       setDialogOpen(false);
     } catch (error) {
       console.error("Error removing specific users:", error);
@@ -83,7 +108,10 @@ const DeleteSpecificUsers: React.FC = () => {
   return (
     <>
       <Button 
-        onClick={() => setDialogOpen(true)} 
+        onClick={() => {
+          refreshUserList(); // Refresh list before opening dialog
+          setDialogOpen(true);
+        }} 
         variant="outline" 
         className="border-valorant-gray/30 hover:bg-orange-500/20 text-orange-500 flex items-center gap-2"
         disabled={loading || emailsToRemove.length === 0}

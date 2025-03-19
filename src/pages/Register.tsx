@@ -56,10 +56,31 @@ const Register = () => {
       console.log('📌 localStorage BEFORE registration:', localStorage.getItem('valorant_registered_users'));
       console.log('📌 Current registered users count BEFORE registration:', registeredUsersCount);
       
+      // Manually verify localStorage content for debugging
+      try {
+        const rawData = localStorage.getItem('valorant_registered_users');
+        const parsedUsers = rawData ? JSON.parse(rawData) : [];
+        console.log('📌 Manual parsing of localStorage BEFORE registration:', 
+          Array.isArray(parsedUsers) ? parsedUsers.length : 'Not an array', parsedUsers);
+      } catch (e) {
+        console.error('📌 Error parsing localStorage BEFORE registration:', e);
+      }
+      
       await registerUser(data.email, data.username, data.password);
       
       // Check localStorage after registration
       console.log('📌 localStorage AFTER registration:', localStorage.getItem('valorant_registered_users'));
+      
+      // Manually verify localStorage content after registration
+      try {
+        const rawData = localStorage.getItem('valorant_registered_users');
+        const parsedUsers = rawData ? JSON.parse(rawData) : [];
+        console.log('📌 Manual parsing of localStorage AFTER registration:', 
+          Array.isArray(parsedUsers) ? parsedUsers.length : 'Not an array', parsedUsers);
+      } catch (e) {
+        console.error('📌 Error parsing localStorage AFTER registration:', e);
+      }
+      
       console.log('📌 Updated registered users count AFTER registration:', registeredUsersCount);
       
       toast({

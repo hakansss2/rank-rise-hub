@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -50,12 +49,27 @@ const USERS_STORAGE_KEY = 'valorant_registered_users';
 const loadRegisteredUsers = () => {
   try {
     console.log('📌 DEBUG: loadRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
+    
     const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
     console.log('📌 Loading registered users from localStorage:', storedUsers);
     
     if (storedUsers) {
       const parsedUsers = JSON.parse(storedUsers);
       console.log('📌 Successfully loaded registered users:', parsedUsers.length, parsedUsers);
+      
+      // Verify each user has required fields
+      const validUsers = parsedUsers.filter((user: any) => 
+        user && user.id && user.email && user.username && user.role);
+      
+      if (validUsers.length !== parsedUsers.length) {
+        console.error('📌 Found invalid users in localStorage, filtering them out:', 
+          parsedUsers.length - validUsers.length);
+        
+        // Save the filtered users back to localStorage
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(validUsers));
+        return validUsers;
+      }
+      
       return parsedUsers;
     }
   } catch (error) {
@@ -73,6 +87,23 @@ const saveRegisteredUsers = (users: any[]) => {
   try {
     console.log('📌 DEBUG: saveRegisteredUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
     console.log('📌 Attempting to save users to localStorage:', users.length, users);
+    
+    // Make sure we're saving a valid array
+    if (!Array.isArray(users)) {
+      console.error('📌 ERROR: Attempted to save non-array to localStorage', users);
+      return;
+    }
+    
+    // Verify all users have required fields
+    const validUsers = users.filter(user => 
+      user && user.id && user.email && user.username && user.role);
+    
+    if (validUsers.length !== users.length) {
+      console.error('📌 Found invalid users, filtering them out:', 
+        users.length - validUsers.length);
+      users = validUsers;
+    }
+    
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
     // Verify that the data was saved correctly
@@ -116,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Always fetch the latest registered users from localStorage
     console.log('🔄 DEBUG: getAllUsers - Called from:', new Error().stack?.split('\n')[2]?.trim());
     const latestRegisteredUsers = loadRegisteredUsers();
-    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length);
+    console.log("🔄 getAllUsers - Registered Users Count:", latestRegisteredUsers.length, latestRegisteredUsers);
     
     // Map users to exclude passwords
     const adminUser = { 
@@ -187,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Get the latest registered users directly from localStorage to ensure we have the most recent data
       const latestRegisteredUsers = loadRegisteredUsers();
-      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length);
+      console.log("📌 Registration - Current registered users:", latestRegisteredUsers.length, latestRegisteredUsers);
       
       // Check for duplicate email
       if (email === DEFAULT_ADMIN.email || latestRegisteredUsers.some(u => u.email === email)) {
