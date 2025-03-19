@@ -43,11 +43,7 @@ const loadRegisteredUsers = () => {
     if (storedUsers) {
       console.log("Loading registered users from localStorage:", storedUsers);
       const parsedUsers = JSON.parse(storedUsers);
-      // Validate each user has the required fields
-      const validUsers = parsedUsers.filter((user: any) => 
-        user && user.id && user.email && user.username && user.password && user.role
-      );
-      return validUsers;
+      return parsedUsers;
     }
   } catch (error) {
     console.error('Failed to parse stored users', error);
@@ -103,15 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const defaultUsers = USERS.map(({ password, ...rest }) => rest);
     
     // Filter out any users with undefined properties
-    const registeredUsersList = latestRegisteredUsers
-      .filter((user: any) => user && user.id && user.email && user.username)
-      .map(({ password, ...rest }: any) => rest);
+    const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }: any) => rest);
     
-    // Log the combined users to verify
+    // Combine default and registered users
     const allUsers = [...defaultUsers, ...registeredUsersList];
     console.log("getAllUsers - returning total users:", allUsers.length);
     
-    // Combine default and registered users
     return allUsers;
   };
 
@@ -181,10 +174,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         balance: 0,
       };
       
-      // Add to registered users list
+      // Add to registered users list and save to localStorage
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
-      
-      // Save to localStorage
       saveRegisteredUsers(updatedRegisteredUsers);
       setRegisteredUsers(updatedRegisteredUsers);
       

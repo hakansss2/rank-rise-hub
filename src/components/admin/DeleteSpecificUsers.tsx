@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -23,7 +23,7 @@ const DeleteSpecificUsers: React.FC = () => {
   const [emailsToRemove, setEmailsToRemove] = useState<string[]>([]);
 
   // Prepare the list of registered users for deletion
-  React.useEffect(() => {
+  useEffect(() => {
     const allUsers = getAllUsers();
     // Filter non-admin registered users
     const registeredUsers = allUsers.filter(user => 
@@ -33,7 +33,11 @@ const DeleteSpecificUsers: React.FC = () => {
     
     if (registeredUsers.length > 0) {
       setEmailsToRemove(registeredUsers.map(user => user.email));
+    } else {
+      setEmailsToRemove([]);
     }
+    
+    console.log("DeleteSpecificUsers - Registered users to remove:", registeredUsers.length);
   }, [getAllUsers]);
 
   const handleDeleteSpecificUsers = async () => {
@@ -55,6 +59,8 @@ const DeleteSpecificUsers: React.FC = () => {
         description: `${emailsToRemove.length} kullanıcı başarıyla silindi.`,
       });
       
+      // Clear emails after successful removal
+      setEmailsToRemove([]);
       setDialogOpen(false);
     } catch (error) {
       console.error("Error removing specific users:", error);
@@ -81,7 +87,7 @@ const DeleteSpecificUsers: React.FC = () => {
         ) : (
           <Trash2 className="h-4 w-4" />
         )}
-        Kayıtlı Kullanıcıları Sil
+        Kayıtlı Kullanıcıları Sil ({emailsToRemove.length})
       </Button>
       
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>

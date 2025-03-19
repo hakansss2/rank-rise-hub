@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -31,7 +32,7 @@ type FormValues = z.infer<typeof formSchema>;
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [registeredUsers, setRegisteredUsers] = useState<number>(0);
-  const { register: registerUser } = useAuth();
+  const { register: registerUser, getAllUsers } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -49,24 +50,17 @@ const Register = () => {
   // Display current registered users count
   useEffect(() => {
     const loadRegisteredUsersCount = () => {
-      const storedUsers = localStorage.getItem('valorant_registered_users');
-      if (storedUsers) {
-        try {
-          const parsedUsers = JSON.parse(storedUsers);
-          console.log('Register page - loaded registered users:', parsedUsers);
-          setRegisteredUsers(parsedUsers.length);
-        } catch (error) {
-          console.error('Failed to parse stored users', error);
-          setRegisteredUsers(0);
-        }
-      } else {
-        console.log('Register page - no registered users found');
-        setRegisteredUsers(0);
-      }
+      // Get registered users count from the getAllUsers() method
+      const allUsers = getAllUsers();
+      const defaultUserCount = 1; // Only the admin user is a default user
+      const registeredCount = Math.max(0, allUsers.length - defaultUserCount);
+      
+      console.log('Register page - loaded registered users count:', registeredCount);
+      setRegisteredUsers(registeredCount);
     };
 
     loadRegisteredUsersCount();
-  }, []);
+  }, [getAllUsers]);
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
@@ -75,13 +69,11 @@ const Register = () => {
       console.log(`Attempting to register user: ${data.username}, ${data.email}`);
       await registerUser(data.email, data.username, data.password);
       
-      // Update the local registered users count after successful registration
-      const storedUsers = localStorage.getItem('valorant_registered_users');
-      if (storedUsers) {
-        const parsedUsers = JSON.parse(storedUsers);
-        setRegisteredUsers(parsedUsers.length);
-        console.log('Updated registered users count after registration:', parsedUsers.length);
-      }
+      // Update the registered users count after successful registration
+      const allUsers = getAllUsers();
+      const defaultUserCount = 1; // Only the admin user is a default user
+      const registeredCount = Math.max(0, allUsers.length - defaultUserCount);
+      setRegisteredUsers(registeredCount);
       
       toast({
         title: 'Kayıt başarılı',
