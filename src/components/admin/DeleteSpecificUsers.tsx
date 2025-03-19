@@ -16,20 +16,43 @@ import {
 import { Trash2, RefreshCw } from 'lucide-react';
 
 const DeleteSpecificUsers: React.FC = () => {
-  const { removeUsersByEmails } = useAuth();
+  const { removeUsersByEmails, getAllUsers } = useAuth();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailsToRemove, setEmailsToRemove] = useState<string[]>([]);
+
+  // Prepare the list of registered users for deletion
+  React.useEffect(() => {
+    const allUsers = getAllUsers();
+    // Filter non-admin registered users
+    const registeredUsers = allUsers.filter(user => 
+      user.email !== 'hakan200505@gmail.com' && 
+      !user.id.startsWith('1') // Skip default users
+    );
+    
+    if (registeredUsers.length > 0) {
+      setEmailsToRemove(registeredUsers.map(user => user.email));
+    }
+  }, [getAllUsers]);
 
   const handleDeleteSpecificUsers = async () => {
+    if (emailsToRemove.length === 0) {
+      toast({
+        title: "Bilgi",
+        description: "Silinecek kayıtlı kullanıcı bulunmuyor.",
+      });
+      setDialogOpen(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const emailsToRemove = ['booster@test.com', 'customer@test.com'];
       await removeUsersByEmails(emailsToRemove);
       
       toast({
         title: "Kullanıcılar Silindi",
-        description: "Belirtilen kullanıcılar başarıyla silindi.",
+        description: `${emailsToRemove.length} kullanıcı başarıyla silindi.`,
       });
       
       setDialogOpen(false);
@@ -51,14 +74,14 @@ const DeleteSpecificUsers: React.FC = () => {
         onClick={() => setDialogOpen(true)} 
         variant="outline" 
         className="border-valorant-gray/30 hover:bg-orange-500/20 text-orange-500 flex items-center gap-2"
-        disabled={loading}
+        disabled={loading || emailsToRemove.length === 0}
       >
         {loading ? (
           <RefreshCw className="h-4 w-4 animate-spin" />
         ) : (
           <Trash2 className="h-4 w-4" />
         )}
-        Test Kullanıcılarını Sil
+        Kayıtlı Kullanıcıları Sil
       </Button>
       
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -66,10 +89,10 @@ const DeleteSpecificUsers: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-orange-500" />
-              Test Kullanıcılarını Sil
+              Kayıtlı Kullanıcıları Sil
             </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              Bu işlem, <strong>booster@test.com</strong> ve <strong>customer@test.com</strong> kullanıcılarını silecektir. 
+              Bu işlem, <strong>{emailsToRemove.length}</strong> kayıtlı kullanıcıyı silecektir. 
               Bu işlem geri alınamaz. Devam etmek istiyor musunuz?
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -81,7 +104,7 @@ const DeleteSpecificUsers: React.FC = () => {
               onClick={handleDeleteSpecificUsers}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
-              Test Kullanıcılarını Sil
+              Kullanıcıları Sil
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

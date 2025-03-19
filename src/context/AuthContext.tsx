@@ -34,8 +34,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Default user data
 const USERS = [
   { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
-  { id: '2', email: 'booster@test.com', username: 'booster', password: 'password', role: 'booster' as UserRole, balance: 1000 },
-  { id: '3', email: 'customer@test.com', username: 'customer', password: 'password', role: 'customer' as UserRole, balance: 2000 },
 ];
 
 // Load registered users from localStorage
@@ -44,7 +42,12 @@ const loadRegisteredUsers = () => {
     const storedUsers = localStorage.getItem('valorant_registered_users');
     if (storedUsers) {
       console.log("Loading registered users from localStorage:", storedUsers);
-      return JSON.parse(storedUsers);
+      const parsedUsers = JSON.parse(storedUsers);
+      // Validate each user has the required fields
+      const validUsers = parsedUsers.filter((user: any) => 
+        user && user.id && user.email && user.username && user.password && user.role
+      );
+      return validUsers;
     }
   } catch (error) {
     console.error('Failed to parse stored users', error);
