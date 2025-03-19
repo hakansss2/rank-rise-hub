@@ -83,7 +83,8 @@ const loadRegisteredUsers = () => {
         return [];
       }
     } else {
-      console.log('📤 loadRegisteredUsers - No data in localStorage');
+      console.log('📤 loadRegisteredUsers - No data in localStorage, initializing with empty array');
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify([]));
     }
   } catch (error) {
     console.error('Failed to parse stored users', error);
@@ -129,7 +130,7 @@ const saveRegisteredUsers = (users: any[]) => {
     // Double-check by parsing back
     try {
       const parsedBack = JSON.parse(storedData || '[]');
-      console.log('📌 Parsed back verification:', parsedBack.length === users.length ? 'SUCCESS' : 'FAILED');
+      console.log('📌 Parse back verification:', parsedBack.length === users.length ? 'SUCCESS' : 'FAILED');
     } catch (e) {
       console.error('📌 Parse back verification failed:', e);
     }
@@ -145,6 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load registered users and check for existing session on mount
   useEffect(() => {
+    console.log('🔄 AuthProvider - Initial mount, loading registered users and checking session');
+    
     // Load registered users
     const loadedUsers = loadRegisteredUsers();
     setRegisteredUsers(loadedUsers);
@@ -164,6 +167,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(false);
   }, []);
+
+  // Periodically check for registered users updates (every 5 seconds)
+  useEffect(() => {
+    console.log('🔄 Setting up periodic check for registered users');
+    
+    const intervalId = setInterval(() => {
+      console.log('🔄 Periodic check - Checking registered users in localStorage');
+      const latestRegisteredUsers = loadRegisteredUsers();
+      
+      // Only update state if there's a difference in user count
+      if (latestRegisteredUsers.length !== registeredUsers.length) {
+        console.log('🔄 Periodic check - User count changed, updating state:', 
+          registeredUsers.length, '->', latestRegisteredUsers.length);
+        setRegisteredUsers(latestRegisteredUsers);
+      }
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [registeredUsers.length]);
 
   // Get all users (default admin + registered users)
   const getAllUsers = () => {
@@ -222,6 +244,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
       console.log('User logged in successfully:', userWithoutPassword.username);
+      
+      // Force refresh registered users count
+      const updatedUsers = loadRegisteredUsers();
+      setRegisteredUsers(updatedUsers);
     } catch (error) {
       console.error('Login failed', error);
       throw error;

@@ -120,6 +120,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setInitialized(true);
   }, []);
 
+  // Periodically refresh orders from localStorage (every 5 seconds)
+  useEffect(() => {
+    console.log('🔄 OrderProvider - Setting up periodic order refresh');
+    
+    const intervalId = setInterval(() => {
+      console.log('🔄 OrderProvider - Periodic refresh of orders');
+      refreshOrders();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
   // Save orders to localStorage when they change
   useEffect(() => {
     if (initialized) {

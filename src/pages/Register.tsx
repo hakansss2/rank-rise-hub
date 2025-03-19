@@ -35,17 +35,30 @@ const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check localStorage on component mount
+  // Periodic check of localStorage for debugging
   useEffect(() => {
-    // Immediately check localStorage for existing users
-    console.log('🔎 Register - Initial localStorage check:', localStorage.getItem('valorant_registered_users'));
-    try {
-      const storedData = localStorage.getItem('valorant_registered_users');
-      const parsedData = storedData ? JSON.parse(storedData) : [];
-      console.log('🔎 Register - Parsed user count:', parsedData.length);
-    } catch (e) {
-      console.error('🔎 Register - Error parsing localStorage:', e);
-    }
+    const checkLocalStorage = () => {
+      console.log('🔎 Register - Checking localStorage for registered users...');
+      try {
+        const storedData = localStorage.getItem('valorant_registered_users');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          console.log('🔎 Register - Current users in localStorage:', parsedData.length, parsedData);
+        } else {
+          console.log('🔎 Register - No users found in localStorage');
+        }
+      } catch (e) {
+        console.error('🔎 Register - Error reading localStorage:', e);
+      }
+    };
+    
+    // Check immediately
+    checkLocalStorage();
+    
+    // Set up periodic check
+    const intervalId = setInterval(checkLocalStorage, 5000);
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   // Set up form with validation
@@ -92,6 +105,25 @@ const Register = () => {
           Array.isArray(parsedUsers) ? parsedUsers.length : 'Not an array', parsedUsers);
       } catch (e) {
         console.error('📌 Error parsing localStorage AFTER registration:', e);
+      }
+      
+      // Verify registration worked by checking localStorage directly
+      const verificationCheck = localStorage.getItem('valorant_registered_users');
+      if (!verificationCheck || verificationCheck === '[]') {
+        console.error('⚠️ Warning: Registration may have failed - No users in localStorage after registration!');
+        // Try to save again manually
+        const mockUser = {
+          id: `u-${Date.now()}`,
+          email: data.email,
+          username: data.username,
+          password: data.password,
+          role: 'customer',
+          balance: 0,
+        };
+        
+        const usersArray = [mockUser];
+        localStorage.setItem('valorant_registered_users', JSON.stringify(usersArray));
+        console.log('📌 Manual retry of saving user to localStorage');
       }
       
       console.log('📌 Updated registered users count AFTER registration:', registeredUsersCount);
