@@ -9,7 +9,7 @@
 export const monitorLocalStorage = (
   key: string, 
   prefix: string = '🔎', 
-  interval: number = 3000
+  interval: number = 1000  // Daha sık kontrol etmek için 3000'den 1000'e düşürüldü
 ): (() => void) => {
   const checkLocalStorage = () => {
     console.log(`${prefix} Checking localStorage for ${key}...`);
@@ -21,14 +21,25 @@ export const monitorLocalStorage = (
           console.log(`${prefix} Current ${key} in localStorage:`, 
             Array.isArray(parsedData) ? `${parsedData.length} items` : 'Object found',
             parsedData);
+          
+          // Dönen verileri null olmayanlara filtrele
+          if (Array.isArray(parsedData)) {
+            const validItems = parsedData.filter(item => item !== null);
+            if (validItems.length !== parsedData.length) {
+              console.warn(`${prefix} Found ${parsedData.length - validItems.length} null items in localStorage, fixing`);
+              localStorage.setItem(key, JSON.stringify(validItems));
+              return validItems;
+            }
+          }
+          
           return parsedData;
         } catch (parseError) {
           console.error(`${prefix} Failed to parse ${key} data:`, parseError);
           console.log(`${prefix} Raw data:`, storedData);
           
-          // Attempt to fix malformed JSON
+          // Hatalı JSON onarımı
           try {
-            // Last resort: if we can't parse, initialize with empty array
+            // Son çare: parse edemiyorsak boş dizi ile başlat
             localStorage.setItem(key, JSON.stringify([]));
             console.log(`${prefix} Reset ${key} to empty array after parse error`);
             return [];
@@ -40,7 +51,7 @@ export const monitorLocalStorage = (
       } else {
         console.log(`${prefix} No ${key} found in localStorage`);
         
-        // Initialize if not found
+        // Bulunamazsa başlat
         localStorage.setItem(key, JSON.stringify([]));
         console.log(`${prefix} Initialized ${key} as empty array`);
         return [];
@@ -51,13 +62,13 @@ export const monitorLocalStorage = (
     }
   };
   
-  // Check immediately and return the parsed data
+  // Hemen kontrol et ve parse edilmiş veriyi döndür
   const initialData = checkLocalStorage();
   
-  // Set up periodic check with reduced interval for faster feedback
+  // Daha hızlı geri bildirim için azaltılmış aralıkla periyodik kontrol
   const intervalId = setInterval(checkLocalStorage, interval);
   
-  // Return cleanup function
+  // Temizleme fonksiyonunu döndür
   return () => clearInterval(intervalId);
 };
 
@@ -77,15 +88,24 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
           Array.isArray(parsedData) ? `${parsedData.length} items found` : 'Object found', 
           parsedData);
         
-        // Validate data structure if it's registered users
+        // Kayıtlı kullanıcılar ise veri yapısını doğrula
         if (key === 'valorant_registered_users' && Array.isArray(parsedData)) {
           console.log(`🔍 Validating ${parsedData.length} users data...`);
           
-          const validUsers = parsedData.filter(user => 
+          // Filtreleme öncesi null olmayan elemanları al
+          const nonNullUsers = parsedData.filter(user => user !== null);
+          if (nonNullUsers.length !== parsedData.length) {
+            console.warn(`⚠️ Found ${parsedData.length - nonNullUsers.length} null users, removing them`);
+            localStorage.setItem(key, JSON.stringify(nonNullUsers));
+            parsedData = nonNullUsers;
+          }
+          
+          // Gerekli alanları olan kullanıcıları filtrele
+          const validUsers = nonNullUsers.filter(user => 
             user && user.id && user.email && user.username);
           
-          if (validUsers.length !== parsedData.length) {
-            console.warn(`⚠️ Found ${parsedData.length - validUsers.length} invalid users in localStorage`);
+          if (validUsers.length !== nonNullUsers.length) {
+            console.warn(`⚠️ Found ${nonNullUsers.length - validUsers.length} invalid users in localStorage`);
             localStorage.setItem(key, JSON.stringify(validUsers));
             return validUsers;
           }
@@ -95,7 +115,7 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
       } catch (parseError) {
         console.error(`❌ Failed to parse ${key}:`, parseError);
         
-        // Initialize with empty array if parse fails
+        // Parse başarısız olursa boş dizi ile başlat
         localStorage.setItem(key, JSON.stringify([]));
         console.log(`🔄 Initialized ${key} as empty array after parse error`);
         return [];
@@ -103,13 +123,56 @@ export const forceRefreshLocalStorage = (key: string): any | null => {
     } else {
       console.log(`⚠️ No ${key} found in localStorage`);
       
-      // Initialize if key doesn't exist
+      // Anahtar yoksa başlat
       localStorage.setItem(key, JSON.stringify([]));
       console.log(`🔄 Initialized ${key} as empty array`);
       return [];
     }
   } catch (e) {
     console.error(`❌ Error reading ${key} from localStorage:`, e);
+    return null;
+  }
+};
+
+// Veri doğrulama ve onarma fonksiyonu
+export const validateAndRepairLocalStorage = (key: string) => {
+  console.log(`🔧 Validating and repairing ${key} in localStorage...`);
+  try {
+    const data = localStorage.getItem(key);
+    
+    // Veri yoksa, boş dizi oluştur
+    if (!data) {
+      localStorage.setItem(key, JSON.stringify([]));
+      console.log(`🔧 Created empty array for ${key}`);
+      return [];
+    }
+    
+    // JSON.parse deneme
+    try {
+      const parsedData = JSON.parse(data);
+      
+      // Dizi değilse veya null ise, sıfırla
+      if (!Array.isArray(parsedData) || parsedData === null) {
+        localStorage.setItem(key, JSON.stringify([]));
+        console.log(`🔧 Reset ${key} to empty array (was not a valid array)`);
+        return [];
+      }
+      
+      // Null elemanları temizle
+      const cleanedData = parsedData.filter(item => item !== null);
+      if (cleanedData.length !== parsedData.length) {
+        localStorage.setItem(key, JSON.stringify(cleanedData));
+        console.log(`🔧 Removed ${parsedData.length - cleanedData.length} null items from ${key}`);
+      }
+      
+      return cleanedData;
+    } catch (e) {
+      console.error(`🔧 Error parsing ${key}, resetting to empty array:`, e);
+      localStorage.setItem(key, JSON.stringify([]));
+      return [];
+    }
+  } catch (e) {
+    console.error(`🔧 Storage error while validating ${key}:`, e);
     return null;
   }
 };

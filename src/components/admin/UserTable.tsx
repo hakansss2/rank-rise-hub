@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, RefreshCw } from 'lucide-react';
-import { forceRefreshLocalStorage } from '@/utils/localStorageMonitor';
+import { forceRefreshLocalStorage, validateAndRepairLocalStorage } from '@/utils/localStorageMonitor';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -26,29 +26,55 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
   const [localUsers, setLocalUsers] = useState<User[]>(users);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
-
-  // More frequent checks for better reactivity
+  
+  // Bileşen mount olduğunda localStorage'ı doğrula ve onar
   useEffect(() => {
-    const checkInterval = setInterval(() => {
-      console.log('🔄 UserTable - Periodic direct localStorage check');
+    console.log('🏁 UserTable - Component mounted, validating localStorage');
+    const repairedUsers = validateAndRepairLocalStorage('valorant_registered_users');
+    if (repairedUsers && repairedUsers.length !== users.length) {
+      console.log('🔄 UserTable - Repaired users data is different, triggering refresh');
+      onRefresh();
+    }
+    
+    // İlk yükleme anında localStorage'dan doğrudan kontrol
+    console.log('🔄 UserTable - Initial direct localStorage check');
+    const directUsers = forceRefreshLocalStorage('valorant_registered_users');
+    
+    if (directUsers && Array.isArray(directUsers)) {
+      console.log('📊 UserTable - Fresh localStorage users data:', directUsers.length, directUsers);
+      
+      // En son verileri almak için daima refresh'i tetikle
+      if (directUsers.length !== users.length) {
+        console.log('🔄 UserTable - User count different, triggering refresh');
+        onRefresh();
+      }
+    }
+  }, []);
+
+  // Daha iyi tepkimelilik için daha sık kontroller
+  useEffect(() => {
+    // Çok kısa aralıklı kontrol için
+    const quickCheckInterval = setInterval(() => {
+      console.log('🔄 UserTable - Quick direct localStorage check');
       const directUsers = forceRefreshLocalStorage('valorant_registered_users');
       
       if (directUsers && Array.isArray(directUsers)) {
         console.log('📊 UserTable - Fresh localStorage users data:', directUsers.length, directUsers);
         
-        // Always trigger refresh to ensure latest data
+        // En son verileri almak için daima refresh'i tetikle
         if (directUsers.length !== localUsers.length) {
           console.log('🔄 UserTable - User count changed, triggering refresh');
           onRefresh();
         }
       }
-    }, 5000); // Check every 5 seconds
+    }, 2000); // Her 2 saniyede kontrol et
     
-    return () => clearInterval(checkInterval);
+    return () => clearInterval(quickCheckInterval);
   }, [localUsers.length, onRefresh]);
 
-  // Update local state when props change
+  // Özellikler değiştiğinde yerel durumu güncelle
   useEffect(() => {
+    console.log('📊 UserTable - Props changed, updating local state with', users.length, 'users');
     setLocalUsers(users);
   }, [users]);
 
@@ -80,13 +106,16 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     try {
       console.log('🔄 UserTable - Manual force refresh initiated');
       
-      // Force immediate refresh from localStorage
+      // Önce localStorage'ı doğrula ve onar
+      validateAndRepairLocalStorage('valorant_registered_users');
+      
+      // localStorage'dan anında yenile
       const directUsers = forceRefreshLocalStorage('valorant_registered_users');
       console.log('📊 UserTable - Manual refresh data:', directUsers);
       
-      // Check if we got a valid response
+      // Geçerli bir yanıt alıp almadığımızı kontrol et
       if (directUsers && Array.isArray(directUsers)) {
-        // Trigger parent refresh
+        // Ebeveyn yenilemeyi tetikle
         onRefresh();
         
         toast({
