@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 type UserRole = 'customer' | 'booster' | 'admin';
@@ -31,29 +32,38 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Default user data
-const USERS = [
-  { id: '1', email: 'hakan200505@gmail.com', username: 'admin', password: 'Metin2398@', role: 'admin' as UserRole, balance: 5000 },
-];
+// Default admin user data
+const DEFAULT_ADMIN = { 
+  id: '1', 
+  email: 'hakan200505@gmail.com', 
+  username: 'admin', 
+  password: 'Metin2398@', 
+  role: 'admin' as UserRole, 
+  balance: 5000 
+};
 
-// Load registered users from localStorage
+// Function to load registered users from localStorage
 const loadRegisteredUsers = () => {
   try {
     const storedUsers = localStorage.getItem('valorant_registered_users');
+    console.log('Raw stored users data:', storedUsers);
+    
     if (storedUsers) {
-      console.log("Loading registered users from localStorage:", storedUsers);
       const parsedUsers = JSON.parse(storedUsers);
+      console.log('Loaded registered users from localStorage:', parsedUsers.length);
       return parsedUsers;
     }
   } catch (error) {
     console.error('Failed to parse stored users', error);
   }
-  // Initialize empty array if no users found
+  
+  // Initialize with empty array if no users found
+  console.log('No registered users found, initializing with empty array');
   localStorage.setItem('valorant_registered_users', JSON.stringify([]));
   return [];
 };
 
-// Save registered users to localStorage
+// Function to save registered users to localStorage
 const saveRegisteredUsers = (users: any[]) => {
   try {
     localStorage.setItem('valorant_registered_users', JSON.stringify(users));
@@ -68,13 +78,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
 
-  // Load registered users on component mount
+  // Load registered users and check for existing session on mount
   useEffect(() => {
+    // Load registered users
     const loadedUsers = loadRegisteredUsers();
     setRegisteredUsers(loadedUsers);
-    console.log("Loaded registered users into state:", loadedUsers.length);
+    console.log('Loaded registered users into state:', loadedUsers.length);
     
-    // Check local storage for existing auth
+    // Check for existing user session
     const storedUser = localStorage.getItem('valorant_user');
     if (storedUser) {
       try {
@@ -89,20 +100,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  // Get all users (default + registered)
+  // Get all users (default admin + registered users)
   const getAllUsers = () => {
-    // Get the latest registered users from localStorage
+    // Always fetch the latest registered users from localStorage
     const latestRegisteredUsers = loadRegisteredUsers();
     console.log("getAllUsers - registered users count:", latestRegisteredUsers.length);
     
-    // Map users to remove passwords
-    const defaultUsers = USERS.map(({ password, ...rest }) => rest);
+    // Map users to exclude passwords
+    const adminUser = { 
+      id: DEFAULT_ADMIN.id, 
+      email: DEFAULT_ADMIN.email, 
+      username: DEFAULT_ADMIN.username, 
+      role: DEFAULT_ADMIN.role, 
+      balance: DEFAULT_ADMIN.balance 
+    };
     
-    // Filter out any users with undefined properties
+    // Map registered users to exclude passwords
     const registeredUsersList = latestRegisteredUsers.map(({ password, ...rest }: any) => rest);
     
-    // Combine default and registered users
-    const allUsers = [...defaultUsers, ...registeredUsersList];
+    // Combine admin and registered users
+    const allUsers = [adminUser, ...registeredUsersList];
     console.log("getAllUsers - returning total users:", allUsers.length);
     
     return allUsers;
@@ -117,13 +134,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // First check default users
-      let foundUser = USERS.find(
-        u => u.email === email && u.password === password
-      );
-      
-      // Then check registered users
-      if (!foundUser) {
+      // Check if admin login
+      let foundUser = null;
+      if (email === DEFAULT_ADMIN.email && password === DEFAULT_ADMIN.password) {
+        foundUser = DEFAULT_ADMIN;
+      } else {
+        // Check registered users
         console.log('Checking registered users for:', email);
         foundUser = latestRegisteredUsers.find(
           u => u.email === email && u.password === password
@@ -135,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Invalid credentials');
       }
       
+      // Extract user info without password
       const { password: _, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
       localStorage.setItem('valorant_user', JSON.stringify(userWithoutPassword));
@@ -157,9 +174,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const latestRegisteredUsers = loadRegisteredUsers();
       console.log("Registration - Current registered users:", latestRegisteredUsers.length);
       
-      // Check for duplicate email across all users
-      const allUsers = [...USERS, ...latestRegisteredUsers];
-      if (allUsers.some(u => u.email === email)) {
+      // Check for duplicate email
+      if (email === DEFAULT_ADMIN.email || latestRegisteredUsers.some(u => u.email === email)) {
         console.error('Registration failed: Email already in use -', email);
         throw new Error('Email already in use');
       }
@@ -174,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         balance: 0,
       };
       
-      // Add to registered users list and save to localStorage
+      // Add to registered users and save to localStorage
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
       saveRegisteredUsers(updatedRegisteredUsers);
       setRegisteredUsers(updatedRegisteredUsers);
@@ -216,9 +232,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
       
-      // Update balance in registered users if applicable
-      const isDefaultUser = USERS.some(u => u.id === user.id);
-      if (!isDefaultUser) {
+      // Update balance in registered users if not admin
+      if (user.email !== DEFAULT_ADMIN.email) {
         const latestRegisteredUsers = loadRegisteredUsers();
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === user.id) {
@@ -257,9 +272,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
       
-      // Update balance in registered users if applicable
-      const isDefaultUser = USERS.some(u => u.id === user.id);
-      if (!isDefaultUser) {
+      // Update balance in registered users if not admin
+      if (user.email !== DEFAULT_ADMIN.email) {
         const latestRegisteredUsers = loadRegisteredUsers();
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === user.id) {
@@ -297,20 +311,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Get the latest registered users
-      const latestRegisteredUsers = loadRegisteredUsers();
-      
-      // Check if updating current logged-in user
+      // Update current user if it's the same one
       if (user && user.id === updatedUser.id) {
         setUser(updatedUser);
         localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
       }
       
-      // Check if the user is a default user
-      const isDefaultUser = USERS.some(u => u.id === updatedUser.id);
-      
-      if (!isDefaultUser) {
-        // Update the user in registered users list
+      // Check if updating admin (which is not stored in registered users)
+      if (updatedUser.email !== DEFAULT_ADMIN.email) {
+        // Update in registered users
+        const latestRegisteredUsers = loadRegisteredUsers();
         const updatedRegisteredUsers = latestRegisteredUsers.map(u => {
           if (u.id === updatedUser.id) {
             return {
@@ -325,7 +335,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRegisteredUsers(updatedRegisteredUsers);
         console.log('Updated registered user:', updatedUser.username);
       } else {
-        console.log('Updated default user in UI only:', updatedUser.username);
+        console.log('Updated admin user in UI only:', updatedUser.username);
       }
     } catch (error) {
       console.error('Failed to update user', error);
@@ -342,16 +352,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Filter to keep only the admin account if it exists
-      const adminEmail = 'hakan200505@gmail.com';
-      const latestRegisteredUsers = loadRegisteredUsers();
-      const filteredUsers = latestRegisteredUsers.filter(u => u.email === adminEmail);
+      // Admin is not in registered users, so just clear all registered users
+      saveRegisteredUsers([]);
+      setRegisteredUsers([]);
       
-      saveRegisteredUsers(filteredUsers);
-      setRegisteredUsers(filteredUsers);
-      
-      // Check if current user was removed
-      if (user && user.email !== adminEmail && !USERS.some(u => u.id === user.id)) {
+      // Check if current user was removed (if not admin)
+      if (user && user.email !== DEFAULT_ADMIN.email) {
         logout();
       }
     } catch (error) {

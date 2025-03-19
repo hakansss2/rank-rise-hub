@@ -24,20 +24,25 @@ const DeleteSpecificUsers: React.FC = () => {
 
   // Prepare the list of registered users for deletion
   useEffect(() => {
-    const allUsers = getAllUsers();
-    // Filter non-admin registered users
-    const registeredUsers = allUsers.filter(user => 
-      user.email !== 'hakan200505@gmail.com' && 
-      !user.id.startsWith('1') // Skip default users
-    );
+    const fetchUsers = () => {
+      // Get all users
+      const allUsers = getAllUsers();
+      
+      // Filter out the admin user (we never want to delete the admin)
+      const registeredUsers = allUsers.filter(user => 
+        user.email !== 'hakan200505@gmail.com'
+      );
+      
+      if (registeredUsers.length > 0) {
+        setEmailsToRemove(registeredUsers.map(user => user.email));
+        console.log("DeleteSpecificUsers - Found registered users to remove:", registeredUsers.length);
+      } else {
+        setEmailsToRemove([]);
+        console.log("DeleteSpecificUsers - No registered users to remove");
+      }
+    };
     
-    if (registeredUsers.length > 0) {
-      setEmailsToRemove(registeredUsers.map(user => user.email));
-    } else {
-      setEmailsToRemove([]);
-    }
-    
-    console.log("DeleteSpecificUsers - Registered users to remove:", registeredUsers.length);
+    fetchUsers();
   }, [getAllUsers]);
 
   const handleDeleteSpecificUsers = async () => {
@@ -52,6 +57,7 @@ const DeleteSpecificUsers: React.FC = () => {
 
     setLoading(true);
     try {
+      console.log("Attempting to remove users with emails:", emailsToRemove);
       await removeUsersByEmails(emailsToRemove);
       
       toast({

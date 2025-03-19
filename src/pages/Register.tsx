@@ -47,16 +47,25 @@ const Register = () => {
     },
   });
 
-  // Display current registered users count
+  // Get registered users count
   useEffect(() => {
     const loadRegisteredUsersCount = () => {
-      // Get registered users count from the getAllUsers() method
-      const allUsers = getAllUsers();
-      const defaultUserCount = 1; // Only the admin user is a default user
-      const registeredCount = Math.max(0, allUsers.length - defaultUserCount);
-      
-      console.log('Register page - loaded registered users count:', registeredCount);
-      setRegisteredUsers(registeredCount);
+      try {
+        // Get all users and subtract 1 for the admin user
+        const allUsers = getAllUsers();
+        const adminUserCount = 1; // Just the default admin
+        const registeredCount = Math.max(0, allUsers.length - adminUserCount);
+        
+        console.log('Register page - registered users count calculation:');
+        console.log('- Total users:', allUsers.length);
+        console.log('- Admin users:', adminUserCount);
+        console.log('- Registered users:', registeredCount);
+        
+        setRegisteredUsers(registeredCount);
+      } catch (error) {
+        console.error('Error loading registered users count:', error);
+        setRegisteredUsers(0);
+      }
     };
 
     loadRegisteredUsersCount();
@@ -71,8 +80,8 @@ const Register = () => {
       
       // Update the registered users count after successful registration
       const allUsers = getAllUsers();
-      const defaultUserCount = 1; // Only the admin user is a default user
-      const registeredCount = Math.max(0, allUsers.length - defaultUserCount);
+      const adminUserCount = 1;
+      const registeredCount = Math.max(0, allUsers.length - adminUserCount);
       setRegisteredUsers(registeredCount);
       
       toast({
