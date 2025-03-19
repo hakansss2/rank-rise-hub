@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, RefreshCw } from 'lucide-react';
 import { forceRefreshLocalStorage } from '@/utils/localStorageMonitor';
+import { useToast } from '@/hooks/use-toast';
 
 interface User {
   id: string;
@@ -23,25 +24,28 @@ interface UserTableProps {
 
 const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRefresh }) => {
   const [localUsers, setLocalUsers] = useState<User[]>(users);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
 
-  // Force refresh the user data from localStorage every 10 seconds
+  // More frequent checks for better reactivity
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      console.log('🔄 UserTable - Periodic force refresh');
+    const checkInterval = setInterval(() => {
+      console.log('🔄 UserTable - Periodic direct localStorage check');
       const directUsers = forceRefreshLocalStorage('valorant_registered_users');
       
       if (directUsers && Array.isArray(directUsers)) {
-        console.log('📊 UserTable - Fresh localStorage data:', directUsers.length, directUsers);
-        // If we have direct data from localStorage and the count differs, trigger a refresh
-        if (directUsers.length !== users.length) {
-          console.log('🔄 UserTable - User count mismatch, triggering refresh');
+        console.log('📊 UserTable - Fresh localStorage users data:', directUsers.length, directUsers);
+        
+        // Always trigger refresh to ensure latest data
+        if (directUsers.length !== localUsers.length) {
+          console.log('🔄 UserTable - User count changed, triggering refresh');
           onRefresh();
         }
       }
-    }, 10000);
+    }, 5000); // Check every 5 seconds
     
-    return () => clearInterval(intervalId);
-  }, [users.length, onRefresh]);
+    return () => clearInterval(checkInterval);
+  }, [localUsers.length, onRefresh]);
 
   // Update local state when props change
   useEffect(() => {
@@ -70,22 +74,69 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
     }
   };
 
-  const handleForceRefresh = () => {
-    console.log('🔄 UserTable - Manual force refresh');
-    const directUsers = forceRefreshLocalStorage('valorant_registered_users');
-    console.log('📊 UserTable - Fresh localStorage data (manual):', directUsers);
-    onRefresh();
+  const handleForceRefresh = async () => {
+    setIsRefreshing(true);
+    
+    try {
+      console.log('🔄 UserTable - Manual force refresh initiated');
+      
+      // Force immediate refresh from localStorage
+      const directUsers = forceRefreshLocalStorage('valorant_registered_users');
+      console.log('📊 UserTable - Manual refresh data:', directUsers);
+      
+      // Check if we got a valid response
+      if (directUsers && Array.isArray(directUsers)) {
+        // Trigger parent refresh
+        onRefresh();
+        
+        toast({
+          title: "Kullanıcı verileri güncellendi",
+          description: `${directUsers.length} kullanıcı bulundu.`,
+        });
+      } else {
+        console.error('❌ UserTable - Invalid data during manual refresh');
+        toast({
+          title: "Veri yenileme başarısız",
+          description: "Yeniden deneyebilir veya sayfayı yenileyebilirsiniz.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('❌ UserTable - Error during manual refresh:', error);
+      toast({
+        title: "Veri yenileme hatası",
+        description: "Beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Kullanıcı Listesi <span className="text-valorant-green">({localUsers.length})</span>
+        </h2>
+        
         <Button 
           onClick={handleForceRefresh}
           variant="outline" 
           className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500"
+          disabled={isRefreshing}
         >
-          Kullanıcı Verilerini Doğrudan localStorage'dan Yenile
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Yenileniyor...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Verileri Yenile
+            </>
+          )}
         </Button>
       </div>
       
@@ -130,8 +181,9 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEditUser, currency, onRe
                     onClick={handleForceRefresh}
                     variant="outline" 
                     className="border-valorant-gray/30 hover:bg-valorant-gray/20 text-blue-500"
+                    disabled={isRefreshing}
                   >
-                    localStorage'ı Kontrol Et
+                    {isRefreshing ? 'Kontrol Ediliyor...' : 'localStorage\'ı Kontrol Et'}
                   </Button>
                 </div>
               </TableCell>

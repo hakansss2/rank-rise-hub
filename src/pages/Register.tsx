@@ -11,18 +11,34 @@ import { monitorLocalStorage, forceRefreshLocalStorage } from '@/utils/localStor
 const Register = () => {
   const { registeredUsersCount } = useAuth();
 
-  // Periodic check of localStorage for debugging
+  // Enhanced localStorage monitoring for debugging
   useEffect(() => {
-    console.log('📋 Register component mounted - Setting up localStorage monitoring');
-    const cleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register');
+    console.log('📋 Register component mounted - Setting up enhanced localStorage monitoring');
     
-    // Force an immediate refresh to verify data
+    // Check localStorage immediately on mount
     const initialUsers = forceRefreshLocalStorage('valorant_registered_users');
-    console.log('📊 Initial users data on Register mount:', initialUsers);
+    console.log('🔍 Initial localStorage check on Register mount:', 
+      initialUsers ? 
+        `${initialUsers.length} users found: ${JSON.stringify(initialUsers)}` : 
+        'No users found or error parsing');
+    
+    // Set up more frequent monitoring (every 3 seconds)
+    const cleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register', 3000);
+    
+    // Schedule a second check after 1 second to catch any async operations
+    const secondCheckTimer = setTimeout(() => {
+      console.log('⏱️ Scheduled second localStorage check...');
+      const secondCheck = forceRefreshLocalStorage('valorant_registered_users');
+      console.log('🔍 Secondary localStorage check result:', 
+        secondCheck ? 
+          `${secondCheck.length} users found: ${JSON.stringify(secondCheck)}` : 
+          'No users found or error parsing');
+    }, 1000);
     
     return () => {
-      console.log('📋 Register component unmounting - Cleaning up localStorage monitor');
+      console.log('📋 Register component unmounting - Cleaning up monitors and timers');
       cleanup();
+      clearTimeout(secondCheckTimer);
     };
   }, []);
 
