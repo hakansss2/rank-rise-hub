@@ -35,7 +35,7 @@ const DeleteSpecificUsers: React.FC = () => {
       
       if (registeredUsers.length > 0) {
         setEmailsToRemove(registeredUsers.map(user => user.email));
-        console.log("DeleteSpecificUsers - Found registered users to remove:", registeredUsers.length);
+        console.log("DeleteSpecificUsers - Found registered users to remove:", registeredUsers.length, registeredUsers);
       } else {
         setEmailsToRemove([]);
         console.log("DeleteSpecificUsers - No registered users to remove");

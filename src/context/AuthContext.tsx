@@ -46,11 +46,11 @@ const DEFAULT_ADMIN = {
 const loadRegisteredUsers = () => {
   try {
     const storedUsers = localStorage.getItem('valorant_registered_users');
-    console.log('Raw stored users data:', storedUsers);
+    console.log('Loading registered users from localStorage:', storedUsers);
     
     if (storedUsers) {
       const parsedUsers = JSON.parse(storedUsers);
-      console.log('Loaded registered users from localStorage:', parsedUsers.length);
+      console.log('Successfully loaded registered users:', parsedUsers.length);
       return parsedUsers;
     }
   } catch (error) {
@@ -67,7 +67,7 @@ const loadRegisteredUsers = () => {
 const saveRegisteredUsers = (users: any[]) => {
   try {
     localStorage.setItem('valorant_registered_users', JSON.stringify(users));
-    console.log('Saved registered users to localStorage:', users.length);
+    console.log('Saved registered users to localStorage:', users.length, users);
   } catch (error) {
     console.error('Failed to save registered users to localStorage', error);
   }
@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Load registered users
     const loadedUsers = loadRegisteredUsers();
     setRegisteredUsers(loadedUsers);
-    console.log('Loaded registered users into state:', loadedUsers.length);
+    console.log('Initial loading of registered users:', loadedUsers.length, loadedUsers);
     
     // Check for existing user session
     const storedUser = localStorage.getItem('valorant_user');
@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getAllUsers = () => {
     // Always fetch the latest registered users from localStorage
     const latestRegisteredUsers = loadRegisteredUsers();
-    console.log("getAllUsers - registered users count:", latestRegisteredUsers.length);
+    console.log("getAllUsers - Fetched registered users count:", latestRegisteredUsers.length);
     
     // Map users to exclude passwords
     const adminUser = { 
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Combine admin and registered users
     const allUsers = [adminUser, ...registeredUsersList];
-    console.log("getAllUsers - returning total users:", allUsers.length);
+    console.log("getAllUsers - Returning total users:", allUsers.length, allUsers);
     
     return allUsers;
   };
@@ -192,10 +192,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Add to registered users and save to localStorage
       const updatedRegisteredUsers = [...latestRegisteredUsers, newUser];
+      console.log("Registration - Saving new user:", newUser);
+      console.log("Registration - Updated users list:", updatedRegisteredUsers);
+      
       saveRegisteredUsers(updatedRegisteredUsers);
       setRegisteredUsers(updatedRegisteredUsers);
       
-      console.log('User registered successfully:', { ...newUser, password: '***' });
+      console.log('User registered successfully:', { email, username, id: newUser.id });
       console.log('Total registered users after registration:', updatedRegisteredUsers.length);
       
       // Log in the new user
@@ -380,6 +383,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Filter out users with specified emails
       const filteredUsers = latestRegisteredUsers.filter(u => !emails.includes(u.email));
+      
+      console.log(`Removing users with emails:`, emails);
+      console.log(`Before removal: ${latestRegisteredUsers.length} users, After removal: ${filteredUsers.length} users`);
       
       saveRegisteredUsers(filteredUsers);
       setRegisteredUsers(filteredUsers);
