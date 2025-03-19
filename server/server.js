@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -21,7 +20,7 @@ app.use(bodyParser.json());
 
 // MongoDB'ye bağlan
 mongoose
-  .connect(process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/rank-rise-hub")
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB bağlantısı başarılı"))
   .catch((err) => console.log("MongoDB bağlantı hatası:", err));
 
