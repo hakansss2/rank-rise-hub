@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -242,6 +243,12 @@ const AdminPanel = () => {
   const completedBoosts = orders.filter(order => order.status === 'completed');
   const pendingBoosts = orders.filter(order => order.status === 'pending');
   const allBoosts = [...activeBoosts, ...completedBoosts, ...pendingBoosts];
+
+  // Helper function to safely display rank name
+  const getRankName = (rankId: number): string => {
+    const rank = getRankById(rankId);
+    return rank ? rank.name : 'Unknown Rank';
+  };
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">
@@ -511,14 +518,12 @@ const AdminPanel = () => {
                     <TableBody>
                       {allBoosts.length > 0 ? (
                         allBoosts.map((boost) => {
-                          const currentRankName = getRankById(boost.currentRank);
-                          const targetRankName = getRankById(boost.targetRank);
                           return (
                             <TableRow key={boost.id}>
                               <TableCell className="font-mono text-xs">{boost.id}</TableCell>
                               <TableCell>{getStatusBadge(boost.status)}</TableCell>
-                              <TableCell>{currentRankName}</TableCell>
-                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{getRankName(boost.currentRank)}</TableCell>
+                              <TableCell>{getRankName(boost.targetRank)}</TableCell>
                               <TableCell>{boost.userId}</TableCell>
                               <TableCell>{boost.boosterUsername || "-"}</TableCell>
                               <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
@@ -591,13 +596,11 @@ const AdminPanel = () => {
                     <TableBody>
                       {activeBoosts.length > 0 ? (
                         activeBoosts.map((boost) => {
-                          const currentRankName = getRankById(boost.currentRank);
-                          const targetRankName = getRankById(boost.targetRank);
                           return (
                             <TableRow key={boost.id}>
                               <TableCell className="font-mono text-xs">{boost.id}</TableCell>
-                              <TableCell>{currentRankName}</TableCell>
-                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{getRankName(boost.currentRank)}</TableCell>
+                              <TableCell>{getRankName(boost.targetRank)}</TableCell>
                               <TableCell>{boost.userId}</TableCell>
                               <TableCell>{boost.boosterUsername || "-"}</TableCell>
                               <TableCell>{boost.gameUsername}</TableCell>
@@ -658,13 +661,11 @@ const AdminPanel = () => {
                     <TableBody>
                       {completedBoosts.length > 0 ? (
                         completedBoosts.map((boost) => {
-                          const currentRankName = getRankById(boost.currentRank);
-                          const targetRankName = getRankById(boost.targetRank);
                           return (
                             <TableRow key={boost.id}>
                               <TableCell className="font-mono text-xs">{boost.id}</TableCell>
-                              <TableCell>{currentRankName}</TableCell>
-                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{getRankName(boost.currentRank)}</TableCell>
+                              <TableCell>{getRankName(boost.targetRank)}</TableCell>
                               <TableCell>{boost.userId}</TableCell>
                               <TableCell>{boost.boosterUsername || "-"}</TableCell>
                               <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
@@ -712,13 +713,11 @@ const AdminPanel = () => {
                     <TableBody>
                       {pendingBoosts.length > 0 ? (
                         pendingBoosts.map((boost) => {
-                          const currentRankName = getRankById(boost.currentRank);
-                          const targetRankName = getRankById(boost.targetRank);
                           return (
                             <TableRow key={boost.id}>
                               <TableCell className="font-mono text-xs">{boost.id}</TableCell>
-                              <TableCell>{currentRankName}</TableCell>
-                              <TableCell>{targetRankName}</TableCell>
+                              <TableCell>{getRankName(boost.currentRank)}</TableCell>
+                              <TableCell>{getRankName(boost.targetRank)}</TableCell>
                               <TableCell>{boost.userId}</TableCell>
                               <TableCell className="text-right font-bold">{formatBalance(boost.price)}</TableCell>
                               <TableCell className="text-right">
@@ -795,3 +794,4 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
