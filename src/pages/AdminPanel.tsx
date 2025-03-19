@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const AdminPanel = () => {
-  const { user, isAuthenticated, isAdmin, getAllUsers, removeAllExceptAdmin, registeredUsersCount } = useAuth();
+  const { user, isAuthenticated, isAdmin, getAllUsers, updateUser, removeAllExceptAdmin, registeredUsersCount } = useAuth();
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [allUsers, setAllUsers] = useState<any[]>([]);
@@ -85,8 +85,12 @@ const AdminPanel = () => {
   
   const handleUserEdit = async (updatedUser: any, newPassword?: string) => {
     try {
-      const { updateUser } = useAuth();
+      console.log("AdminPanel - Düzenlenecek kullanıcı:", updatedUser);
+      console.log("AdminPanel - Yeni şifre var mı:", newPassword ? "Evet" : "Hayır");
+      
       await updateUser(updatedUser, newPassword);
+      
+      console.log("AdminPanel - Kullanıcı güncellendi, şimdi listeyi yeniliyorum");
       refreshUsers();
       
       toast({
@@ -104,6 +108,7 @@ const AdminPanel = () => {
   };
   
   const handleEditUser = (user: any) => {
+    console.log("Düzenlenecek kullanıcı seçildi:", user);
     setSelectedUser(user);
     setDialogOpen(true);
   };

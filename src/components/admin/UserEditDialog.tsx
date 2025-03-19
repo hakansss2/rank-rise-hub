@@ -57,6 +57,16 @@ const UserEditDialog: React.FC<UserEditDialogProps> = ({ user, open, onOpenChang
       return;
     }
     
+    console.log("Düzenlenen kullanıcı bilgileri:", {
+      önceki: user,
+      yeni: {
+        email,
+        username,
+        role,
+        balance: numBalance
+      }
+    });
+    
     const updatedUser: User = {
       ...user,
       email,
@@ -65,6 +75,7 @@ const UserEditDialog: React.FC<UserEditDialogProps> = ({ user, open, onOpenChang
       balance: numBalance
     };
     
+    console.log("UserEditDialog - updatedUser:", updatedUser);
     onSave(updatedUser, newPassword || undefined);
     onOpenChange(false);
   };
