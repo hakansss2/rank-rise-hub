@@ -1,64 +1,14 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
-import { 
-  monitorLocalStorage, 
-  forceRefreshLocalStorage, 
-  validateAndRepairLocalStorage,
-  setupAggressiveRefresh
-} from '@/utils/localStorageMonitor';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
-
-  // Kayıt sayfası mount olduğunda localStorage kontrolü ve onarımı
-  useEffect(() => {
-    console.log('📋 Register component mounted - Setting up intensive localStorage monitoring');
-    
-    // İlk olarak localStorage'ı onar
-    validateAndRepairLocalStorage('valorant_registered_users');
-    
-    // Daha agresif yenileme kur (verilerle callback)
-    const aggressiveCleanup = setupAggressiveRefresh('valorant_registered_users', (data) => {
-      console.log('⚡ Register - Aggressive refresh returned users data:', 
-        Array.isArray(data) ? `${data.length} users` : 'Invalid data');
-    }, 500); // Run every 500ms for immediate updates
-    
-    // Ayrıca normal izleme de kur (daha az sıklıkta)
-    const monitorCleanup = monitorLocalStorage('valorant_registered_users', '🔎 Register', 2000);
-    
-    // Kayıt sonrası beklenen işlemleri planla
-    const postRegisterCheck = setTimeout(() => {
-      console.log('⏱️ Post-registration checks starting...');
-      
-      // localStorage'ı tekrar kontrol et ve onar
-      validateAndRepairLocalStorage('valorant_registered_users');
-      
-      // En güncel verileri al
-      const latestData = forceRefreshLocalStorage('valorant_registered_users');
-      console.log('📊 Post-registration data check:', latestData);
-      
-      // Manual storage event trigger to notify other tabs
-      try {
-        // This attempts to notify other browser tabs about the change
-        window.dispatchEvent(new Event('storage'));
-      } catch (e) {
-        console.error('Failed to dispatch storage event:', e);
-      }
-    }, 1000);
-    
-    return () => {
-      console.log('📋 Register component unmounting - Cleaning up all monitors');
-      aggressiveCleanup();
-      monitorCleanup();
-      clearTimeout(postRegisterCheck);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">

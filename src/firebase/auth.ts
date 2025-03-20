@@ -1,3 +1,4 @@
+
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
@@ -25,7 +26,7 @@ const checkConnection = async () => {
   }
   
   try {
-    // Firestore bağlantısını test et - Doğru query syntaxı ile
+    // Firestore bağlantısını test et
     const q = query(collection(db, "connection_test"), where("test", "==", true), limit(1));
     await getDocs(q);
     return true;
@@ -42,11 +43,14 @@ export const registerUser = async (
   password: string
 ): Promise<FirebaseUser> => {
   try {
+    console.log("Kayıt işlemi başlatılıyor:", email);
+    
     // Bağlantı kontrolü
     await checkConnection();
     
     // Admin için özel durum
     if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+      console.log("Admin hesabı tespit edildi, özel giriş yapılıyor");
       return {
         id: "admin-user-id",
         email: "hakan200505@gmail.com",
@@ -58,6 +62,8 @@ export const registerUser = async (
     
     // Firebase Authentication ile kullanıcı oluştur
     const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log("Firebase Auth hesabı oluşturuldu:", userCredential.user.uid);
+    
     const user = userCredential.user;
     
     // Kullanıcı bilgilerini Firestore'a kaydet
@@ -69,13 +75,31 @@ export const registerUser = async (
       balance: 0
     };
     
-    await setDoc(doc(db, "users", user.uid), userData);
+    try {
+      await setDoc(doc(db, "users", user.uid), userData);
+      console.log("Kullanıcı Firestore'a kaydedildi:", user.uid);
+    } catch (firestoreError) {
+      console.error("Firestore kaydı sırasında hata:", firestoreError);
+      throw new Error("Kullanıcı profili oluşturulamadı: " + firestoreError.message);
+    }
     
     console.log("Kullanıcı başarıyla kaydedildi:", userData);
     return userData;
   } catch (error: any) {
-    console.error("Kayıt hatası:", error.message);
-    throw new Error(error.message);
+    console.error("Kayıt hatası:", error.code, error.message);
+    
+    // Firebase hata kodlarını daha anlaşılır hata mesajlarına çevir
+    if (error.code === 'auth/email-already-in-use') {
+      throw new Error("Bu e-posta adresi zaten kullanımda.");
+    } else if (error.code === 'auth/invalid-email') {
+      throw new Error("Geçersiz e-posta formatı.");
+    } else if (error.code === 'auth/weak-password') {
+      throw new Error("Şifre çok zayıf. En az 6 karakter olmalıdır.");
+    } else if (error.code === 'auth/network-request-failed') {
+      throw new Error("Ağ hatası. İnternet bağlantınızı kontrol edin.");
+    }
+    
+    throw new Error(error.message || "Kayıt sırasında beklenmeyen bir hata oluştu.");
   }
 };
 

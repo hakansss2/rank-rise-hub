@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -46,6 +47,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
   });
 
   const onSubmit = async (data: FormValues) => {
+    console.log("Kayıt formu gönderiliyor:", data.email, data.username);
     setIsLoading(true);
 
     try {
@@ -53,18 +55,21 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
       
       await registerUser(data.email, data.username, data.password);
       
+      console.log("Kayıt işlemi başarıyla tamamlandı");
+      
       toast({
         title: 'Kayıt başarılı',
         description: 'Hoş geldiniz! Artık giriş yaptınız.',
       });
       
+      // Başarılı kayıt sonrası dashboard'a yönlendir
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
       
       toast({
         title: 'Kayıt başarısız',
-        description: 'Bir hata oluştu. Lütfen tekrar deneyin.',
+        description: error.message || 'Bir hata oluştu. Lütfen tekrar deneyin.',
         variant: 'destructive',
       });
     } finally {
