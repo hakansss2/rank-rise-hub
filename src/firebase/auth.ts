@@ -1,4 +1,3 @@
-
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
@@ -27,9 +26,8 @@ const checkConnection = async () => {
   
   try {
     // Firestore bağlantısını test et
-    const q = query(collection(db, "connection_test"), where("test", "==", true));
-    const limitedQuery = limit(1)(q);
-    await getDocs(limitedQuery);
+    const q = query(collection(db, "connection_test"), where("test", "==", true), limit(1));
+    await getDocs(q);
     return true;
   } catch (error) {
     console.error("Firebase bağlantı hatası:", error);
