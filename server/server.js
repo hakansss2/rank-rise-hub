@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -8,10 +7,10 @@ require("dotenv").config();
 
 const app = express();
 
-// Production için CORS ayarları
+// Glitch ve production için CORS ayarları
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://rankrisehub.netlify.app', 'https://www.rankrisehub.netlify.app'] 
+    ? ['https://rankrisehub.netlify.app', 'https://www.rankrisehub.netlify.app', 'https://e6d75c2d-6fff-4293-8358-83b61117fd89.lovableproject.com'] 
     : 'http://localhost:5173', // Vite'ın varsayılan portu
   optionsSuccessStatus: 200
 };
@@ -23,10 +22,16 @@ app.use(bodyParser.json());
 const connectionURI = process.env.MONGODB_URI || 'MongoDB URI bulunamadı';
 const sanitizedURI = connectionURI.replace(/(:.*@)/g, ':***@');
 console.log("MongoDB bağlantı URI'si:", sanitizedURI);
+console.log("Çalışma ortamı:", process.env.NODE_ENV);
+console.log("Sunucu portu:", process.env.PORT);
 
 // MongoDB'ye bağlan
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 30000, // Timeout artırıldı (Glitch için)
+  })
   .then(() => console.log("MongoDB bağlantısı başarılı"))
   .catch((err) => {
     console.error("MongoDB bağlantı hatası:", err);
@@ -121,7 +126,7 @@ app.post("/api/users/login", async (req, res) => {
   }
 });
 
-// Kullanıcı sayısını getir - endpoint düzeltildi
+// Kullanıcı sayısını getir - düzeltildi ve yeni yol eklendi
 app.get("/api/users/count", async (req, res) => {
   try {
     const count = await User.countDocuments({ role: "customer" });
@@ -136,9 +141,11 @@ app.get("/api/users/count", async (req, res) => {
 // Sipariş Rotaları
 app.get("/api/orders", async (req, res) => {
   try {
-    const orders = await Order.find();
+    const orders = await Order.find().lean().exec();
+    console.log(`${orders.length} sipariş bulundu`);
     res.json(orders);
   } catch (err) {
+    console.error("Sipariş getirme hatası:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -230,7 +237,22 @@ app.patch("/api/users/:id/balance", async (req, res) => {
 
 // Ana Endpoint
 app.get("/", (req, res) => {
-  res.send("Rank Rise Hub Backend Çalışıyor!");
+  res.send("Rank Rise Hub Backend Çalışıyor! API endpointleri /api altında erişilebilir.");
+});
+
+// Glitch için ping endpointi (uyku moduna girmesini önlemek için)
+app.get("/ping", (req, res) => {
+  res.status(200).send("pong");
+});
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "up", 
+    time: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
 });
 
 // Production için statik dosyaları serv et (opsiyonel - eğer backend ve frontend aynı sunucuda olacaksa)

@@ -11,9 +11,19 @@ export const getApiBaseUrl = (): string => {
   }
   
   // Fallback URL'leri (eğer environment değişkenleri bulunamazsa)
-  const fallbackUrl = import.meta.env.MODE === 'production'
-    ? 'https://forested-saber-sandal.glitch.me/api'
-    : 'http://localhost:5000/api';
+  const isGlitch = window.location.hostname.includes('glitch.me');
+  const isDevelopment = import.meta.env.MODE === 'development';
+  
+  let fallbackUrl = isDevelopment
+    ? 'http://localhost:5000/api'
+    : 'https://forested-saber-sandal.glitch.me/api';
+    
+  // Eğer Glitch üzerinde çalışıyorsa ve development modunda değilse
+  if (isGlitch && !isDevelopment) {
+    // Mevcut hostnameyi alıp API yolunu oluştur
+    const currentHostname = window.location.hostname;
+    fallbackUrl = `https://${currentHostname}/api`;
+  }
   
   console.log('Using fallback API URL:', fallbackUrl);
   return fallbackUrl;
