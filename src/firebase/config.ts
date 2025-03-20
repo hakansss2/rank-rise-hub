@@ -1,44 +1,47 @@
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getStorage, connectStorageEmulator } from "firebase/storage";
+import { getStorage } from "firebase/storage";
 
 // Firebase yapılandırma bilgileri
 const firebaseConfig = {
   apiKey: "AIzaSyBzaP14IRGBFhGkIXj6Iq2A4Rb-El-HMrY",
   authDomain: "valorantboost-ebb7d.firebaseapp.com",
   projectId: "valorantboost-ebb7d",
-  storageBucket: "valorantboost-ebb7d.appspot.com", // .firebasestorage.app yerine doğru değer
+  storageBucket: "valorantboost-ebb7d.appspot.com",
   messagingSenderId: "297162271025",
   appId: "1:297162271025:web:c6c0c990aae0bdc2a96810",
   measurementId: "G-LY2PTB3X70"
 };
 
-// Firebase'i başlat
-const app = initializeApp(firebaseConfig);
+console.log("Firebase yapılandırması başlatılıyor...");
 
-// Firestore, Authentication, Storage hizmetlerini al
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const storage = getStorage(app);
+try {
+  // Firebase'i başlat
+  const app = initializeApp(firebaseConfig);
 
-// Analytics'i yalnızca destekleniyorsa başlat
-export let analytics = null;
-isSupported().then(supported => {
-  if (supported) {
-    analytics = getAnalytics(app);
-  }
-}).catch(err => {
-  console.error("Analytics başlatma hatası:", err);
-});
+  // Firestore, Authentication, Storage hizmetlerini al
+  export const db = getFirestore(app);
+  export const auth = getAuth(app);
+  export const storage = getStorage(app);
 
-// Geliştirme ortamında emülatör bağlantıları (geliştirici bu kısmı açabilir)
-// if (window.location.hostname === "localhost") {
-//   connectFirestoreEmulator(db, "localhost", 8080);
-//   connectAuthEmulator(auth, "http://localhost:9099");
-//   connectStorageEmulator(storage, "localhost", 9199);
-// }
+  console.log("Firebase başarıyla yapılandırıldı");
 
-export default app;
+  // Analytics'i yalnızca destekleniyorsa başlat
+  export let analytics = null;
+  isSupported().then(supported => {
+    if (supported) {
+      analytics = getAnalytics(app);
+      console.log("Firebase Analytics başlatıldı");
+    }
+  }).catch(err => {
+    console.error("Analytics başlatma hatası:", err);
+  });
+
+  export default app;
+} catch (error) {
+  console.error("Firebase yapılandırma hatası:", error);
+  throw new Error("Firebase yapılandırılamadı. Lütfen daha sonra tekrar deneyin.");
+}

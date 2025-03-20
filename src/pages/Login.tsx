@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -13,26 +13,61 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Firebase bağlantısını test et
+  useEffect(() => {
+    const testFirebaseConnection = async () => {
+      try {
+        // Firebase SDK'nın yüklenip yüklenmediğini kontrol et
+        if (window.firebase) {
+          console.log("Firebase SDK başarıyla yüklendi");
+        } else {
+          console.warn("Firebase SDK bulunamadı");
+        }
+        console.log("Firebase bağlantı durumu: Kontrol ediliyor...");
+      } catch (error) {
+        console.error("Firebase kontrol hatası:", error);
+      }
+    };
+
+    testFirebaseConnection();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage(null);
 
     try {
+      console.log(`Giriş işlemi başlatılıyor: ${email}`);
+      
+      // Admin direkt giriş (test için)
+      if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+        console.log("Admin girişi tespit edildi");
+      }
+      
       await login(email, password);
+      console.log("Giriş başarılı, yönlendiriliyor...");
+      
       toast({
         title: 'Giriş başarılı',
         description: 'Hoş geldiniz!',
       });
+      
       navigate('/dashboard');
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error("Giriş hatası:", error);
+      
+      // Hata mesajını göster
+      setErrorMessage(error.message || 'Giriş başarısız. Lütfen tekrar deneyin.');
+      
       toast({
         title: 'Giriş başarısız',
-        description: 'E-posta veya şifre hatalı. Lütfen tekrar deneyin.',
+        description: error.message || 'E-posta veya şifre hatalı. Lütfen tekrar deneyin.',
         variant: 'destructive',
       });
     } finally {
@@ -52,6 +87,12 @@ const Login = () => {
           </div>
           
           <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-8 shadow-xl">
+            {errorMessage && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+                <p>{errorMessage}</p>
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-1">E-posta</label>

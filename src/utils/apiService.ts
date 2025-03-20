@@ -1,4 +1,3 @@
-
 // Firebase tabanlı API servisi
 import { getApiBaseUrl } from './environment';
 import { 
@@ -36,6 +35,8 @@ export type MessageResponse = FirebaseMessage;
 export const authApi = {
   login: async (email: string, password: string): Promise<UserResponse> => {
     try {
+      console.log(`🔐 Login attempt for: ${email}`);
+      
       // Admin girişi için özel durum kontrolü
       if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
         const adminUser = {
@@ -48,27 +49,31 @@ export const authApi = {
         
         // Admin bilgilerini localStorage'a kaydet
         localStorage.setItem('valorant_user', JSON.stringify(adminUser));
+        console.log("🔓 Admin login successful");
         return adminUser;
       }
       
       // Normal kullanıcı girişi
       const userData = await loginUser(email, password);
       localStorage.setItem('valorant_user', JSON.stringify(userData));
+      console.log(`🔓 User login successful: ${userData.username}`);
       return userData;
     } catch (error: any) {
       console.error('❌ Giriş başarısız:', error);
-      throw new Error(error.message || 'Giriş yapılamadı');
+      throw error; // Orijinal hatayı ilet
     }
   },
   
   register: async (email: string, username: string, password: string): Promise<UserResponse> => {
     try {
+      console.log(`📝 Register attempt: ${email}, ${username}`);
       const userData = await registerUser(email, username, password);
       localStorage.setItem('valorant_user', JSON.stringify(userData));
+      console.log(`✅ Registration successful: ${userData.username}`);
       return userData;
     } catch (error: any) {
       console.error('❌ Kayıt başarısız:', error);
-      throw new Error(error.message || 'Kayıt yapılamadı');
+      throw error; // Orijinal hatayı ilet
     }
   },
     
@@ -78,7 +83,7 @@ export const authApi = {
       return { count };
     } catch (error: any) {
       console.error('❌ Kullanıcı sayısı alınamadı:', error);
-      throw new Error(error.message || 'Kullanıcı sayısı alınamadı');
+      return { count: 0 };
     }
   },
   
@@ -113,7 +118,7 @@ export const userApi = {
       return updatedUser;
     } catch (error: any) {
       console.error('❌ Bakiye güncellenemedi:', error);
-      throw new Error(error.message || 'Bakiye güncellenemedi');
+      throw error;
     }
   },
   
@@ -122,7 +127,7 @@ export const userApi = {
       return await uploadProfileImage(userId, file);
     } catch (error: any) {
       console.error('❌ Profil resmi yüklenemedi:', error);
-      throw new Error(error.message || 'Profil resmi yüklenemedi');
+      throw error;
     }
   },
 };

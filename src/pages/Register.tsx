@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -9,6 +9,25 @@ import RegisterHeader from '@/components/auth/RegisterHeader';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
+
+  // Firebase bağlantısı kontrolü
+  useEffect(() => {
+    const checkFirebaseStatus = () => {
+      try {
+        console.log("Kayıt sayfası - Firebase durumu kontrol ediliyor");
+        // Basit bir kontrol - firebase nesnesi var mı?
+        if (window.firebase) {
+          console.log("Firebase SDK başarıyla yüklendi");
+        } else {
+          console.warn("Firebase SDK bulunamadı, bu normal olabilir");
+        }
+      } catch (error) {
+        console.error("Firebase kontrol hatası:", error);
+      }
+    };
+
+    checkFirebaseStatus();
+  }, []);
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">

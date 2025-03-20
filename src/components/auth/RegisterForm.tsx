@@ -32,6 +32,7 @@ interface RegisterFormProps {
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,6 +50,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
   const onSubmit = async (data: FormValues) => {
     console.log("Kayıt formu gönderiliyor:", data.email, data.username);
     setIsLoading(true);
+    setRegisterError(null);
 
     try {
       console.log(`📌 Attempting to register user: ${data.username}, ${data.email}`);
@@ -66,6 +68,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Registration error:', error);
+      setRegisterError(error.message || 'Kayıt olurken bir hata oluştu');
       
       toast({
         title: 'Kayıt başarısız',
@@ -79,6 +82,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ registeredUsersCount }) => 
 
   return (
     <Form {...form}>
+      {registerError && (
+        <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm">
+          <p>{registerError}</p>
+        </div>
+      )}
+      
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}

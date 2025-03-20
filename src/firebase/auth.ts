@@ -26,13 +26,15 @@ const checkConnection = async () => {
   }
   
   try {
-    // Firestore bağlantısını test et
-    const q = query(collection(db, "connection_test"), where("test", "==", true), limit(1));
-    await getDocs(q);
+    console.log("Firebase bağlantısı test ediliyor...");
+    // Firestore bağlantısını test et - bu bir okuma operasyonu
+    const testQuery = query(collection(db, "users"), limit(1));
+    await getDocs(testQuery);
+    console.log("Firebase bağlantısı başarılı");
     return true;
   } catch (error) {
     console.error("Firebase bağlantı hatası:", error);
-    throw new Error("Firebase'e bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.");
+    throw new Error("Firebase'e bağlanılamıyor. Lütfen daha sonra tekrar deneyin.");
   }
 };
 
@@ -60,6 +62,7 @@ export const registerUser = async (
       };
     }
     
+    console.log("Firebase Auth hesabı oluşturuluyor...");
     // Firebase Authentication ile kullanıcı oluştur
     const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
     console.log("Firebase Auth hesabı oluşturuldu:", userCredential.user.uid);
@@ -76,11 +79,19 @@ export const registerUser = async (
     };
     
     try {
+      console.log("Kullanıcı bilgileri Firestore'a kaydediliyor...");
       await setDoc(doc(db, "users", user.uid), userData);
       console.log("Kullanıcı Firestore'a kaydedildi:", user.uid);
     } catch (firestoreError) {
       console.error("Firestore kaydı sırasında hata:", firestoreError);
-      throw new Error("Kullanıcı profili oluşturulamadı: " + firestoreError.message);
+      // Kullanıcı oluşturuldu ancak profil oluşturulamadı, temizlik yap
+      try {
+        await user.delete();
+        console.log("Auth kullanıcı silindi çünkü Firestore kaydı başarısız oldu");
+      } catch (deleteError) {
+        console.error("Kullanıcı silme hatası:", deleteError);
+      }
+      throw new Error("Kullanıcı profili oluşturulamadı. Lütfen daha sonra tekrar deneyin.");
     }
     
     console.log("Kullanıcı başarıyla kaydedildi:", userData);
@@ -97,6 +108,8 @@ export const registerUser = async (
       throw new Error("Şifre çok zayıf. En az 6 karakter olmalıdır.");
     } else if (error.code === 'auth/network-request-failed') {
       throw new Error("Ağ hatası. İnternet bağlantınızı kontrol edin.");
+    } else if (error.code === 'auth/operation-not-allowed') {
+      throw new Error("E-posta/şifre girişi bu Firebase projesi için etkin değil.");
     }
     
     throw new Error(error.message || "Kayıt sırasında beklenmeyen bir hata oluştu.");
@@ -109,8 +122,11 @@ export const loginUser = async (
   password: string
 ): Promise<FirebaseUser> => {
   try {
+    console.log("Giriş işlemi başlatılıyor:", email);
+    
     // Admin kontrolü
     if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+      console.log("Admin giriş başarılı");
       return {
         id: "admin-user-id",
         email: "hakan200505@gmail.com",
@@ -124,20 +140,52 @@ export const loginUser = async (
     await checkConnection();
     
     // Normal kullanıcı girişi
+    console.log("Firebase Auth ile giriş yapılıyor...");
     const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log("Firebase Auth girişi başarılı");
+    
     const user = userCredential.user;
     
     // Kullanıcı bilgilerini Firestore'dan al
+    console.log("Kullanıcı verileri Firestore'dan alınıyor...");
     const userDoc = await getDoc(doc(db, "users", user.uid));
     
     if (userDoc.exists()) {
-      return userDoc.data() as FirebaseUser;
+      const userData = userDoc.data() as FirebaseUser;
+      console.log("Kullanıcı verileri başarıyla alındı");
+      return userData;
     } else {
-      throw new Error("Kullanıcı bilgileri bulunamadı.");
+      console.error("Kullanıcı Firestore'da bulunamadı, senkronizasyon sorunu");
+      
+      // Kullanıcı Auth'da var ama Firestore'da yok, otomatik oluştur
+      const newUserData: FirebaseUser = {
+        id: user.uid,
+        email: user.email,
+        username: email.split('@')[0], // E-postadan basit bir kullanıcı adı oluştur
+        role: "customer",
+        balance: 0
+      };
+      
+      await setDoc(doc(db, "users", user.uid), newUserData);
+      console.log("Eksik Firestore kaydı oluşturuldu");
+      
+      return newUserData;
     }
   } catch (error: any) {
-    console.error("Giriş hatası:", error.message);
-    throw new Error(error.message);
+    console.error("Giriş hatası:", error.code, error.message);
+    
+    // Firebase hata kodlarını daha anlaşılır hata mesajlarına çevir
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      throw new Error("E-posta veya şifre hatalı.");
+    } else if (error.code === 'auth/invalid-email') {
+      throw new Error("Geçersiz e-posta formatı.");
+    } else if (error.code === 'auth/user-disabled') {
+      throw new Error("Bu hesap devre dışı bırakılmış.");
+    } else if (error.code === 'auth/too-many-requests') {
+      throw new Error("Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.");
+    }
+    
+    throw new Error(error.message || "Giriş sırasında beklenmeyen bir hata oluştu.");
   }
 };
 
@@ -148,7 +196,7 @@ export const signOut = async (): Promise<void> => {
     console.log("Kullanıcı çıkış yaptı");
   } catch (error: any) {
     console.error("Çıkış hatası:", error.message);
-    throw new Error(error.message);
+    throw new Error("Çıkış yapılırken bir hata oluştu.");
   }
 };
 
@@ -162,18 +210,20 @@ export const onAuthStateChanged = (
 // Kullanıcı sayısını getir
 export const getUserCount = async (): Promise<number> => {
   try {
-    // Bağlantı kontrolü
-    try {
-      await checkConnection();
-    } catch (error) {
-      return 0; // Bağlantı yoksa 0 dön
-    }
+    console.log("Kullanıcı sayısı getiriliyor...");
     
-    const usersSnapshot = await getDocs(collection(db, "users"));
-    return usersSnapshot.size;
+    // Bağlantı kontrolü
+    await checkConnection();
+    
+    const usersRef = collection(db, "users");
+    const usersSnapshot = await getDocs(usersRef);
+    const count = usersSnapshot.size;
+    
+    console.log(`${count} kullanıcı bulundu`);
+    return count;
   } catch (error: any) {
     console.error("Kullanıcı sayısı alma hatası:", error.message);
-    throw new Error(error.message);
+    return 0; // Hata durumunda 0 dön
   }
 };
 
@@ -209,6 +259,6 @@ export const updateUserBalance = async (
     };
   } catch (error: any) {
     console.error("Bakiye güncelleme hatası:", error.message);
-    throw new Error(error.message);
+    throw new Error("Bakiye güncellenirken bir hata oluştu.");
   }
 };
