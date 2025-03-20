@@ -7,7 +7,7 @@ import {
   User,
   onAuthStateChanged as firebaseOnAuthStateChanged
 } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
 import { auth, db } from "./config";
 
 // Kullanıcı arayüzü
@@ -27,7 +27,9 @@ const checkConnection = async () => {
   
   try {
     // Firestore bağlantısını test et
-    await getDocs(query(collection(db, "connection_test"), where("test", "==", true)).limit(1));
+    const q = query(collection(db, "connection_test"), where("test", "==", true));
+    const limitedQuery = limit(1)(q);
+    await getDocs(limitedQuery);
     return true;
   } catch (error) {
     console.error("Firebase bağlantı hatası:", error);
