@@ -25,7 +25,7 @@ const checkConnection = async () => {
   }
   
   try {
-    // Firestore bağlantısını test et
+    // Firestore bağlantısını test et - Doğru query syntaxı ile
     const q = query(collection(db, "connection_test"), where("test", "==", true), limit(1));
     await getDocs(q);
     return true;
@@ -43,21 +43,17 @@ export const registerUser = async (
 ): Promise<FirebaseUser> => {
   try {
     // Bağlantı kontrolü
-    try {
-      await checkConnection();
-    } catch (error) {
-      // Admin için özel durum
-      if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
-        return {
-          id: "admin-user-id",
-          email: "hakan200505@gmail.com",
-          username: "admin",
-          role: "admin",
-          balance: 5000
-        };
-      }
-      
-      throw error;
+    await checkConnection();
+    
+    // Admin için özel durum
+    if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+      return {
+        id: "admin-user-id",
+        email: "hakan200505@gmail.com",
+        username: "admin",
+        role: "admin",
+        balance: 5000
+      };
     }
     
     // Firebase Authentication ile kullanıcı oluştur
@@ -89,7 +85,7 @@ export const loginUser = async (
   password: string
 ): Promise<FirebaseUser> => {
   try {
-    // Admin kontrolü (gerçek uygulamada daha güvenli bir yöntem kullanılmalı)
+    // Admin kontrolü
     if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
       return {
         id: "admin-user-id",
@@ -101,11 +97,7 @@ export const loginUser = async (
     }
     
     // Bağlantı kontrolü
-    try {
-      await checkConnection();
-    } catch (error) {
-      throw new Error("Giriş yapılamıyor. Lütfen internet bağlantınızı kontrol edin.");
-    }
+    await checkConnection();
     
     // Normal kullanıcı girişi
     const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -168,11 +160,7 @@ export const updateUserBalance = async (
 ): Promise<FirebaseUser> => {
   try {
     // Bağlantı kontrolü
-    try {
-      await checkConnection();
-    } catch (error) {
-      throw new Error("Bakiye güncellenemiyor. Lütfen internet bağlantınızı kontrol edin.");
-    }
+    await checkConnection();
     
     // Kullanıcı bilgilerini al
     const userDoc = await getDoc(doc(db, "users", userId));
