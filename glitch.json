@@ -4,6 +4,11 @@
   "start": "node server.js",
   "watch": {
     "throttle": 2000,
-    "install": false
+    "restart": {
+      "include": [
+        "^server\\.js$",
+        "^\\.env$"
+      ]
+    }
   }
 }

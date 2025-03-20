@@ -31,10 +31,12 @@ console.log("Sunucu portu:", process.env.PORT);
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 10000, // Reduced from 30000 for faster failures
-  connectTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
-  family: 4 // Use IPv4, skip trying IPv6
+  serverSelectionTimeoutMS: 5000, // Reduced for faster failures
+  connectTimeoutMS: 5000,
+  socketTimeoutMS: 10000,
+  family: 4, // Use IPv4, skip trying IPv6
+  // Use a smaller connection pool for Glitch
+  poolSize: process.env.MONGODB_POOL_SIZE || 5
 };
 
 // Connect to MongoDB with improved error handling
@@ -50,10 +52,6 @@ mongoose
       syscall: err.syscall,
       hostname: err.hostname
     });
-    
-    if (err.message && err.message.includes('ENOTFOUND')) {
-      console.log("Hata detayı: Cluster adı yanlış olabilir. MongoDB Atlas'ta cluster adınızı kontrol edin.");
-    }
   });
 
 // Add MongoDB connection event listeners
@@ -62,18 +60,22 @@ mongoose.connection.on('error', (err) => {
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected, attempting to reconnect...');
+  console.log('MongoDB disconnected');
 });
 
 // Require models
 const User = require("./models/User");
 const Order = require("./models/Order");
 
+// Super lightweight health check that doesn't depend on MongoDB
+app.get("/health-fast", (req, res) => {
+  res.status(200).send({ status: "server-running" });
+});
+
 // Request timeout middleware
 app.use((req, res, next) => {
-  res.setTimeout(25000, () => {
+  req.setTimeout(5000, () => {
     console.log('Request timeout for:', req.path);
-    res.status(503).json({ message: 'Request timeout, please try again' });
   });
   next();
 });
@@ -284,44 +286,20 @@ app.get("/health", (req, res) => {
   }
   
   res.status(200).json({ 
-    status: mongoStatus === 1 ? "up" : "degraded", 
+    status: "up", 
     time: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     server: "active",
-    mongodb: statusText,
-    memoryUsage: process.memoryUsage()
+    mongodb: statusText
   });
 });
 
-// Production için statik dosyaları serv et (opsiyonel - eğer backend ve frontend aynı sunucuda olacaksa)
-if (process.env.NODE_ENV === 'production') {
-  const path = require('path');
-  app.use(express.static(path.join(__dirname, '../dist')));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../dist', 'index.html'));
-  });
-}
-
-// Start server with error handling
+// Start server with reduced timeout
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => console.log(`Server ${PORT} portunda çalışıyor.`));
 
-// Add server timeout handling
-server.timeout = 30000; // 30 second timeout
-
-// Add proper server error handling
-server.on('error', (error) => {
-  console.error('Server error:', error);
-  // Attempt to restart server on uncaught errors
-  if (error.code === 'EADDRINUSE') {
-    console.log('Address in use, retrying in 1 second...');
-    setTimeout(() => {
-      server.close();
-      server.listen(PORT);
-    }, 1000);
-  }
-});
+// Add server timeout handling - reduce timeout periods
+server.timeout = 10000; // 10 second timeout
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
