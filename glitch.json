@@ -3,7 +3,7 @@
   "install": "npm install",
   "start": "node server.js",
   "watch": {
-    "throttle": 1000,
+    "throttle": 2000,
     "install": false
   }
 }

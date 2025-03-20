@@ -10,19 +10,19 @@ export const getApiBaseUrl = (): string => {
     return envApiUrl;
   }
   
-  // Fallback URL'leri (eğer environment değişkenleri bulunamazsa)
+  // Determine if we're running on Glitch or Lovable
   const isGlitch = window.location.hostname.includes('glitch.me');
+  const isLovable = window.location.hostname.includes('lovableproject.com');
   const isDevelopment = import.meta.env.MODE === 'development';
   
+  // Default to Glitch URL when running on production
   let fallbackUrl = isDevelopment
     ? 'http://localhost:5000/api'
     : 'https://forested-saber-sandal.glitch.me/api';
     
-  // Eğer Glitch üzerinde çalışıyorsa ve development modunda değilse
-  if (isGlitch && !isDevelopment) {
-    // Mevcut hostnameyi alıp API yolunu oluştur
-    const currentHostname = window.location.hostname;
-    fallbackUrl = `https://${currentHostname}/api`;
+  // If running on Glitch, use relative URL to avoid CORS
+  if (isGlitch) {
+    fallbackUrl = '/api';
   }
   
   console.log('Using fallback API URL:', fallbackUrl);

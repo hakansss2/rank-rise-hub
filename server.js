@@ -7,16 +7,18 @@ require("dotenv").config();
 
 const app = express();
 
-// Glitch ve production için CORS ayarları
+// Improved CORS settings - include Glitch domains
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://rankrisehub.netlify.app', 'https://www.rankrisehub.netlify.app', 'https://e6d75c2d-6fff-4293-8358-83b61117fd89.lovableproject.com'] 
-    : 'http://localhost:5173', // Vite'ın varsayılan portu
+    ? ['https://rankrisehub.netlify.app', 'https://www.rankrisehub.netlify.app', 
+       'https://e6d75c2d-6fff-4293-8358-83b61117fd89.lovableproject.com', 
+       'https://forested-saber-sandal.glitch.me'] 
+    : 'http://localhost:5173',
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '1mb' })); // Limit payload size
 
 // MongoDB bağlantı URI'sini konsola yazdır (şifreyi gizleyerek)
 const connectionURI = process.env.MONGODB_URI || 'MongoDB URI bulunamadı';
@@ -25,13 +27,19 @@ console.log("MongoDB bağlantı URI'si:", sanitizedURI);
 console.log("Çalışma ortamı:", process.env.NODE_ENV);
 console.log("Sunucu portu:", process.env.PORT);
 
-// MongoDB'ye bağlan
+// Optimize MongoDB connection options
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 10000, // Reduced from 30000 for faster failures
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
+  family: 4 // Use IPv4, skip trying IPv6
+};
+
+// Connect to MongoDB with improved error handling
 mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 30000, // Timeout artırıldı (Glitch için)
-  })
+  .connect(process.env.MONGODB_URI, mongooseOptions)
   .then(() => console.log("MongoDB bağlantısı başarılı"))
   .catch((err) => {
     console.error("MongoDB bağlantı hatası:", err);
@@ -48,10 +56,27 @@ mongoose
     }
   });
 
-// Kullanıcı modelini dahil et
+// Add MongoDB connection event listeners
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected, attempting to reconnect...');
+});
+
+// Require models
 const User = require("./models/User");
-// Sipariş modelini dahil et
 const Order = require("./models/Order");
+
+// Request timeout middleware
+app.use((req, res, next) => {
+  res.setTimeout(25000, () => {
+    console.log('Request timeout for:', req.path);
+    res.status(503).json({ message: 'Request timeout, please try again' });
+  });
+  next();
+});
 
 // Kullanıcı Rotaları
 app.post("/api/users/register", async (req, res) => {
@@ -245,13 +270,26 @@ app.get("/ping", (req, res) => {
   res.status(200).send("pong");
 });
 
-// Health check endpoint
+// Health check endpoint with improved details
 app.get("/health", (req, res) => {
+  const mongoStatus = mongoose.connection.readyState;
+  let statusText;
+  
+  switch(mongoStatus) {
+    case 0: statusText = "disconnected"; break;
+    case 1: statusText = "connected"; break;
+    case 2: statusText = "connecting"; break;
+    case 3: statusText = "disconnecting"; break;
+    default: statusText = "unknown";
+  }
+  
   res.status(200).json({ 
-    status: "up", 
+    status: mongoStatus === 1 ? "up" : "degraded", 
     time: new Date().toISOString(),
     environment: process.env.NODE_ENV,
-    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+    server: "active",
+    mongodb: statusText,
+    memoryUsage: process.memoryUsage()
   });
 });
 
@@ -265,5 +303,34 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Start server with error handling
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server ${PORT} portunda çalışıyor.`));
+const server = app.listen(PORT, () => console.log(`Server ${PORT} portunda çalışıyor.`));
+
+// Add server timeout handling
+server.timeout = 30000; // 30 second timeout
+
+// Add proper server error handling
+server.on('error', (error) => {
+  console.error('Server error:', error);
+  // Attempt to restart server on uncaught errors
+  if (error.code === 'EADDRINUSE') {
+    console.log('Address in use, retrying in 1 second...');
+    setTimeout(() => {
+      server.close();
+      server.listen(PORT);
+    }, 1000);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+});
