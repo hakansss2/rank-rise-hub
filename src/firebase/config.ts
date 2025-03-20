@@ -2,15 +2,17 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getAnalytics } from "firebase/analytics";
 
 // Firebase yapılandırma bilgileri
 const firebaseConfig = {
-  apiKey: "AIzaSyDpv-U7lAy9Bm_AE2XJk8jMDcB5ttrjUBk",
-  authDomain: "valorant-rank-booster.firebaseapp.com",
-  projectId: "valorant-rank-booster",
-  storageBucket: "valorant-rank-booster.appspot.com",
-  messagingSenderId: "383776211387",
-  appId: "1:383776211387:web:d7c35a0a3cc8c4ab8fc9f2"
+  apiKey: "AIzaSyBzaP14IRGBFhGkIXj6Iq2A4Rb-El-HMrY",
+  authDomain: "valorantboost-ebb7d.firebaseapp.com",
+  projectId: "valorantboost-ebb7d",
+  storageBucket: "valorantboost-ebb7d.firebasestorage.app",
+  messagingSenderId: "297162271025",
+  appId: "1:297162271025:web:c6c0c990aae0bdc2a96810",
+  measurementId: "G-LY2PTB3X70"
 };
 
 // Firebase'i başlat
@@ -19,4 +21,5 @@ const app = initializeApp(firebaseConfig);
 // Firestore ve Authentication hizmetlerini al
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const analytics = getAnalytics(app);
 export default app;
