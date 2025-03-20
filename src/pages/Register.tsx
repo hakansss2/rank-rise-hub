@@ -7,9 +7,11 @@ import Footer from '@/components/ui/footer';
 import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
 import { supabase } from '@/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
+  const { toast } = useToast();
 
   // Supabase bağlantısı kontrolü
   useEffect(() => {
@@ -22,17 +24,35 @@ const Register = () => {
         
         if (error) {
           console.log("Supabase kontrol hatası (bu beklenen bir durum olabilir):", error.message);
-          console.log("Supabase bağlantısı mevcut, ancak tablo henüz oluşturulmamış olabilir");
+          
+          if (error.message.includes('does not exist')) {
+            toast({
+              title: "Veritabanı hatası",
+              description: "Kullanıcı tablosu bulunamadı. Yönetici ile iletişime geçin.",
+              variant: "destructive"
+            });
+          } else {
+            console.log("Supabase bağlantısı mevcut, ancak tablo henüz oluşturulmamış olabilir");
+          }
         } else {
           console.log("Supabase bağlantısı başarılı");
+          toast({
+            title: "Supabase bağlantısı başarılı",
+            description: "Kayıt yapabilirsiniz."
+          });
         }
       } catch (error) {
         console.error("Supabase kontrol hatası:", error);
+        toast({
+          title: "Bağlantı hatası",
+          description: "Sunucu ile bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin.",
+          variant: "destructive"
+        });
       }
     };
 
     checkSupabaseStatus();
-  }, []);
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-valorant-black text-white">
