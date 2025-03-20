@@ -61,6 +61,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(0);
   const { toast } = useToast();
   
+  // İnternet bağlantı kontrolü
+  const checkOnlineStatus = () => {
+    if (navigator.onLine) {
+      if (!document.body.classList.contains('online-mode')) {
+        document.body.classList.add('online-mode');
+        document.body.classList.remove('offline-mode');
+        toast({
+          title: "Çevrimiçi moda geçildi",
+          description: "İnternet bağlantısı sağlandı, tam özelliklerle devam edebilirsiniz.",
+        });
+      }
+    } else {
+      if (!document.body.classList.contains('offline-mode')) {
+        document.body.classList.remove('online-mode');
+        document.body.classList.add('offline-mode');
+        toast({
+          title: "Çevrimdışı moda geçildi",
+          description: "İnternet bağlantısı yok. Sınırlı özelliklerle devam edilecek.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+  
+  useEffect(() => {
+    // İnternet bağlantısı durumunu dinle
+    window.addEventListener('online', checkOnlineStatus);
+    window.addEventListener('offline', checkOnlineStatus);
+    
+    // İlk kontrol
+    checkOnlineStatus();
+    
+    return () => {
+      window.removeEventListener('online', checkOnlineStatus);
+      window.removeEventListener('offline', checkOnlineStatus);
+    };
+  }, []);
+  
   // Sayfa yüklendiğinde oturum kontrolü yap
   useEffect(() => {
     console.log('🔄 AuthProvider - Initial mount, checking session');
@@ -108,8 +146,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       balance: DEFAULT_ADMIN.balance 
     };
     
-    // Sonradan API çağrısı ile gerçek kullanıcıları alacağız
-    return [adminUser];
+    // Çevrimdışı modda localStorage'daki kullanıcıları ekle
+    const registeredUsers = getData(STORAGE_KEYS.USERS, []) as any[];
+    const users = [adminUser, ...registeredUsers.map(u => {
+      // Şifreleri hariç tutarak döndür
+      const { password, ...userData } = u;
+      return userData;
+    })];
+    
+    return users;
   };
 
   const login = async (email: string, password: string) => {
@@ -157,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('User registered successfully:', userData.username);
       
       // Kayıtlı kullanıcı sayısını güncelle
-      setRegisteredUsersCount(prev => prev + 1);
+      fetchUserCount();
       
       toast({
         title: "Kayıt Başarılı",
@@ -179,6 +224,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('valorant_user');
+    
+    // Eğer çevrimiçiyse Firebase çıkışını da yap
+    if (navigator.onLine) {
+      authApi.signOut().catch(err => console.error('Çıkış hatası:', err));
+    }
+    
     console.log('User logged out');
   };
   
