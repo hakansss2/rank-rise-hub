@@ -21,7 +21,8 @@ const Register = () => {
         const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
         
         if (error) {
-          console.error("Supabase kontrol hatası:", error.message);
+          console.log("Supabase kontrol hatası (bu beklenen bir durum olabilir):", error.message);
+          console.log("Supabase bağlantısı mevcut, ancak tablo henüz oluşturulmamış olabilir");
         } else {
           console.log("Supabase bağlantısı başarılı");
         }
