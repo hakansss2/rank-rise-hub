@@ -32,7 +32,7 @@ export const getOrders = async (): Promise<SupabaseOrder[]> => {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .order('createdAt', { ascending: false });
+      .order('created_at', { ascending: false });
     
     if (error) {
       console.error("Sipariş getirme hatası:", error.message);
@@ -47,8 +47,24 @@ export const getOrders = async (): Promise<SupabaseOrder[]> => {
       return [];
     }
     
-    console.log(`${data.length} sipariş bulundu`);
-    return data as SupabaseOrder[];
+    // Veri alanlarını doğru isimlendirmeye dönüştür
+    const formattedOrders = data.map(order => ({
+      id: order.id,
+      userId: order.user_id,
+      currentRank: order.current_rank,
+      targetRank: order.target_rank,
+      price: order.price,
+      status: order.status,
+      boosterId: order.booster_id,
+      boosterUsername: order.booster_username,
+      createdAt: order.created_at,
+      messages: order.messages || [],
+      gameUsername: order.game_username,
+      gamePassword: order.game_password
+    }));
+    
+    console.log(`${formattedOrders.length} sipariş bulundu`);
+    return formattedOrders;
   } catch (error: any) {
     console.error("Sipariş getirme hatası:", error.message);
     return []; // Hata durumunda boş liste dön
@@ -65,19 +81,46 @@ export const createOrder = async (orderData: {
   gamePassword?: string;
 }): Promise<SupabaseOrder> => {
   try {
+    console.log("Yeni sipariş oluşturuluyor:", orderData);
+    
+    // Supabase için alan adlarını dönüştür (camelCase -> snake_case)
     const newOrder = {
-      userId: orderData.userId,
-      currentRank: orderData.currentRank,
-      targetRank: orderData.targetRank,
+      user_id: orderData.userId,
+      current_rank: orderData.currentRank,
+      target_rank: orderData.targetRank,
       price: orderData.price,
-      gameUsername: orderData.gameUsername || '',
-      gamePassword: orderData.gamePassword || '',
+      game_username: orderData.gameUsername || '',
+      game_password: orderData.gamePassword || '',
       status: "pending" as const,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       messages: []
     };
     
-    console.log("Yeni sipariş oluşturuluyor:", newOrder);
+    // Önce tabloyu kontrol et ve gerekirse oluştur
+    const { error: checkError } = await supabase
+      .from('orders')
+      .select('count', { count: 'exact', head: true })
+      .limit(1);
+    
+    if (checkError && checkError.message.includes('does not exist')) {
+      console.log("Orders tablosu bulunamadı, yeniden oluşturma deneniyor...");
+      await supabase.query(`
+        CREATE TABLE IF NOT EXISTS public.orders (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          user_id TEXT NOT NULL,
+          current_rank INTEGER NOT NULL,
+          target_rank INTEGER NOT NULL,
+          price INTEGER NOT NULL,
+          status TEXT DEFAULT 'pending',
+          booster_id TEXT,
+          booster_username TEXT,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          messages JSONB DEFAULT '[]',
+          game_username TEXT,
+          game_password TEXT
+        );
+      `);
+    }
     
     const { data, error } = await supabase
       .from('orders')
@@ -94,8 +137,24 @@ export const createOrder = async (orderData: {
       throw new Error("Sipariş oluşturuldu ancak veri alınamadı");
     }
     
-    console.log("Sipariş başarıyla oluşturuldu:", data.id);
-    return data as SupabaseOrder;
+    // Response'u doğru formata dönüştür
+    const formattedOrder: SupabaseOrder = {
+      id: data.id,
+      userId: data.user_id,
+      currentRank: data.current_rank,
+      targetRank: data.target_rank,
+      price: data.price,
+      status: data.status,
+      boosterId: data.booster_id,
+      boosterUsername: data.booster_username,
+      createdAt: data.created_at,
+      messages: data.messages || [],
+      gameUsername: data.game_username,
+      gamePassword: data.game_password
+    };
+    
+    console.log("Sipariş başarıyla oluşturuldu:", formattedOrder.id);
+    return formattedOrder;
   } catch (error: any) {
     console.error("Sipariş oluşturma hatası:", error.message);
     throw new Error(error.message || "Sipariş oluştururken beklenmeyen bir hata oluştu");
@@ -110,9 +169,23 @@ export const updateOrder = async (
   try {
     console.log("Sipariş güncelleniyor:", orderId, updateData);
     
+    // CamelCase'ten snake_case'e dönüştür
+    const formattedUpdateData: any = {};
+    
+    if (updateData.userId !== undefined) formattedUpdateData.user_id = updateData.userId;
+    if (updateData.currentRank !== undefined) formattedUpdateData.current_rank = updateData.currentRank;
+    if (updateData.targetRank !== undefined) formattedUpdateData.target_rank = updateData.targetRank;
+    if (updateData.price !== undefined) formattedUpdateData.price = updateData.price;
+    if (updateData.status !== undefined) formattedUpdateData.status = updateData.status;
+    if (updateData.boosterId !== undefined) formattedUpdateData.booster_id = updateData.boosterId;
+    if (updateData.boosterUsername !== undefined) formattedUpdateData.booster_username = updateData.boosterUsername;
+    if (updateData.messages !== undefined) formattedUpdateData.messages = updateData.messages;
+    if (updateData.gameUsername !== undefined) formattedUpdateData.game_username = updateData.gameUsername;
+    if (updateData.gamePassword !== undefined) formattedUpdateData.game_password = updateData.gamePassword;
+    
     const { data, error } = await supabase
       .from('orders')
-      .update(updateData)
+      .update(formattedUpdateData)
       .eq('id', orderId)
       .select()
       .single();
@@ -126,8 +199,24 @@ export const updateOrder = async (
       throw new Error("Sipariş güncellendi ancak veri alınamadı");
     }
     
+    // Response'u doğru formata dönüştür
+    const formattedOrder: SupabaseOrder = {
+      id: data.id,
+      userId: data.user_id,
+      currentRank: data.current_rank,
+      targetRank: data.target_rank,
+      price: data.price,
+      status: data.status,
+      boosterId: data.booster_id,
+      boosterUsername: data.booster_username,
+      createdAt: data.created_at,
+      messages: data.messages || [],
+      gameUsername: data.game_username,
+      gamePassword: data.game_password
+    };
+    
     console.log("Sipariş başarıyla güncellendi");
-    return data as SupabaseOrder;
+    return formattedOrder;
   } catch (error: any) {
     console.error("Sipariş güncelleme hatası:", error.message);
     throw new Error(error.message || "Sipariş güncellenirken beklenmeyen bir hata oluştu");
@@ -197,15 +286,35 @@ export const getUserOrders = async (userId: string): Promise<SupabaseOrder[]> =>
     const { data, error } = await supabase
       .from('orders')
       .select('*')
-      .eq('userId', userId)
-      .order('createdAt', { ascending: false });
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
     
     if (error) {
       console.error("Kullanıcı siparişleri getirme hatası:", error.message);
       return [];
     }
     
-    return data as SupabaseOrder[] || [];
+    if (!data) {
+      return [];
+    }
+    
+    // Veri alanlarını doğru isimlendirmeye dönüştür
+    const formattedOrders = data.map(order => ({
+      id: order.id,
+      userId: order.user_id,
+      currentRank: order.current_rank,
+      targetRank: order.target_rank,
+      price: order.price,
+      status: order.status,
+      boosterId: order.booster_id,
+      boosterUsername: order.booster_username,
+      createdAt: order.created_at,
+      messages: order.messages || [],
+      gameUsername: order.game_username,
+      gamePassword: order.game_password
+    }));
+    
+    return formattedOrders;
   } catch (error: any) {
     console.error("Kullanıcı siparişleri getirme hatası:", error.message);
     return [];
@@ -226,7 +335,27 @@ export const getOrderById = async (orderId: string): Promise<SupabaseOrder | nul
       return null;
     }
     
-    return data as SupabaseOrder;
+    if (!data) {
+      return null;
+    }
+    
+    // Veri alanlarını doğru isimlendirmeye dönüştür
+    const formattedOrder: SupabaseOrder = {
+      id: data.id,
+      userId: data.user_id,
+      currentRank: data.current_rank,
+      targetRank: data.target_rank,
+      price: data.price,
+      status: data.status,
+      boosterId: data.booster_id,
+      boosterUsername: data.booster_username,
+      createdAt: data.created_at,
+      messages: data.messages || [],
+      gameUsername: data.game_username,
+      gamePassword: data.game_password
+    };
+    
+    return formattedOrder;
   } catch (error: any) {
     console.error("Sipariş getirme hatası:", error.message);
     return null;

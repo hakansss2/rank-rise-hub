@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/ui/navbar';
@@ -12,34 +12,98 @@ import { useToast } from '@/hooks/use-toast';
 const Register = () => {
   const { registeredUsersCount } = useAuth();
   const { toast } = useToast();
+  const [isCheckingSupabase, setIsCheckingSupabase] = useState(true);
 
   // Supabase bağlantısı kontrolü
   useEffect(() => {
     const checkSupabaseStatus = async () => {
       try {
+        setIsCheckingSupabase(true);
         console.log("Kayıt sayfası - Supabase durumu kontrol ediliyor");
         
-        // Basit bir sorgu ile Supabase bağlantısını kontrol et
-        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        // Users tablosunu kontrol et
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('count', { count: 'exact', head: true });
         
-        if (error) {
-          console.log("Supabase kontrol hatası (bu beklenen bir durum olabilir):", error.message);
+        if (usersError) {
+          console.log("Supabase users tablosu kontrolü hatası:", usersError.message);
           
-          if (error.message.includes('does not exist')) {
-            toast({
-              title: "Veritabanı hatası",
-              description: "Kullanıcı tablosu bulunamadı. Yönetici ile iletişime geçin.",
-              variant: "destructive"
-            });
-          } else {
-            console.log("Supabase bağlantısı mevcut, ancak tablo henüz oluşturulmamış olabilir");
+          if (usersError.message.includes('does not exist')) {
+            // Tablo oluşturma deneyin
+            try {
+              const { error: createError } = await supabase.query(`
+                CREATE TABLE IF NOT EXISTS public.users (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  email TEXT UNIQUE NOT NULL,
+                  username TEXT NOT NULL,
+                  role TEXT DEFAULT 'customer',
+                  balance INTEGER DEFAULT 0,
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+              `);
+              
+              if (createError) {
+                console.error("Users tablosu oluşturma hatası:", createError.message);
+                toast({
+                  title: "Veritabanı oluşturma hatası",
+                  description: "Kullanıcı tablosu oluşturulamadı. Lütfen Supabase kontrol panelinden tabloları oluşturun.",
+                  variant: "destructive"
+                });
+              } else {
+                toast({
+                  title: "Kullanıcı tablosu oluşturuldu",
+                  description: "Artık kayıt olabilirsiniz.",
+                });
+              }
+            } catch (error) {
+              console.error("Tablo oluşturma hatası:", error);
+            }
           }
         } else {
-          console.log("Supabase bağlantısı başarılı");
           toast({
             title: "Supabase bağlantısı başarılı",
             description: "Kayıt yapabilirsiniz."
           });
+        }
+        
+        // Orders tablosunu kontrol et
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('count', { count: 'exact', head: true });
+        
+        if (ordersError) {
+          console.log("Supabase orders tablosu kontrolü hatası:", ordersError.message);
+          
+          if (ordersError.message.includes('does not exist')) {
+            // Tablo oluşturma deneyin
+            try {
+              const { error: createError } = await supabase.query(`
+                CREATE TABLE IF NOT EXISTS public.orders (
+                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                  user_id TEXT NOT NULL,
+                  current_rank INTEGER NOT NULL,
+                  target_rank INTEGER NOT NULL,
+                  price INTEGER NOT NULL,
+                  status TEXT DEFAULT 'pending',
+                  booster_id TEXT,
+                  booster_username TEXT,
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                  messages JSONB DEFAULT '[]',
+                  game_username TEXT,
+                  game_password TEXT
+                );
+              `);
+              
+              if (createError) {
+                console.error("Orders tablosu oluşturma hatası:", createError.message);
+              } else {
+                console.log("Orders tablosu başarıyla oluşturuldu");
+              }
+            } catch (error) {
+              console.error("Tablo oluşturma hatası:", error);
+            }
+          }
         }
       } catch (error) {
         console.error("Supabase kontrol hatası:", error);
@@ -48,6 +112,8 @@ const Register = () => {
           description: "Sunucu ile bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin.",
           variant: "destructive"
         });
+      } finally {
+        setIsCheckingSupabase(false);
       }
     };
 
@@ -63,7 +129,14 @@ const Register = () => {
           <RegisterHeader />
           
           <div className="bg-valorant-black border border-valorant-gray/30 rounded-xl p-8 shadow-xl">
-            <RegisterForm registeredUsersCount={registeredUsersCount} />
+            {isCheckingSupabase ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-valorant-green mx-auto mb-4"></div>
+                <p className="text-gray-400">Supabase bağlantısı kontrol ediliyor...</p>
+              </div>
+            ) : (
+              <RegisterForm registeredUsersCount={registeredUsersCount} />
+            )}
             
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-400">
