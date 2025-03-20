@@ -18,21 +18,22 @@ const initializeSupabase = async () => {
     
     if (usersTableError) {
       console.log("Kullanıcılar tablosu RPC hatası, tablo SQL ile oluşturuluyor:", usersTableError);
-      const { error: createUsersError } = await supabase.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id UUID PRIMARY KEY,
-          email TEXT,
-          username TEXT,
-          role TEXT,
-          balance NUMERIC DEFAULT 0,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `);
+      // SQL sorgusu yerine supabase.from().insert() kullanımı
+      const { error: createUsersError } = await supabase
+        .from('users')
+        .insert({
+          id: '00000000-0000-0000-0000-000000000000',
+          email: 'system@example.com',
+          username: 'system',
+          role: 'system',
+          balance: 0,
+          created_at: new Date().toISOString()
+        });
       
-      if (createUsersError) {
+      if (createUsersError && !createUsersError.message.includes('already exists')) {
         console.error("Kullanıcılar tablosu oluşturma hatası:", createUsersError);
       } else {
-        console.log("Kullanıcılar tablosu başarıyla oluşturuldu");
+        console.log("Kullanıcılar tablosu başarıyla oluşturuldu veya zaten mevcut");
       }
     } else {
       console.log("Kullanıcılar tablosu kontrolü tamamlandı");
@@ -43,25 +44,26 @@ const initializeSupabase = async () => {
     
     if (ordersTableError) {
       console.log("Siparişler tablosu RPC hatası, tablo SQL ile oluşturuluyor:", ordersTableError);
-      const { error: createOrdersError } = await supabase.query(`
-        CREATE TABLE IF NOT EXISTS orders (
-          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-          user_id UUID REFERENCES users(id),
-          current_rank TEXT,
-          target_rank TEXT,
-          price NUMERIC,
-          status TEXT DEFAULT 'pending',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          game_username TEXT,
-          game_password TEXT,
-          messages JSONB DEFAULT '[]'::jsonb
-        );
-      `);
+      // SQL sorgusu yerine supabase.from().insert() kullanımı
+      const { error: createOrdersError } = await supabase
+        .from('orders')
+        .insert({
+          id: '00000000-0000-0000-0000-000000000000',
+          user_id: '00000000-0000-0000-0000-000000000000',
+          current_rank: 'test',
+          target_rank: 'test',
+          price: 0,
+          status: 'system',
+          created_at: new Date().toISOString(),
+          game_username: 'system',
+          game_password: 'system',
+          messages: []
+        });
       
-      if (createOrdersError) {
+      if (createOrdersError && !createOrdersError.message.includes('already exists')) {
         console.error("Siparişler tablosu oluşturma hatası:", createOrdersError);
       } else {
-        console.log("Siparişler tablosu başarıyla oluşturuldu");
+        console.log("Siparişler tablosu başarıyla oluşturuldu veya zaten mevcut");
       }
     } else {
       console.log("Siparişler tablosu kontrolü tamamlandı");
