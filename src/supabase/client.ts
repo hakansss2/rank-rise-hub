@@ -13,60 +13,119 @@ const initializeSupabase = async () => {
   try {
     console.log("Supabase durumu kontrol ediliyor...");
     
-    // Kullanıcılar tablosunu oluştur
-    const { error: usersTableError } = await supabase.rpc('create_users_table_if_not_exists');
-    
-    if (usersTableError) {
-      console.log("Kullanıcılar tablosu RPC hatası, tablo SQL ile oluşturuluyor:", usersTableError);
-      // SQL sorgusu yerine supabase.from().insert() kullanımı
-      const { error: createUsersError } = await supabase
-        .from('users')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'system@example.com',
-          username: 'system',
-          role: 'system',
-          balance: 0,
-          created_at: new Date().toISOString()
-        });
+    // Tabloları oluşturmak için SQL sorguları (doğrudan SQL sorguları kullanarak)
+    const createUsersSql = `
+      CREATE TABLE IF NOT EXISTS public.users (
+        id UUID PRIMARY KEY,
+        email TEXT,
+        username TEXT,
+        role TEXT,
+        balance NUMERIC DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `;
+
+    const createOrdersSql = `
+      CREATE TABLE IF NOT EXISTS public.orders (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID,
+        current_rank TEXT,
+        target_rank TEXT,
+        price NUMERIC,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        game_username TEXT,
+        game_password TEXT,
+        messages JSONB DEFAULT '[]'::jsonb
+      )
+    `;
+
+    // SQL sorguları çalıştır
+    const { error: usersError } = await supabase.rpc('exec_sql', { sql: createUsersSql });
+    if (usersError) {
+      console.log("Users tablosu oluşturma hatası (SQL RPC):", usersError.message);
       
-      if (createUsersError && !createUsersError.message.includes('already exists')) {
-        console.error("Kullanıcılar tablosu oluşturma hatası:", createUsersError);
-      } else {
-        console.log("Kullanıcılar tablosu başarıyla oluşturuldu veya zaten mevcut");
+      // Alternatif yöntem: Diğer yaygın Supabase yöntemleri ile devam et
+      try {
+        // Test amaçlı select sorgusu 
+        const { data: testData, error: testError } = await supabase
+          .from('users')
+          .select('count', { count: 'exact', head: true });
+          
+        if (testError && testError.message.includes('does not exist')) {
+          console.log("Users tablosu yok, varsayılan veri eklemeye çalışacağız");
+        } else {
+          console.log("Users tablosu mevcut gibi görünüyor");
+        }
+        
+        // Varsayılan veri ekle (tablo yoksa veya varsa)
+        const { error: insertError } = await supabase
+          .from('users')
+          .upsert({
+            id: '00000000-0000-0000-0000-000000000000',
+            email: 'system@example.com',
+            username: 'system',
+            role: 'system',
+            balance: 0,
+            created_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+          
+        if (insertError) {
+          console.error("Kullanıcı verisi eklenirken hata:", insertError.message);
+        } else {
+          console.log("Kullanıcı verisi başarıyla eklendi veya güncellendi");
+        }
+      } catch (e) {
+        console.error("Alternatif users tablosu işlemi hatası:", e);
       }
     } else {
-      console.log("Kullanıcılar tablosu kontrolü tamamlandı");
+      console.log("Users tablosu başarıyla oluşturuldu veya zaten mevcuttu");
     }
     
-    // Siparişler tablosunu oluştur
-    const { error: ordersTableError } = await supabase.rpc('create_orders_table_if_not_exists');
-    
-    if (ordersTableError) {
-      console.log("Siparişler tablosu RPC hatası, tablo SQL ile oluşturuluyor:", ordersTableError);
-      // SQL sorgusu yerine supabase.from().insert() kullanımı
-      const { error: createOrdersError } = await supabase
-        .from('orders')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000',
-          user_id: '00000000-0000-0000-0000-000000000000',
-          current_rank: 'test',
-          target_rank: 'test',
-          price: 0,
-          status: 'system',
-          created_at: new Date().toISOString(),
-          game_username: 'system',
-          game_password: 'system',
-          messages: []
-        });
+    // Orders tablosu oluştur
+    const { error: ordersError } = await supabase.rpc('exec_sql', { sql: createOrdersSql });
+    if (ordersError) {
+      console.log("Orders tablosu oluşturma hatası (SQL RPC):", ordersError.message);
       
-      if (createOrdersError && !createOrdersError.message.includes('already exists')) {
-        console.error("Siparişler tablosu oluşturma hatası:", createOrdersError);
-      } else {
-        console.log("Siparişler tablosu başarıyla oluşturuldu veya zaten mevcut");
+      // Alternatif yöntem
+      try {
+        // Test sorgusu
+        const { data: testData, error: testError } = await supabase
+          .from('orders')
+          .select('count', { count: 'exact', head: true });
+          
+        if (testError && testError.message.includes('does not exist')) {
+          console.log("Orders tablosu yok, varsayılan veri eklemeye çalışacağız");
+        } else {
+          console.log("Orders tablosu mevcut gibi görünüyor");
+        }
+        
+        // Varsayılan sipariş ekle
+        const { error: insertError } = await supabase
+          .from('orders')
+          .upsert({
+            id: '00000000-0000-0000-0000-000000000000',
+            user_id: '00000000-0000-0000-0000-000000000000',
+            current_rank: 'test',
+            target_rank: 'test',
+            price: 0,
+            status: 'system',
+            created_at: new Date().toISOString(),
+            game_username: 'system',
+            game_password: 'system',
+            messages: []
+          }, { onConflict: 'id' });
+          
+        if (insertError) {
+          console.error("Sipariş verisi eklenirken hata:", insertError.message);
+        } else {
+          console.log("Sipariş verisi başarıyla eklendi veya güncellendi");
+        }
+      } catch (e) {
+        console.error("Alternatif orders tablosu işlemi hatası:", e);
       }
     } else {
-      console.log("Siparişler tablosu kontrolü tamamlandı");
+      console.log("Orders tablosu başarıyla oluşturuldu veya zaten mevcuttu");
     }
     
     console.log("Supabase bağlantısı başarılı");
