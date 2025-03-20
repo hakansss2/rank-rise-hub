@@ -30,4 +30,14 @@ const UserSchema = new mongoose.Schema({
   },
 });
 
+// ID string olarak kullanılabilir
+UserSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: function (doc, ret) {
+    ret.id = ret._id.toString();
+    delete ret._id;
+  }
+});
+
 module.exports = mongoose.model("User", UserSchema);

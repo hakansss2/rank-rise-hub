@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -102,11 +103,11 @@ app.post("/api/users/login", async (req, res) => {
   }
 });
 
-// Kullanıcı sayısını getir
+// Kullanıcı sayısını getir - Endpoint'teki yazım hatası düzeltildi
 app.get("/api/users/count", async (req, res) => {
   try {
     const count = await User.countDocuments({ role: "customer" });
-    res.json({ count });
+    res.status(200).json({ count });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
