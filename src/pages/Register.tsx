@@ -6,23 +6,31 @@ import Navbar from '@/components/ui/navbar';
 import Footer from '@/components/ui/footer';
 import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
+import { supabase } from '@/supabase/client';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
 
-  // Firebase bağlantısı kontrolü
+  // Supabase bağlantısı kontrolü
   useEffect(() => {
-    const checkFirebaseStatus = () => {
+    const checkSupabaseStatus = async () => {
       try {
-        console.log("Kayıt sayfası - Firebase durumu kontrol ediliyor");
-        // Firebase SDK yüklü mü kontrol etmek için güvenli bir yol
-        // ileride daha spesifik kontroller eklenebilir
+        console.log("Kayıt sayfası - Supabase durumu kontrol ediliyor");
+        
+        // Basit bir sorgu ile Supabase bağlantısını kontrol et
+        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        
+        if (error) {
+          console.error("Supabase kontrol hatası:", error.message);
+        } else {
+          console.log("Supabase bağlantısı başarılı");
+        }
       } catch (error) {
-        console.error("Firebase kontrol hatası:", error);
+        console.error("Supabase kontrol hatası:", error);
       }
     };
 
-    checkFirebaseStatus();
+    checkSupabaseStatus();
   }, []);
 
   return (

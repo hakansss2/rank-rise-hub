@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/supabase/client';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,18 +19,25 @@ const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Firebase bağlantısını test et
+  // Supabase bağlantısını test et
   useEffect(() => {
-    const testFirebaseConnection = async () => {
+    const testSupabaseConnection = async () => {
       try {
-        console.log("Firebase bağlantı durumu: Kontrol ediliyor...");
-        // İleride burada Firebase bağlantı kontrolü yapılabilir
+        console.log("Supabase bağlantı durumu: Kontrol ediliyor...");
+        
+        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        
+        if (error) {
+          console.error("Supabase bağlantı hatası:", error.message);
+        } else {
+          console.log("Supabase bağlantısı başarılı");
+        }
       } catch (error) {
-        console.error("Firebase kontrol hatası:", error);
+        console.error("Supabase kontrol hatası:", error);
       }
     };
 
-    testFirebaseConnection();
+    testSupabaseConnection();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

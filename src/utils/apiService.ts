@@ -1,37 +1,38 @@
-// Firebase tabanlı API servisi
+
+// Supabase tabanlı API servisi
 import { getApiBaseUrl } from './environment';
 import { 
   registerUser, 
   loginUser, 
   getUserCount,
   updateUserBalance,
-  FirebaseUser,
-  signOut as firebaseSignOut
-} from '../firebase/auth';
+  SupabaseUser,
+  signOut as supabaseSignOut
+} from '../supabase/auth';
 import {
   getOrders,
   createOrder,
   updateOrder,
   sendMessage,
-  FirebaseOrder,
-  FirebaseMessage
-} from '../firebase/orders';
+  SupabaseOrder,
+  SupabaseMessage
+} from '../supabase/orders';
 import {
   uploadFile,
   uploadProfileImage,
   uploadBoostProofImage,
   deleteFile
-} from '../firebase/storage';
+} from '../supabase/storage';
 
-// API_BASE_URL artık sadece eski Mongo API'si için kullanılır, Firebase doğrudan erişilecek
+// API_BASE_URL artık sadece eski Mongo API'si için kullanılır
 export const API_BASE_URL = getApiBaseUrl();
 
-// Yanıt türleri için arayüzler (Firebase'den dönecek)
-export type UserResponse = FirebaseUser;
-export type OrderResponse = FirebaseOrder;
-export type MessageResponse = FirebaseMessage;
+// Yanıt türleri için arayüzler (Supabase'den dönecek)
+export type UserResponse = SupabaseUser;
+export type OrderResponse = SupabaseOrder;
+export type MessageResponse = SupabaseMessage;
 
-// Firebase tabanlı auth API
+// Supabase tabanlı auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<UserResponse> => {
     try {
@@ -90,7 +91,7 @@ export const authApi = {
   signOut: async (): Promise<void> => {
     try {
       localStorage.removeItem('valorant_user');
-      await firebaseSignOut();
+      await supabaseSignOut();
       console.log("Kullanıcı çıkış yaptı");
     } catch (error: any) {
       console.error("Çıkış hatası:", error.message);
@@ -99,7 +100,7 @@ export const authApi = {
   }
 };
 
-// Firebase tabanlı kullanıcı API
+// Supabase tabanlı kullanıcı API
 export const userApi = {
   updateBalance: async (userId: string, amount: number): Promise<UserResponse> => {
     try {
@@ -132,7 +133,7 @@ export const userApi = {
   },
 };
 
-// Firebase tabanlı sipariş API
+// Supabase tabanlı sipariş API
 export const orderApi = {
   getOrders: async (): Promise<OrderResponse[]> => {
     try {
@@ -180,7 +181,7 @@ export const orderApi = {
   },
 };
 
-// Firebase tabanlı storage API
+// Supabase tabanlı storage API
 export const storageApi = {
   uploadFile: async (file: File, path: string): Promise<string> => {
     try {

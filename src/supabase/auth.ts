@@ -1,0 +1,328 @@
+
+import { supabase } from './client';
+
+// Kullanıcı arayüzü
+export interface SupabaseUser {
+  id: string;
+  email: string | null;
+  username: string;
+  role: 'customer' | 'booster' | 'admin';
+  balance: number;
+}
+
+// Kayıt fonksiyonu
+export const registerUser = async (
+  email: string, 
+  username: string, 
+  password: string
+): Promise<SupabaseUser> => {
+  try {
+    console.log("Kayıt işlemi başlatılıyor:", email);
+    
+    // Admin için özel durum
+    if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+      console.log("Admin hesabı tespit edildi, özel giriş yapılıyor");
+      return {
+        id: "admin-user-id",
+        email: "hakan200505@gmail.com",
+        username: "admin",
+        role: "admin",
+        balance: 5000
+      };
+    }
+    
+    console.log("Supabase Auth kaydı oluşturuluyor...");
+    
+    // Supabase Authentication ile kullanıcı oluştur
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          role: "customer",
+          balance: 0
+        }
+      }
+    });
+    
+    if (authError) {
+      console.error("Supabase Auth hatası:", authError.message);
+      throw new Error(authError.message);
+    }
+    
+    if (!authData.user) {
+      throw new Error("Kullanıcı oluşturulamadı.");
+    }
+    
+    console.log("Supabase Auth kaydı oluşturuldu:", authData.user.id);
+    
+    // Kullanıcı bilgilerini Supabase veritabanına kaydet
+    const userData: SupabaseUser = {
+      id: authData.user.id,
+      email: authData.user.email,
+      username,
+      role: "customer",
+      balance: 0
+    };
+    
+    console.log("Kullanıcı bilgileri Supabase veritabanına kaydediliyor...");
+    
+    const { error: dbError } = await supabase
+      .from('users')
+      .insert([userData]);
+    
+    if (dbError) {
+      console.error("Supabase DB kaydı sırasında hata:", dbError.message);
+      
+      // Kullanıcı oluşturuldu ancak profil oluşturulamadı, temizlik yap
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      console.log("Auth kullanıcı silindi çünkü DB kaydı başarısız oldu");
+      
+      throw new Error("Kullanıcı profili oluşturulamadı. Lütfen daha sonra tekrar deneyin.");
+    }
+    
+    console.log("Kullanıcı başarıyla kaydedildi:", userData);
+    return userData;
+  } catch (error: any) {
+    console.error("Kayıt hatası:", error.message);
+    
+    // Supabase hata kodlarını daha anlaşılır hata mesajlarına çevir
+    if (error.message.includes('already exists')) {
+      throw new Error("Bu e-posta adresi zaten kullanımda.");
+    } else if (error.message.includes('email')) {
+      throw new Error("Geçersiz e-posta formatı.");
+    } else if (error.message.includes('password')) {
+      throw new Error("Şifre çok zayıf. En az 6 karakter olmalıdır.");
+    } else if (error.message.includes('network')) {
+      throw new Error("Ağ hatası. İnternet bağlantınızı kontrol edin.");
+    }
+    
+    throw new Error(error.message || "Kayıt sırasında beklenmeyen bir hata oluştu.");
+  }
+};
+
+// Giriş fonksiyonu
+export const loginUser = async (
+  email: string, 
+  password: string
+): Promise<SupabaseUser> => {
+  try {
+    console.log("Giriş işlemi başlatılıyor:", email);
+    
+    // Admin kontrolü
+    if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+      console.log("Admin giriş başarılı");
+      return {
+        id: "admin-user-id",
+        email: "hakan200505@gmail.com",
+        username: "admin",
+        role: "admin",
+        balance: 5000
+      };
+    }
+    
+    // Normal kullanıcı girişi
+    console.log("Supabase Auth ile giriş yapılıyor...");
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (authError) {
+      console.error("Supabase Auth giriş hatası:", authError.message);
+      throw new Error(authError.message);
+    }
+    
+    if (!authData.user) {
+      throw new Error("Giriş başarısız.");
+    }
+    
+    console.log("Supabase Auth girişi başarılı");
+    
+    // Kullanıcı bilgilerini Supabase veritabanından al
+    console.log("Kullanıcı verileri Supabase veritabanından alınıyor...");
+    const { data: userData, error: dbError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+    
+    if (dbError) {
+      console.error("Kullanıcı verileri alınamadı:", dbError.message);
+      
+      // Eğer veritabanında kullanıcı yoksa, Auth'daki metadata'yı kullan
+      const metadata = authData.user.user_metadata;
+      
+      if (metadata && metadata.username) {
+        const newUserData: SupabaseUser = {
+          id: authData.user.id,
+          email: authData.user.email,
+          username: metadata.username as string,
+          role: (metadata.role as 'customer' | 'booster' | 'admin') || 'customer',
+          balance: (metadata.balance as number) || 0
+        };
+        
+        // Eksik kullanıcı kaydını oluştur
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert([newUserData]);
+        
+        if (insertError) {
+          console.error("Eksik kullanıcı kaydı oluşturulamadı:", insertError.message);
+        } else {
+          console.log("Eksik kullanıcı kaydı oluşturuldu");
+        }
+        
+        return newUserData;
+      }
+      
+      // Hiçbir metadata yoksa e-postadan basit bir kullanıcı adı türet
+      const defaultUsername = email ? email.split('@')[0] : 'user';
+      const newUser: SupabaseUser = {
+        id: authData.user.id,
+        email: authData.user.email,
+        username: defaultUsername,
+        role: 'customer',
+        balance: 0
+      };
+      
+      // Eksik kullanıcı kaydını oluştur
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert([newUser]);
+      
+      if (insertError) {
+        console.error("Eksik kullanıcı kaydı oluşturulamadı:", insertError.message);
+      } else {
+        console.log("Eksik kullanıcı kaydı oluşturuldu");
+      }
+      
+      return newUser;
+    }
+    
+    console.log("Kullanıcı verileri başarıyla alındı");
+    return userData as SupabaseUser;
+  } catch (error: any) {
+    console.error("Giriş hatası:", error.message);
+    
+    // Supabase hata kodlarını daha anlaşılır hata mesajlarına çevir
+    if (error.message.includes('credentials')) {
+      throw new Error("E-posta veya şifre hatalı.");
+    } else if (error.message.includes('email')) {
+      throw new Error("Geçersiz e-posta formatı.");
+    } else if (error.message.includes('disabled')) {
+      throw new Error("Bu hesap devre dışı bırakılmış.");
+    } else if (error.message.includes('too many requests')) {
+      throw new Error("Çok fazla başarısız giriş denemesi. Lütfen daha sonra tekrar deneyin.");
+    }
+    
+    throw new Error(error.message || "Giriş sırasında beklenmeyen bir hata oluştu.");
+  }
+};
+
+// Çıkış fonksiyonu
+export const signOut = async (): Promise<void> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw error;
+    }
+    console.log("Kullanıcı çıkış yaptı");
+  } catch (error: any) {
+    console.error("Çıkış hatası:", error.message);
+    throw new Error("Çıkış yapılırken bir hata oluştu.");
+  }
+};
+
+// Kullanıcının oturum durumunu izle
+export const onAuthStateChanged = (
+  callback: (user: any | null) => void
+) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      // Kullanıcı bilgilerini Supabase'den al
+      supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Kullanıcı bilgileri alınamadı:", error.message);
+            callback(null);
+            return;
+          }
+          
+          callback(data);
+        });
+    } else if (event === 'SIGNED_OUT') {
+      callback(null);
+    }
+  });
+  
+  return data.subscription.unsubscribe;
+};
+
+// Kullanıcı sayısını getir
+export const getUserCount = async (): Promise<number> => {
+  try {
+    console.log("Kullanıcı sayısı getiriliyor...");
+    
+    const { count, error } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error("Kullanıcı sayısı alma hatası:", error.message);
+      return 0;
+    }
+    
+    console.log(`${count} kullanıcı bulundu`);
+    return count || 0;
+  } catch (error: any) {
+    console.error("Kullanıcı sayısı alma hatası:", error.message);
+    return 0; // Hata durumunda 0 dön
+  }
+};
+
+// Kullanıcı bakiyesini güncelle
+export const updateUserBalance = async (
+  userId: string, 
+  amount: number
+): Promise<SupabaseUser> => {
+  try {
+    // Kullanıcı bilgilerini al
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (userError) {
+      console.error("Kullanıcı bilgileri alınamadı:", userError.message);
+      throw new Error("Kullanıcı bulunamadı.");
+    }
+    
+    const user = userData as SupabaseUser;
+    const newBalance = user.balance + amount;
+    
+    // Bakiyeyi güncelle
+    const { data: updatedData, error: updateError } = await supabase
+      .from('users')
+      .update({ balance: newBalance })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error("Bakiye güncellenemedi:", updateError.message);
+      throw new Error("Bakiye güncellenirken bir hata oluştu.");
+    }
+    
+    return updatedData as SupabaseUser;
+  } catch (error: any) {
+    console.error("Bakiye güncelleme hatası:", error.message);
+    throw new Error(error.message || "Bakiye güncellenirken bir hata oluştu.");
+  }
+};
