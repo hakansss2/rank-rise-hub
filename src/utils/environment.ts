@@ -11,7 +11,7 @@ export const getApiBaseUrl = (): string => {
   }
   
   // Fallback URL'leri (eğer environment değişkenleri bulunamazsa)
-  const fallbackUrl = process.env.NODE_ENV === 'production'
+  const fallbackUrl = import.meta.env.MODE === 'production'
     ? 'https://forested-saber-sandal.glitch.me/api'
     : 'http://localhost:5000/api';
   

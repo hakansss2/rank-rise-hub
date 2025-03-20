@@ -103,12 +103,14 @@ app.post("/api/users/login", async (req, res) => {
   }
 });
 
-// Kullanıcı sayısını getir - Endpoint'teki yazım hatası düzeltildi
+// Kullanıcı sayısını getir - endpoint düzeltildi
 app.get("/api/users/count", async (req, res) => {
   try {
     const count = await User.countDocuments({ role: "customer" });
+    console.log("Kullanıcı sayısı isteği, sonuç:", count);
     res.status(200).json({ count });
   } catch (err) {
+    console.error("Kullanıcı sayısı isteği hatası:", err);
     res.status(500).json({ message: err.message });
   }
 });
