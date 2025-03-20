@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
+import { getStorage } from "firebase/storage";
 
 // Firebase yapılandırma bilgileri
 const firebaseConfig = {
@@ -18,8 +19,9 @@ const firebaseConfig = {
 // Firebase'i başlat
 const app = initializeApp(firebaseConfig);
 
-// Firestore ve Authentication hizmetlerini al
+// Firestore, Authentication, Analytics ve Storage hizmetlerini al
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const analytics = getAnalytics(app);
+export const storage = getStorage(app);
 export default app;

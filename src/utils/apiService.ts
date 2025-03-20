@@ -1,4 +1,3 @@
-
 // Firebase tabanlı API servisi
 import { getApiBaseUrl } from './environment';
 import { 
@@ -16,6 +15,12 @@ import {
   FirebaseOrder,
   FirebaseMessage
 } from '../firebase/orders';
+import {
+  uploadFile,
+  uploadProfileImage,
+  uploadBoostProofImage,
+  deleteFile
+} from '../firebase/storage';
 
 // API_BASE_URL artık sadece eski Mongo API'si için kullanılır, Firebase doğrudan erişilecek
 export const API_BASE_URL = getApiBaseUrl();
@@ -66,6 +71,15 @@ export const userApi = {
       throw new Error(error.message || 'Bakiye güncellenemedi');
     }
   },
+  
+  uploadProfileImage: async (userId: string, file: File): Promise<string> => {
+    try {
+      return await uploadProfileImage(userId, file);
+    } catch (error: any) {
+      console.error('❌ Profil resmi yüklenemedi:', error);
+      throw new Error(error.message || 'Profil resmi yüklenemedi');
+    }
+  },
 };
 
 // Firebase tabanlı sipariş API
@@ -103,6 +117,36 @@ export const orderApi = {
     } catch (error: any) {
       console.error('❌ Mesaj gönderilemedi:', error);
       throw new Error(error.message || 'Mesaj gönderilemedi');
+    }
+  },
+  
+  uploadProofImage: async (orderId: string, file: File): Promise<string> => {
+    try {
+      return await uploadBoostProofImage(orderId, file);
+    } catch (error: any) {
+      console.error('❌ Kanıt resmi yüklenemedi:', error);
+      throw new Error(error.message || 'Kanıt resmi yüklenemedi');
+    }
+  },
+};
+
+// Firebase tabanlı storage API
+export const storageApi = {
+  uploadFile: async (file: File, path: string): Promise<string> => {
+    try {
+      return await uploadFile(file, path);
+    } catch (error: any) {
+      console.error('❌ Dosya yüklenemedi:', error);
+      throw new Error(error.message || 'Dosya yüklenemedi');
+    }
+  },
+  
+  deleteFile: async (fileUrl: string): Promise<void> => {
+    try {
+      await deleteFile(fileUrl);
+    } catch (error: any) {
+      console.error('❌ Dosya silinemedi:', error);
+      throw new Error(error.message || 'Dosya silinemedi');
     }
   },
 };
