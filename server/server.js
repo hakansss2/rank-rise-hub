@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -29,6 +30,14 @@ mongoose
   .then(() => console.log("MongoDB bağlantısı başarılı"))
   .catch((err) => {
     console.error("MongoDB bağlantı hatası:", err);
+    console.error("Hata detayları:", {
+      message: err.message,
+      code: err.code,
+      errno: err.errno,
+      syscall: err.syscall,
+      hostname: err.hostname
+    });
+    
     if (err.message && err.message.includes('ENOTFOUND')) {
       console.log("Hata detayı: Cluster adı yanlış olabilir. MongoDB Atlas'ta cluster adınızı kontrol edin.");
     }
