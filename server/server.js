@@ -1,4 +1,3 @@
-
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -19,11 +18,21 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
+// MongoDB bağlantı URI'sini konsola yazdır (şifreyi gizleyerek)
+const connectionURI = process.env.MONGODB_URI || 'MongoDB URI bulunamadı';
+const sanitizedURI = connectionURI.replace(/(:.*@)/g, ':***@');
+console.log("MongoDB bağlantı URI'si:", sanitizedURI);
+
 // MongoDB'ye bağlan
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("MongoDB bağlantısı başarılı"))
-  .catch((err) => console.log("MongoDB bağlantı hatası:", err));
+  .catch((err) => {
+    console.error("MongoDB bağlantı hatası:", err);
+    if (err.message && err.message.includes('ENOTFOUND')) {
+      console.log("Hata detayı: Cluster adı yanlış olabilir. MongoDB Atlas'ta cluster adınızı kontrol edin.");
+    }
+  });
 
 // Kullanıcı modelini dahil et
 const User = require("./models/User");
