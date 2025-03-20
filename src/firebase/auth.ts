@@ -1,4 +1,3 @@
-
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
@@ -46,9 +45,6 @@ export const registerUser = async (
 ): Promise<FirebaseUser> => {
   try {
     console.log("Kayıt işlemi başlatılıyor:", email);
-    
-    // Bağlantı kontrolü
-    await checkConnection();
     
     // Admin için özel durum
     if (email === "hakan200505@gmail.com" && password === "Metin2398@") {

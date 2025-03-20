@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -22,13 +21,8 @@ const Login = () => {
   useEffect(() => {
     const testFirebaseConnection = async () => {
       try {
-        // Firebase SDK'nın yüklenip yüklenmediğini kontrol et
-        if (window.firebase) {
-          console.log("Firebase SDK başarıyla yüklendi");
-        } else {
-          console.warn("Firebase SDK bulunamadı");
-        }
         console.log("Firebase bağlantı durumu: Kontrol ediliyor...");
+        // İleride burada Firebase bağlantı kontrolü yapılabilir
       } catch (error) {
         console.error("Firebase kontrol hatası:", error);
       }

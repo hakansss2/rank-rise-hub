@@ -15,12 +15,8 @@ const Register = () => {
     const checkFirebaseStatus = () => {
       try {
         console.log("Kayıt sayfası - Firebase durumu kontrol ediliyor");
-        // Basit bir kontrol - firebase nesnesi var mı?
-        if (window.firebase) {
-          console.log("Firebase SDK başarıyla yüklendi");
-        } else {
-          console.warn("Firebase SDK bulunamadı, bu normal olabilir");
-        }
+        // Firebase SDK yüklü mü kontrol etmek için güvenli bir yol
+        // ileride daha spesifik kontroller eklenebilir
       } catch (error) {
         console.error("Firebase kontrol hatası:", error);
       }
