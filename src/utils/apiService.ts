@@ -1,126 +1,108 @@
-// API çağrıları için merkezi bir servis dosyası
-import { getApiBaseUrl } from './environment';
 
-// API_BASE_URL, ortama göre değişiklik gösterebilir
+// Firebase tabanlı API servisi
+import { getApiBaseUrl } from './environment';
+import { 
+  registerUser, 
+  loginUser, 
+  getUserCount,
+  updateUserBalance,
+  FirebaseUser
+} from '../firebase/auth';
+import {
+  getOrders,
+  createOrder,
+  updateOrder,
+  sendMessage,
+  FirebaseOrder,
+  FirebaseMessage
+} from '../firebase/orders';
+
+// API_BASE_URL artık sadece eski Mongo API'si için kullanılır, Firebase doğrudan erişilecek
 export const API_BASE_URL = getApiBaseUrl();
 
-// Tüm endpoint'leri tek bir yerde toplama
-export const API_ENDPOINTS = {
-  LOGIN: `${API_BASE_URL}/users/login`,
-  REGISTER: `${API_BASE_URL}/users/register`,
-  USERS: `${API_BASE_URL}/users`,
-  USERS_COUNT: `${API_BASE_URL}/users/count`,
-  ORDERS: `${API_BASE_URL}/orders`,
-  USER_BALANCE: (userId: string) => `${API_BASE_URL}/users/${userId}/balance`,
-  ORDER_MESSAGES: (orderId: string) => `${API_BASE_URL}/orders/${orderId}/messages`,
-};
+// Yanıt türleri için arayüzler (Firebase'den dönecek)
+export type UserResponse = FirebaseUser;
+export type OrderResponse = FirebaseOrder;
+export type MessageResponse = FirebaseMessage;
 
-// API yanıt türleri için arayüzler
-export interface UserResponse {
-  id: string;
-  email: string;
-  username: string;
-  role: 'customer' | 'booster' | 'admin';
-  balance: number;
-}
-
-export interface OrderResponse {
-  id: string;
-  userId: string;
-  currentRank: number;
-  targetRank: number;
-  price: number;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  boosterId?: string;
-  boosterUsername?: string;
-  createdAt: string;
-  messages: MessageResponse[];
-  gameUsername?: string;
-  gamePassword?: string;
-}
-
-export interface MessageResponse {
-  id: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  timestamp: string;
-}
-
-// HTTP istekleri için yardımcı fonksiyonlar
-async function httpRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
-  try {
-    console.log(`🔄 API isteği yapılıyor: ${url}`);
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log(`✅ API yanıtı alındı:`, data);
-    return data;
-  } catch (error) {
-    console.error('❌ API isteği başarısız:', error);
-    throw error;
-  }
-}
-
-// Auth API istekleri
+// Firebase tabanlı auth API
 export const authApi = {
-  login: (email: string, password: string): Promise<UserResponse> => 
-    httpRequest<UserResponse>(API_ENDPOINTS.LOGIN, {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+  login: async (email: string, password: string): Promise<UserResponse> => {
+    try {
+      return await loginUser(email, password);
+    } catch (error: any) {
+      console.error('❌ Giriş başarısız:', error);
+      throw new Error(error.message || 'Giriş yapılamadı');
+    }
+  },
   
-  register: (email: string, username: string, password: string): Promise<UserResponse> => 
-    httpRequest<UserResponse>(API_ENDPOINTS.REGISTER, {
-      method: 'POST',
-      body: JSON.stringify({ email, username, password }),
-    }),
+  register: async (email: string, username: string, password: string): Promise<UserResponse> => {
+    try {
+      return await registerUser(email, username, password);
+    } catch (error: any) {
+      console.error('❌ Kayıt başarısız:', error);
+      throw new Error(error.message || 'Kayıt yapılamadı');
+    }
+  },
     
-  getUserCount: (): Promise<{count: number}> =>
-    httpRequest<{count: number}>(API_ENDPOINTS.USERS_COUNT),
+  getUserCount: async (): Promise<{count: number}> => {
+    try {
+      const count = await getUserCount();
+      return { count };
+    } catch (error: any) {
+      console.error('❌ Kullanıcı sayısı alınamadı:', error);
+      throw new Error(error.message || 'Kullanıcı sayısı alınamadı');
+    }
+  },
 };
 
-// Kullanıcı API istekleri
+// Firebase tabanlı kullanıcı API
 export const userApi = {
-  updateBalance: (userId: string, amount: number): Promise<UserResponse> => 
-    httpRequest<UserResponse>(API_ENDPOINTS.USER_BALANCE(userId), {
-      method: 'PATCH',
-      body: JSON.stringify({ amount }),
-    }),
+  updateBalance: async (userId: string, amount: number): Promise<UserResponse> => {
+    try {
+      return await updateUserBalance(userId, amount);
+    } catch (error: any) {
+      console.error('❌ Bakiye güncellenemedi:', error);
+      throw new Error(error.message || 'Bakiye güncellenemedi');
+    }
+  },
 };
 
-// Sipariş API istekleri
+// Firebase tabanlı sipariş API
 export const orderApi = {
-  getOrders: (): Promise<OrderResponse[]> => 
-    httpRequest<OrderResponse[]>(API_ENDPOINTS.ORDERS),
+  getOrders: async (): Promise<OrderResponse[]> => {
+    try {
+      return await getOrders();
+    } catch (error: any) {
+      console.error('❌ Siparişler alınamadı:', error);
+      throw new Error(error.message || 'Siparişler alınamadı');
+    }
+  },
   
-  createOrder: (orderData: any): Promise<OrderResponse> => 
-    httpRequest<OrderResponse>(API_ENDPOINTS.ORDERS, {
-      method: 'POST',
-      body: JSON.stringify(orderData),
-    }),
+  createOrder: async (orderData: any): Promise<OrderResponse> => {
+    try {
+      return await createOrder(orderData);
+    } catch (error: any) {
+      console.error('❌ Sipariş oluşturulamadı:', error);
+      throw new Error(error.message || 'Sipariş oluşturulamadı');
+    }
+  },
   
-  updateOrder: (orderId: string, updateData: any): Promise<OrderResponse> => 
-    httpRequest<OrderResponse>(`${API_ENDPOINTS.ORDERS}/${orderId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updateData),
-    }),
+  updateOrder: async (orderId: string, updateData: any): Promise<OrderResponse> => {
+    try {
+      return await updateOrder(orderId, updateData);
+    } catch (error: any) {
+      console.error('❌ Sipariş güncellenemedi:', error);
+      throw new Error(error.message || 'Sipariş güncellenemedi');
+    }
+  },
   
-  sendMessage: (orderId: string, messageData: any): Promise<MessageResponse> => 
-    httpRequest<MessageResponse>(API_ENDPOINTS.ORDER_MESSAGES(orderId), {
-      method: 'POST',
-      body: JSON.stringify(messageData),
-    }),
+  sendMessage: async (orderId: string, messageData: any): Promise<MessageResponse> => {
+    try {
+      return await sendMessage(orderId, messageData);
+    } catch (error: any) {
+      console.error('❌ Mesaj gönderilemedi:', error);
+      throw new Error(error.message || 'Mesaj gönderilemedi');
+    }
+  },
 };

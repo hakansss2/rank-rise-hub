@@ -1,14 +1,9 @@
 
 {
   "install": "npm install",
-  "start": "node server.js",
+  "start": "echo 'Backend artık Firebase kullanıyor, sunucu başlatılmadı'",
   "watch": {
     "throttle": 2000,
-    "restart": {
-      "include": [
-        "^server\\.js$",
-        "^\\.env$"
-      ]
-    }
+    "restart": false
   }
 }
