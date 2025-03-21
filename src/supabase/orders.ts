@@ -1,3 +1,4 @@
+
 import { supabase } from './client';
 
 // Sipariş arayüzü
@@ -96,33 +97,39 @@ export const createOrder = async (orderData: {
     };
     
     // Önce tabloyu kontrol et ve gerekirse oluştur
-    const { error: checkError } = await supabase
-      .from('orders')
-      .select('count', { count: 'exact', head: true })
-      .limit(1);
-    
-    if (checkError && checkError.message.includes('does not exist')) {
-      console.log("Orders tablosu bulunamadı, yeniden oluşturma deneniyor...");
-      
-      // Doğrudan tabloyu oluşturmak yerine, örnek bir kayıt eklemeye çalışarak tabloyu oluşturmayı dene
-      await supabase
+    try {
+      const { error: checkError } = await supabase
         .from('orders')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000',
-          user_id: '00000000-0000-0000-0000-000000000000',
-          current_rank: 0,
-          target_rank: 0,
-          price: 0,
-          status: 'system',
-          created_at: new Date().toISOString(),
-          messages: []
-        })
-        .then(res => {
-          if (res.error && !res.error.message.includes('already exists')) {
-            console.error("Tablo oluşturma hatası:", res.error.message);
+        .select('count', { count: 'exact', head: true })
+        .limit(1);
+      
+      if (checkError && checkError.message.includes('does not exist')) {
+        console.log("Orders tablosu bulunamadı, yeniden oluşturma deneniyor...");
+        
+        // Doğrudan tabloyu oluşturmak yerine, örnek bir kayıt eklemeye çalışarak tabloyu oluşturmayı dene
+        try {
+          const { error: createError } = await supabase
+            .from('orders')
+            .insert({
+              id: '00000000-0000-0000-0000-000000000000',
+              user_id: '00000000-0000-0000-0000-000000000000',
+              current_rank: 0,
+              target_rank: 0,
+              price: 0,
+              status: 'system',
+              created_at: new Date().toISOString(),
+              messages: []
+            });
+            
+          if (createError && !createError.message.includes('already exists')) {
+            console.error("Tablo oluşturma hatası:", createError.message);
           }
-        })
-        .catch(e => console.error("Fallback tablo oluşturma hatası:", e));
+        } catch (e) {
+          console.error("Fallback tablo oluşturma hatası:", e);
+        }
+      }
+    } catch (error) {
+      console.error("Tablo kontrol hatası:", error);
     }
     
     const { data, error } = await supabase

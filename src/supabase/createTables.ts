@@ -13,13 +13,19 @@ export const createSupabaseTables = async () => {
     if (uuidError) {
       console.error("UUID eklentisi RPC ile oluşturulamadı, SQL ile deneniyor:", uuidError.message);
       // Doğrudan SQL kullanımı yerine rpc methodu kullanılabilir
-      const { error: fallbackError } = await supabase
-        .from('_dummy_query')
-        .select()
-        .limit(1)
-        .then(() => ({ error: null }))
-        .catch(e => ({ error: e }));
-        
+      try {
+        const { error: fallbackError } = await supabase
+          .from('_dummy_query')
+          .select()
+          .limit(1);
+          
+        if (fallbackError && !fallbackError.message.includes('does not exist')) {
+          console.error("UUID eklentisi fallback kontrol hatası:", fallbackError.message);
+        }
+      } catch (e) {
+        console.error("UUID fallback işlemi hatası:", e);
+      }
+      
       console.log("UUID eklentisi kontrolü tamamlandı, devam ediliyor");
     } else {
       console.log("UUID eklentisi başarıyla etkinleştirildi veya mevcuttu");
@@ -33,27 +39,24 @@ export const createSupabaseTables = async () => {
       console.error("Users tablosu RPC ile oluşturulamadı, API ile deneniyor:", usersError.message);
       
       // API ile tablo oluşturmayı dene
-      const { error: fallbackError } = await supabase
-        .from('users')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'system@example.com',
-          username: 'system',
-          role: 'system',
-          balance: 0
-        })
-        .then(res => {
-          if (res.error && !res.error.message.includes('already exists')) {
-            return { error: res.error };
-          }
-          return { error: null };
-        })
-        .catch(e => ({ error: e }));
-        
-      if (fallbackError) {
-        console.error("Users tablosu oluşturma hatası:", fallbackError.message);
-      } else {
-        console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
+      try {
+        const { error: fallbackError } = await supabase
+          .from('users')
+          .insert({
+            id: '00000000-0000-0000-0000-000000000000',
+            email: 'system@example.com',
+            username: 'system',
+            role: 'system',
+            balance: 0
+          });
+          
+        if (fallbackError && !fallbackError.message.includes('already exists')) {
+          console.error("Users tablosu oluşturma hatası:", fallbackError.message);
+        } else {
+          console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
+        }
+      } catch (e) {
+        console.error("Users tablosu fallback oluşturma hatası:", e);
       }
     } else {
       console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
@@ -67,30 +70,27 @@ export const createSupabaseTables = async () => {
       console.error("Orders tablosu RPC ile oluşturulamadı, API ile deneniyor:", ordersError.message);
       
       // API ile tablo oluşturmayı dene
-      const { error: fallbackError } = await supabase
-        .from('orders')
-        .insert({
-          id: '00000000-0000-0000-0000-000000000000',
-          user_id: '00000000-0000-0000-0000-000000000000',
-          current_rank: 0,
-          target_rank: 0,
-          price: 0,
-          status: 'system',
-          created_at: new Date().toISOString(),
-          messages: []
-        })
-        .then(res => {
-          if (res.error && !res.error.message.includes('already exists')) {
-            return { error: res.error };
-          }
-          return { error: null };
-        })
-        .catch(e => ({ error: e }));
-        
-      if (fallbackError) {
-        console.error("Orders tablosu oluşturma hatası:", fallbackError.message);
-      } else {
-        console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
+      try {
+        const { error: fallbackError } = await supabase
+          .from('orders')
+          .insert({
+            id: '00000000-0000-0000-0000-000000000000',
+            user_id: '00000000-0000-0000-0000-000000000000',
+            current_rank: 0,
+            target_rank: 0,
+            price: 0,
+            status: 'system',
+            created_at: new Date().toISOString(),
+            messages: []
+          });
+          
+        if (fallbackError && !fallbackError.message.includes('already exists')) {
+          console.error("Orders tablosu oluşturma hatası:", fallbackError.message);
+        } else {
+          console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
+        }
+      } catch (e) {
+        console.error("Orders tablosu fallback oluşturma hatası:", e);
       }
     } else {
       console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
