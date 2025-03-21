@@ -8,6 +8,7 @@ import RegisterForm from '@/components/auth/RegisterForm';
 import RegisterHeader from '@/components/auth/RegisterHeader';
 import { supabase } from '@/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { createSupabaseTables } from '@/supabase/createTables';
 
 const Register = () => {
   const { registeredUsersCount } = useAuth();
@@ -32,32 +33,18 @@ const Register = () => {
           if (usersError.message.includes('does not exist')) {
             // Tablo oluşturma deneyin
             try {
-              const { error: createError } = await supabase.query(`
-                CREATE TABLE IF NOT EXISTS public.users (
-                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                  email TEXT UNIQUE NOT NULL,
-                  username TEXT NOT NULL,
-                  role TEXT DEFAULT 'customer',
-                  balance INTEGER DEFAULT 0,
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                );
-              `);
-              
-              if (createError) {
-                console.error("Users tablosu oluşturma hatası:", createError.message);
-                toast({
-                  title: "Veritabanı oluşturma hatası",
-                  description: "Kullanıcı tablosu oluşturulamadı. Lütfen Supabase kontrol panelinden tabloları oluşturun.",
-                  variant: "destructive"
-                });
-              } else {
-                toast({
-                  title: "Kullanıcı tablosu oluşturuldu",
-                  description: "Artık kayıt olabilirsiniz.",
-                });
-              }
-            } catch (error) {
+              await createSupabaseTables();
+              toast({
+                title: "Veritabanı tabloları oluşturuldu",
+                description: "Kullanıcı tablosu oluşturuldu, kayıt olabilirsiniz.",
+              });
+            } catch (error: any) {
               console.error("Tablo oluşturma hatası:", error);
+              toast({
+                title: "Veritabanı oluşturma hatası",
+                description: "Kullanıcı tablosu oluşturulamadı. Lütfen tekrar deneyin.",
+                variant: "destructive"
+              });
             }
           }
         } else {
@@ -78,30 +65,9 @@ const Register = () => {
           if (ordersError.message.includes('does not exist')) {
             // Tablo oluşturma deneyin
             try {
-              const { error: createError } = await supabase.query(`
-                CREATE TABLE IF NOT EXISTS public.orders (
-                  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                  user_id TEXT NOT NULL,
-                  current_rank INTEGER NOT NULL,
-                  target_rank INTEGER NOT NULL,
-                  price INTEGER NOT NULL,
-                  status TEXT DEFAULT 'pending',
-                  booster_id TEXT,
-                  booster_username TEXT,
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                  messages JSONB DEFAULT '[]',
-                  game_username TEXT,
-                  game_password TEXT
-                );
-              `);
-              
-              if (createError) {
-                console.error("Orders tablosu oluşturma hatası:", createError.message);
-              } else {
-                console.log("Orders tablosu başarıyla oluşturuldu");
-              }
+              await createSupabaseTables();
             } catch (error) {
-              console.error("Tablo oluşturma hatası:", error);
+              console.error("Orders tablosu oluşturma hatası:", error);
             }
           }
         }
