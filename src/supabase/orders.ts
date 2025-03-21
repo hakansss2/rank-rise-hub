@@ -1,4 +1,3 @@
-
 import { supabase } from './client';
 
 // Sipariş arayüzü
@@ -100,13 +99,12 @@ export const createOrder = async (orderData: {
     try {
       const { error: checkError } = await supabase
         .from('orders')
-        .select('count', { count: 'exact', head: true })
+        .select('count')
         .limit(1);
       
       if (checkError && checkError.message.includes('does not exist')) {
         console.log("Orders tablosu bulunamadı, yeniden oluşturma deneniyor...");
         
-        // Doğrudan tabloyu oluşturmak yerine, örnek bir kayıt eklemeye çalışarak tabloyu oluşturmayı dene
         try {
           const { error: createError } = await supabase
             .from('orders')
@@ -371,4 +369,3 @@ export const getOrderById = async (orderId: string): Promise<SupabaseOrder | nul
     return null;
   }
 };
-

@@ -6,94 +6,87 @@ export const createSupabaseTables = async () => {
   console.log("Supabase tablolarını oluşturma işlemi başlatılıyor...");
   
   try {
-    // UUID eklentisini etkinleştir
-    console.log("UUID eklentisi kontrol ediliyor...");
-    const { error: uuidError } = await supabase.rpc('create_uuid_extension', {});
-    
-    if (uuidError) {
-      console.error("UUID eklentisi RPC ile oluşturulamadı, SQL ile deneniyor:", uuidError.message);
-      // Doğrudan SQL kullanımı yerine rpc methodu kullanılabilir
-      try {
-        const { error: fallbackError } = await supabase
-          .from('_dummy_query')
-          .select()
-          .limit(1);
-          
-        if (fallbackError && !fallbackError.message.includes('does not exist')) {
-          console.error("UUID eklentisi fallback kontrol hatası:", fallbackError.message);
-        }
-      } catch (e) {
-        console.error("UUID fallback işlemi hatası:", e);
-      }
+    // UUID eklentisini etkinleştirmeyi dene
+    console.log("UUID eklentisini kontrol ediliyor...");
+    try {
+      const { error: uuidError } = await supabase.rpc('create_uuid_extension', {});
       
-      console.log("UUID eklentisi kontrolü tamamlandı, devam ediliyor");
-    } else {
-      console.log("UUID eklentisi başarıyla etkinleştirildi veya mevcuttu");
+      if (uuidError) {
+        console.error("UUID eklentisi RPC ile oluşturulamadı:", uuidError.message);
+      } else {
+        console.log("UUID eklentisi başarıyla etkinleştirildi");
+      }
+    } catch (e) {
+      console.error("UUID eklentisi etkinleştirme hatası:", e);
     }
     
     // Users tablosunu oluştur
     console.log("Users tablosu oluşturuluyor...");
-    const { error: usersError } = await supabase.rpc('create_users_table', {});
-    
-    if (usersError) {
-      console.error("Users tablosu RPC ile oluşturulamadı, API ile deneniyor:", usersError.message);
+    try {
+      // Önce tablo var mı kontrol et
+      const { error: checkError } = await supabase
+        .from('users')
+        .select('count')
+        .limit(1);
       
-      // API ile tablo oluşturmayı dene
-      try {
-        const { error: fallbackError } = await supabase
-          .from('users')
-          .insert({
-            id: '00000000-0000-0000-0000-000000000000',
-            email: 'system@example.com',
-            username: 'system',
-            role: 'system',
-            balance: 0
-          });
-          
-        if (fallbackError && !fallbackError.message.includes('already exists')) {
-          console.error("Users tablosu oluşturma hatası:", fallbackError.message);
+      if (checkError && checkError.message.includes('does not exist')) {
+        console.log("Users tablosu bulunamadı, oluşturuluyor...");
+        
+        // SQL sorgusu ile tablo oluştur
+        const { error: createError } = await supabase.from('users').insert({
+          id: '00000000-0000-0000-0000-000000000000',
+          email: 'system@example.com',
+          username: 'system',
+          role: 'system',
+          balance: 0
+        });
+        
+        if (createError && !createError.message.includes('already exists')) {
+          console.error("Users tablosu oluşturma hatası:", createError.message);
         } else {
           console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
         }
-      } catch (e) {
-        console.error("Users tablosu fallback oluşturma hatası:", e);
+      } else {
+        console.log("Users tablosu zaten mevcut");
       }
-    } else {
-      console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
+    } catch (e) {
+      console.error("Users tablosu oluşturma hatası:", e);
     }
     
     // Orders tablosunu oluştur
     console.log("Orders tablosu oluşturuluyor...");
-    const { error: ordersError } = await supabase.rpc('create_orders_table', {});
-    
-    if (ordersError) {
-      console.error("Orders tablosu RPC ile oluşturulamadı, API ile deneniyor:", ordersError.message);
+    try {
+      // Önce tablo var mı kontrol et
+      const { error: checkError } = await supabase
+        .from('orders')
+        .select('count')
+        .limit(1);
       
-      // API ile tablo oluşturmayı dene
-      try {
-        const { error: fallbackError } = await supabase
-          .from('orders')
-          .insert({
-            id: '00000000-0000-0000-0000-000000000000',
-            user_id: '00000000-0000-0000-0000-000000000000',
-            current_rank: 0,
-            target_rank: 0,
-            price: 0,
-            status: 'system',
-            created_at: new Date().toISOString(),
-            messages: []
-          });
-          
-        if (fallbackError && !fallbackError.message.includes('already exists')) {
-          console.error("Orders tablosu oluşturma hatası:", fallbackError.message);
+      if (checkError && checkError.message.includes('does not exist')) {
+        console.log("Orders tablosu bulunamadı, oluşturuluyor...");
+        
+        // Tablo oluşturmak için örnek kayıt eklemeyi dene
+        const { error: createError } = await supabase.from('orders').insert({
+          id: '00000000-0000-0000-0000-000000000000',
+          user_id: '00000000-0000-0000-0000-000000000000',
+          current_rank: 0,
+          target_rank: 0,
+          price: 0,
+          status: 'system',
+          created_at: new Date().toISOString(),
+          messages: []
+        });
+        
+        if (createError && !createError.message.includes('already exists')) {
+          console.error("Orders tablosu oluşturma hatası:", createError.message);
         } else {
           console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
         }
-      } catch (e) {
-        console.error("Orders tablosu fallback oluşturma hatası:", e);
+      } else {
+        console.log("Orders tablosu zaten mevcut");
       }
-    } else {
-      console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
+    } catch (e) {
+      console.error("Orders tablosu oluşturma hatası:", e);
     }
     
     console.log("Tablo oluşturma işlemleri tamamlandı!");
@@ -110,8 +103,22 @@ export const createSupabaseTables = async () => {
   }
 };
 
-// Bu fonksiyonu tarayıcı konsolunda şöyle çalıştırabilirsiniz:
-// import { createSupabaseTables } from './src/supabase/createTables';
-// createSupabaseTables().then(result => console.log(result));
+// Konsol fonksiyonu
+const executeInConsole = () => {
+  console.log("Tablolar oluşturuluyor...");
+  createSupabaseTables().then(result => {
+    console.log("İşlem sonucu:", result);
+    if (result.success) {
+      console.log("✅ Tüm tablolar başarıyla oluşturuldu veya mevcuttu.");
+      console.log("Şimdi sayfayı yenileyip uygulamayı kullanmaya başlayabilirsiniz.");
+    } else {
+      console.log("❌ Tablolar oluşturulurken bir hata oluştu:", result.message);
+    }
+  });
+};
 
+// Bu fonksiyonu tarayıcı konsolunda şöyle çalıştırabilirsiniz:
+// executeInConsole();
+
+export { executeInConsole };
 export default createSupabaseTables;
