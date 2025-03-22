@@ -1,4 +1,3 @@
-
 import { supabase } from './client';
 
 // Kullanıcı arayüzü
@@ -10,6 +9,26 @@ export interface SupabaseUser {
   balance: number;
 }
 
+// Admin hesap bilgileri listesi
+const ADMIN_ACCOUNTS = [
+  {
+    email: "hakan200505@gmail.com",
+    password: "Metin2398@",
+    id: "admin-user-id-1",
+    username: "admin",
+    role: "admin" as const,
+    balance: 5000
+  },
+  {
+    email: "admin@rankrisehub.com",
+    password: "Admin123!",
+    id: "admin-user-id-2",
+    username: "rankrise-admin",
+    role: "admin" as const,
+    balance: 10000
+  }
+];
+
 // Kayıt fonksiyonu
 export const registerUser = async (
   email: string, 
@@ -19,15 +38,19 @@ export const registerUser = async (
   try {
     console.log("Kayıt işlemi başlatılıyor:", email);
     
-    // Admin için özel durum
-    if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+    // Admin için özel durum kontrolü
+    const adminAccount = ADMIN_ACCOUNTS.find(
+      admin => admin.email === email && admin.password === password
+    );
+    
+    if (adminAccount) {
       console.log("Admin hesabı tespit edildi, özel giriş yapılıyor");
       return {
-        id: "admin-user-id",
-        email: "hakan200505@gmail.com",
-        username: "admin",
-        role: "admin",
-        balance: 5000
+        id: adminAccount.id,
+        email: adminAccount.email,
+        username: adminAccount.username,
+        role: adminAccount.role,
+        balance: adminAccount.balance
       };
     }
     
@@ -150,14 +173,18 @@ export const loginUser = async (
     console.log("Giriş işlemi başlatılıyor:", email);
     
     // Admin kontrolü
-    if (email === "hakan200505@gmail.com" && password === "Metin2398@") {
+    const adminAccount = ADMIN_ACCOUNTS.find(
+      admin => admin.email === email && admin.password === password
+    );
+    
+    if (adminAccount) {
       console.log("Admin giriş başarılı");
       return {
-        id: "admin-user-id",
-        email: "hakan200505@gmail.com",
-        username: "admin",
-        role: "admin",
-        balance: 5000
+        id: adminAccount.id,
+        email: adminAccount.email,
+        username: adminAccount.username,
+        role: adminAccount.role,
+        balance: adminAccount.balance
       };
     }
     
@@ -333,23 +360,37 @@ export const updateUserBalance = async (
   try {
     console.log(`Bakiye güncelleniyor: Kullanıcı ${userId}, Miktar ${amount}`);
     
-    // Kullanıcı kontrolü - admin için özel durum
-    if (userId === "admin-user-id" || userId === "1") {
+    // Admin kullanıcıları için özel durum
+    const adminAccount = ADMIN_ACCOUNTS.find(admin => admin.id === userId);
+    if (adminAccount || userId === "admin-user-id" || userId === "1") {
       console.log("Admin kullanıcısı için bakiye güncelleniyor");
-      // Admin için yerel güncelleme
-      const adminUser = {
-        id: "admin-user-id",
-        email: "hakan200505@gmail.com",
-        username: "admin",
-        role: "admin" as const,
-        balance: 5000 + amount
-      };
+      
+      // Admin ID'sini kontrol et ve doğru admin hesabını bul
+      let adminUser;
+      if (adminAccount) {
+        adminUser = {
+          id: adminAccount.id,
+          email: adminAccount.email,
+          username: adminAccount.username,
+          role: "admin" as const,
+          balance: adminAccount.balance + amount
+        };
+      } else {
+        // Eski admin ID'si ile uyumluluk için
+        adminUser = {
+          id: "admin-user-id-1",
+          email: "hakan200505@gmail.com",
+          username: "admin",
+          role: "admin" as const,
+          balance: 5000 + amount
+        };
+      }
       
       // Güncellenen veriyi localStorage'a da kaydet
       const stored = localStorage.getItem('valorant_user');
       if (stored) {
         const currentUser = JSON.parse(stored);
-        if (currentUser.id === userId || currentUser.email === "hakan200505@gmail.com") {
+        if (currentUser.id === userId || ADMIN_ACCOUNTS.some(admin => admin.email === currentUser.email)) {
           currentUser.balance = adminUser.balance;
           localStorage.setItem('valorant_user', JSON.stringify(currentUser));
         }
