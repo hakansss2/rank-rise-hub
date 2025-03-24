@@ -1,7 +1,24 @@
 
 import { getOrders as getSupabaseOrders, createOrder as createSupabaseOrder, updateOrder as updateSupabaseOrder, sendMessage as sendSupabaseMessage } from '../supabase/orders';
 import { getOrders as getFirebaseOrders, createOrder as createFirebaseOrder, updateOrder as updateFirebaseOrder, sendMessage as sendFirebaseMessage } from '../firebase/orders';
+import { 
+  registerUser, 
+  loginUser, 
+  signOut, 
+  getUserCount, 
+  updateUserBalance,
+  FirebaseUser
+} from '../firebase/auth';
 import { toast } from '@/components/ui/use-toast';
+
+// Kullanıcı yanıt arayüzü
+export interface UserResponse {
+  id: string;
+  email: string;
+  username: string;
+  role: 'customer' | 'booster' | 'admin';
+  balance: number;
+}
 
 // Sipariş arayüzü
 export interface OrderResponse {
@@ -27,6 +44,66 @@ export interface MessageResponse {
   content: string;
   timestamp: string;
 }
+
+// Auth API
+export const authApi = {
+  // Kullanıcı kaydı
+  register: async (email: string, username: string, password: string): Promise<UserResponse> => {
+    try {
+      const userData = await registerUser(email, username, password);
+      return userData as UserResponse;
+    } catch (error) {
+      console.error("Register error:", error);
+      throw error;
+    }
+  },
+  
+  // Kullanıcı girişi
+  login: async (email: string, password: string): Promise<UserResponse> => {
+    try {
+      const userData = await loginUser(email, password);
+      return userData as UserResponse;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
+  },
+  
+  // Çıkış
+  signOut: async (): Promise<void> => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      throw error;
+    }
+  },
+  
+  // Kullanıcı sayısını al
+  getUserCount: async (): Promise<{count: number}> => {
+    try {
+      const count = await getUserCount();
+      return { count };
+    } catch (error) {
+      console.error("Get user count error:", error);
+      return { count: 0 };
+    }
+  }
+};
+
+// User API
+export const userApi = {
+  // Kullanıcı bakiyesini güncelle
+  updateBalance: async (userId: string, amount: number): Promise<UserResponse> => {
+    try {
+      const updatedUser = await updateUserBalance(userId, amount);
+      return updatedUser as UserResponse;
+    } catch (error) {
+      console.error("Update balance error:", error);
+      throw error;
+    }
+  }
+};
 
 // Veritabanı bağlantısı ve işlemleri için yardımcı API
 export const orderApi = {
