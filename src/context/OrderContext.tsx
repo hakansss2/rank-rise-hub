@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -94,7 +93,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Siparişler yüklenirken bir hata oluştu.",
         variant: "destructive",
       });
-      setOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -119,12 +117,16 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const createdOrderResponse = await orderApi.createOrder(newOrder);
       const createdOrder = mapResponseToOrder(createdOrderResponse);
       
-      setOrders(prevOrders => [...prevOrders, createdOrder]);
+      // Yeni siparişi listeye ekle
+      setOrders(prevOrders => [createdOrder, ...prevOrders]);
       
       toast({
         title: "Sipariş Oluşturuldu",
         description: "Siparişiniz başarıyla oluşturuldu!",
       });
+      
+      // Siparişleri yenile
+      fetchOrders();
       
       return createdOrder;
     } catch (error) {
@@ -159,6 +161,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       const updatedOrder = mapResponseToOrder(updatedOrderResponse);
       
+      // Siparişleri güncelle
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId ? updatedOrder : order
@@ -169,6 +172,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Sipariş Alındı",
         description: "Sipariş başarıyla size atandı!",
       });
+      
+      // Siparişleri yenile
+      fetchOrders();
       
       return updatedOrder;
     } catch (error) {
@@ -228,6 +234,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Sipariş başarıyla tamamlandı!",
       });
       
+      // Siparişleri yenile
+      fetchOrders();
+      
       return updatedOrder;
     } catch (error) {
       console.error('❌ OrderProvider - Error completing order:', error);
@@ -243,7 +252,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const cancelOrder = async (orderId: string) => {
-    if (!user || user.role !== 'admin') throw new Error('Only admins can cancel orders');
+    if (!user) throw new Error('Only authorized users can cancel orders');
     
     setIsLoading(true);
     try {
@@ -265,6 +274,9 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Sipariş İptal Edildi",
         description: "Sipariş başarıyla iptal edildi.",
       });
+      
+      // Siparişleri yenile
+      fetchOrders();
       
       return updatedOrder;
     } catch (error) {
@@ -348,20 +360,28 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getAvailableOrders = () => {
     if (!user) return [];
     
+    console.log('getAvailableOrders - user role:', user.role);
+    console.log('getAvailableOrders - orders:', orders);
+    
     if (user.role === 'admin') {
-      return orders.filter(order => order.status === 'pending');
+      const pendingOrders = orders.filter(order => order.status === 'pending');
+      console.log('getAvailableOrders - admin pendingOrders:', pendingOrders);
+      return pendingOrders;
     }
     
     if (user.role === 'booster') {
-      return orders.filter(order => 
+      const availableOrders = orders.filter(order => 
         order.status === 'pending' && order.userId !== user.id
       );
+      console.log('getAvailableOrders - booster availableOrders:', availableOrders);
+      return availableOrders;
     }
     
     return [];
   };
   
   const refreshOrders = () => {
+    console.log('OrderContext - Manual refresh requested');
     fetchOrders();
   };
 

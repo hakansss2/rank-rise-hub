@@ -42,7 +42,7 @@ export interface FirebaseMessage {
 export const checkFirebaseConnection = async (): Promise<boolean> => {
   try {
     // Basit bir okuma işlemi yaparak bağlantıyı kontrol et
-    const testQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"), orderBy("createdAt", "desc"));
+    const testQuery = query(collection(db, "orders"));
     await getDocs(testQuery);
     console.log("Firebase bağlantısı başarılı");
     return true;
@@ -64,15 +64,15 @@ export const getOrders = async (): Promise<FirebaseOrder[]> => {
       orders.push({
         id: doc.id,
         ...data,
-        createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString()
+        createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString()
       } as FirebaseOrder);
     });
     
-    console.log(`${orders.length} sipariş bulundu`);
+    console.log(`Firebase'den ${orders.length} sipariş bulundu`);
     return orders;
   } catch (error: any) {
-    console.error("Sipariş getirme hatası:", error.message);
-    throw new Error(error.message);
+    console.error("Firebase sipariş getirme hatası:", error.message);
+    return []; // Hata durumunda boş liste dön
   }
 };
 
@@ -93,12 +93,11 @@ export const createOrder = async (orderData: {
     }
     
     console.log("Firebase'de sipariş oluşturuluyor:", orderData);
-    const timestamp = serverTimestamp();
     
     const orderRef = await addDoc(collection(db, "orders"), {
       ...orderData,
       status: "pending",
-      createdAt: timestamp,
+      createdAt: new Date(),
       messages: []
     });
     
@@ -152,7 +151,7 @@ export const updateOrder = async (
     return {
       id: orderId,
       ...data,
-      createdAt: data.createdAt?.toDate().toISOString() || new Date().toISOString()
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString()
     } as FirebaseOrder;
   } catch (error: any) {
     console.error("Sipariş güncelleme hatası:", error.message);

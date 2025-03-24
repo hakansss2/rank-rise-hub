@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -33,15 +32,17 @@ const BoosterPanel = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   
   useEffect(() => {
-    refreshOrders();
-    console.log("Refreshing orders in BoosterPanel");
-  }, [refreshOrders, refreshKey]);
+    if (isAuthenticated && isBooster) {
+      console.log("BoosterPanel - Refreshing orders");
+      refreshOrders();
+    }
+  }, [refreshOrders, refreshKey, isAuthenticated, isBooster]);
   
   const boosterOrders = getBoosterOrders();
   const availableOrders = getAvailableOrders();
   
-  console.log('Available Orders in BoosterPanel:', availableOrders);
-  console.log('Booster Orders in BoosterPanel:', boosterOrders);
+  console.log('BoosterPanel - Available Orders:', availableOrders);
+  console.log('BoosterPanel - Booster Orders:', boosterOrders);
   
   const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
   const completedOrders = boosterOrders.filter(o => o.status === 'completed');
@@ -49,23 +50,24 @@ const BoosterPanel = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
+      console.log('BoosterPanel - User not authenticated, redirecting to login');
       navigate('/login');
       return;
     }
     
     if (!isBooster) {
-      console.log('User is not a booster, redirecting to login');
+      console.log('BoosterPanel - User is not a booster, redirecting to login');
       navigate('/login');
       return;
     }
     
-    console.log('Current user in BoosterPanel:', user);
-    console.log('isAuthenticated:', isAuthenticated);
-    console.log('isBooster:', isBooster);
+    console.log('BoosterPanel - Current user:', user);
+    console.log('BoosterPanel - isAuthenticated:', isAuthenticated);
+    console.log('BoosterPanel - isBooster:', isBooster);
   }, [isAuthenticated, isBooster, navigate, user]);
 
   const handleRefresh = () => {
+    console.log("BoosterPanel - Manual refresh requested");
     refreshOrders();
     setRefreshKey(prev => prev + 1);
     toast.success('Siparişler güncellendi');
