@@ -3,6 +3,23 @@ import { supabase } from '../supabase/client';
 import { initializeOrdersTable } from '../supabase/orders';
 import { checkFirebaseConnection } from '../firebase/orders';
 
+// Extend the Window interface to include our custom methods
+declare global {
+  interface Window {
+    setupDatabase: () => Promise<{ success: boolean; message: string }>;
+    createDemoOrder: () => any;
+    clearLocalOrders: () => boolean;
+    checkDatabaseStatus: () => Promise<{
+      supabase: boolean;
+      firebase: boolean;
+      localStorage: boolean;
+      anyServiceWorking: boolean;
+    }>;
+    createOrdersTable: () => Promise<{ success: boolean; message: string }>;
+    checkRlsSettings: () => void;
+  }
+}
+
 // Supabase orders tablosunu oluşturma fonksiyonu
 export const createOrdersTable = async () => {
   try {
@@ -173,7 +190,7 @@ export const setupDatabase = async () => {
 export const setupDatabaseHelper = () => {
   console.log("Veritabanı kurulumu başlatılıyor...");
   
-  // @ts-ignore - global window objesine ekleme
+  // Add functions to window object with proper type safety
   window.setupDatabase = setupDatabase;
   window.createDemoOrder = createDemoOrder;
   window.clearLocalOrders = clearLocalOrders;
