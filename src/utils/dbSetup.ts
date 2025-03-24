@@ -41,10 +41,11 @@ export const createOrdersTable = async () => {
       };
     }
   } catch (error: any) {
-    console.error("Tablo oluşturma işleminde hata:", error);
+    const errorMessage = error?.message || "Bilinmeyen hata";
+    console.error("Tablo oluşturma işleminde hata:", errorMessage);
     return {
       success: false,
-      message: `İşlem hatası: ${error.message}`
+      message: `İşlem hatası: ${errorMessage}`
     };
   }
 };

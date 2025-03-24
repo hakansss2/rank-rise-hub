@@ -1,3 +1,4 @@
+
 import { supabase } from './client';
 
 // Sipariş arayüzü
@@ -43,26 +44,35 @@ export const initializeOrdersTable = async (): Promise<boolean> => {
     
     console.log("Orders tablosu oluşturuluyor...");
     
-    // Admin hesabı için SQL yetkisi olmadığından, ilk kaydı ekleyerek tabloyu oluşturmayı deneyelim
-    const { error: createError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: '00000000-0000-0000-0000-000000000000',
-        current_rank: 0,
-        target_rank: 0,
-        price: 0,
-        status: 'system',
-        created_at: new Date().toISOString(),
-        messages: []
-      });
-    
-    if (createError && !createError.message.includes('already exists')) {
-      console.error("Orders tablosu oluşturma hatası:", createError);
+    // Safe error check - ensure error property exists and has a message property
+    if (checkError && typeof checkError === 'object') {
+      // Admin hesabı için SQL yetkisi olmadığından, ilk kaydı ekleyerek tabloyu oluşturmayı deneyelim
+      const { error: createError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: '00000000-0000-0000-0000-000000000000',
+          current_rank: 0,
+          target_rank: 0,
+          price: 0,
+          status: 'system',
+          created_at: new Date().toISOString(),
+          messages: []
+        });
+      
+      // Safe error check for createError
+      if (createError && typeof createError === 'object' && 
+          createError.message && 
+          !createError.message.includes('already exists')) {
+        console.error("Orders tablosu oluşturma hatası:", createError);
+        return false;
+      }
+      
+      console.log("Orders tablosu başarıyla oluşturuldu!");
+      return true;
+    } else {
+      console.error("Beklenmeyen hata formatı:", checkError);
       return false;
     }
-    
-    console.log("Orders tablosu başarıyla oluşturuldu!");
-    return true;
   } catch (error) {
     console.error("Orders tablosu başlatma hatası:", error);
     return false;
