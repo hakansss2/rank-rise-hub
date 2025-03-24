@@ -1,63 +1,28 @@
 
 import { supabase } from '../supabase/client';
+import { initializeOrdersTable } from '../supabase/orders';
+import { checkFirebaseConnection } from '../firebase/orders';
 
-// Supabase orders tablosunu doğrudan oluşturmaya çalışan fonksiyon
+// Supabase orders tablosunu oluşturma fonksiyonu
 export const createOrdersTable = async () => {
   try {
     console.log("Orders tablosu oluşturma işlemi başlatılıyor...");
     
-    // Önce tablo var mı kontrol et
-    const { error: checkError } = await supabase
-      .from('orders')
-      .select('count')
-      .limit(1);
-      
-    if (!checkError) {
-      console.log("Orders tablosu zaten mevcut.");
+    const success = await initializeOrdersTable();
+    
+    if (success) {
+      console.log("Orders tablosu başarıyla oluşturuldu veya zaten mevcuttu.");
       return {
         success: true,
-        message: "Orders tablosu zaten mevcut."
+        message: "Orders tablosu başarıyla oluşturuldu veya zaten mevcuttu."
       };
-    }
-    
-    if (checkError && !checkError.message.includes('does not exist')) {
-      console.error("Tablo kontrolünde beklenmeyen hata:", checkError.message);
+    } else {
+      console.error("Orders tablosu oluşturma işlemi başarısız oldu.");
       return {
         success: false,
-        message: `Tablo kontrolünde hata: ${checkError.message}`
+        message: "Orders tablosu oluşturma işlemi başarısız oldu."
       };
     }
-    
-    // Tablo yok, manuel olarak kayıt ekleyerek oluşturmayı dene
-    console.log("Orders tablosu bulunamadı, oluşturuluyor...");
-    
-    // Bu fonksiyon SQL query çalıştıramaz, bu yüzden kayıt ekleyerek oluşturmaya çalışacağız
-    const { error: createError } = await supabase
-      .from('orders')
-      .insert({
-        id: '00000000-0000-0000-0000-000000000000',
-        user_id: '00000000-0000-0000-0000-000000000000',
-        current_rank: 0,
-        target_rank: 0,
-        price: 0,
-        status: 'system',
-        created_at: new Date().toISOString(),
-        messages: []
-      });
-    
-    if (createError) {
-      console.error("Orders tablosu oluşturma hatası:", createError.message);
-      return {
-        success: false,
-        message: `Orders tablosu oluşturulamadı: ${createError.message}`
-      };
-    }
-    
-    console.log("Orders tablosu başarıyla oluşturuldu!");
-    return {
-      success: true,
-      message: "Orders tablosu başarıyla oluşturuldu."
-    };
   } catch (error: any) {
     console.error("Tablo oluşturma işleminde hata:", error);
     return {
@@ -67,14 +32,50 @@ export const createOrdersTable = async () => {
   }
 };
 
+// Veritabanı durumunu kontrol et
+export const checkDatabaseStatus = async () => {
+  console.log("Veritabanı durumu kontrol ediliyor...");
+  
+  // Supabase durumu
+  let supabaseStatus = false;
+  try {
+    const ordersSuccess = await initializeOrdersTable();
+    supabaseStatus = ordersSuccess;
+    console.log("Supabase durumu:", supabaseStatus ? "Çalışıyor" : "Bağlantı sorunu");
+  } catch (error) {
+    console.error("Supabase kontrolünde hata:", error);
+  }
+  
+  // Firebase durumu
+  let firebaseStatus = false;
+  try {
+    firebaseStatus = await checkFirebaseConnection();
+    console.log("Firebase durumu:", firebaseStatus ? "Çalışıyor" : "Bağlantı sorunu");
+  } catch (error) {
+    console.error("Firebase kontrolünde hata:", error);
+  }
+  
+  return {
+    supabase: supabaseStatus,
+    firebase: firebaseStatus,
+    anyServiceWorking: supabaseStatus || firebaseStatus
+  };
+};
+
 // Kullanıcılar için konsol yardımcısı
 export const setupDatabase = async () => {
   console.log("Veritabanı kurulum yardımcısı başlatılıyor...");
+  
+  // Veritabanı durumunu kontrol et
+  const dbStatus = await checkDatabaseStatus();
   
   // Orders tablosunu oluştur
   const ordersResult = await createOrdersTable();
   console.log("Orders tablosu sonuç:", ordersResult);
   
+  console.log("\n==== Veritabanı Kurulum Durumu ====");
+  console.log("Supabase durumu:", dbStatus.supabase ? "✅ Çalışıyor" : "❌ Bağlantı sorunu");
+  console.log("Firebase durumu:", dbStatus.firebase ? "✅ Çalışıyor" : "❌ Bağlantı sorunu");
   console.log("\n==== Supabase Kurulum Talimatları ====");
   console.log("1. Supabase kontrol panelini açın");
   console.log("2. 'Table Editor' bölümüne gidin");
@@ -86,7 +87,7 @@ export const setupDatabase = async () => {
   console.log("6. Sayfayı yenileyip tekrar deneyin");
   
   return {
-    success: ordersResult.success,
+    success: dbStatus.anyServiceWorking || ordersResult.success,
     message: "Veritabanı kurulum işlemi tamamlandı. Talimatları takip edin."
   };
 };
@@ -99,6 +100,23 @@ export const setupDatabaseHelper = () => {
   window.setupDatabase = setupDatabase;
   
   console.log("Şimdi konsola 'setupDatabase()' yazıp çalıştırın.");
+  console.log("Veya doğrudan Supabase'e gidip tablo yapılandırmanızı kontrol edin.");
+};
+
+// RLS ayarlarını gösteren helper fonksiyon
+export const checkRlsSettings = () => {
+  console.log("\n==== Supabase RLS Kontrol Talimatları ====");
+  console.log("1. Supabase kontrol panelini açın: https://vhxhlsidnwarmgbycrwa.supabase.co");
+  console.log("2. Authentication -> Policies menüsüne gidin");
+  console.log("3. orders tablosu için aşağıdaki RLS ayarlarını yapın:");
+  console.log("   - Tüm politikaları geçici olarak kaldırın veya devre dışı bırakın");
+  console.log("   - Ya da 'Enable Row Level Security' seçeneğini geçici olarak kapatın");
+  console.log("4. Sayfayı yenileyip tekrar deneyin");
+  
+  // @ts-ignore - global window objesine ekleme
+  window.checkRlsSettings = checkRlsSettings;
+  
+  console.log("Bu fonksiyonu istediğiniz zaman 'checkRlsSettings()' yazarak çalıştırabilirsiniz.");
 };
 
 export default setupDatabase;

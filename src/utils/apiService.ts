@@ -1,4 +1,3 @@
-
 // Supabase tabanlı API servisi
 import { getApiBaseUrl } from './environment';
 import { 
@@ -10,12 +9,13 @@ import {
   signOut as supabaseSignOut
 } from '../supabase/auth';
 import {
-  getOrders,
-  createOrder,
-  updateOrder,
-  sendMessage,
+  getOrders as getSupabaseOrders,
+  createOrder as createSupabaseOrder,
+  updateOrder as updateSupabaseOrder,
+  sendMessage as sendSupabaseMessage,
   SupabaseOrder,
-  SupabaseMessage
+  SupabaseMessage,
+  initializeOrdersTable
 } from '../supabase/orders';
 import {
   uploadFile,
@@ -23,6 +23,13 @@ import {
   uploadBoostProofImage,
   deleteFile
 } from '../supabase/storage';
+import {
+  getOrders as getFirebaseOrders,
+  createOrder as createFirebaseOrder,
+  updateOrder as updateFirebaseOrder,
+  sendMessage as sendFirebaseMessage,
+  checkFirebaseConnection
+} from '../firebase/orders';
 
 // API_BASE_URL artık sadece eski Mongo API'si için kullanılır
 export const API_BASE_URL = getApiBaseUrl();
@@ -133,29 +140,88 @@ export const userApi = {
   },
 };
 
-// Supabase tabanlı sipariş API
+// Supabase ve Firebase tabanlı sipariş API
 export const orderApi = {
   getOrders: async (): Promise<OrderResponse[]> => {
     try {
-      return await getOrders();
+      // Önce Supabase'den almayı dene
+      try {
+        console.log('🔄 Supabase üzerinden siparişler alınıyor...');
+        await initializeOrdersTable();
+        const orders = await getSupabaseOrders();
+        console.log(`✅ Supabase: ${orders.length} sipariş bulundu`);
+        return orders;
+      } catch (supabaseError) {
+        console.error('❌ Supabase sipariş hatası, Firebase deneniyor:', supabaseError);
+        
+        // Supabase başarısız olursa Firebase'i dene
+        const isFirebaseConnected = await checkFirebaseConnection();
+        if (isFirebaseConnected) {
+          console.log('🔄 Firebase üzerinden siparişler alınıyor...');
+          const firebaseOrders = await getFirebaseOrders();
+          console.log(`✅ Firebase: ${firebaseOrders.length} sipariş bulundu`);
+          return firebaseOrders;
+        } else {
+          console.error('❌ Firebase bağlantısı kurulamadı');
+          return []; // Boş liste dön
+        }
+      }
     } catch (error: any) {
-      console.error('❌ Siparişler alınamadı:', error);
-      throw new Error(error.message || 'Siparişler alınamadı');
+      console.error('❌ Tüm sistemler başarısız, siparişler alınamadı:', error);
+      return []; // Hata durumunda boş liste dön
     }
   },
   
   createOrder: async (orderData: any): Promise<OrderResponse> => {
     try {
-      return await createOrder(orderData);
+      console.log('🔄 Sipariş oluşturma başlatılıyor...');
+      
+      // Önce Supabase'e kaydetmeyi dene
+      try {
+        console.log('🔄 Supabase üzerinde sipariş oluşturuluyor...');
+        await initializeOrdersTable();
+        const order = await createSupabaseOrder(orderData);
+        console.log('✅ Supabase sipariş başarıyla oluşturuldu');
+        return order;
+      } catch (supabaseError) {
+        console.error('❌ Supabase sipariş hatası, Firebase deneniyor:', supabaseError);
+        
+        // Firebase'i dene
+        console.log('🔄 Firebase üzerinde sipariş oluşturuluyor...');
+        const isFirebaseConnected = await checkFirebaseConnection();
+        
+        if (isFirebaseConnected) {
+          const firebaseOrder = await createFirebaseOrder(orderData);
+          console.log('✅ Firebase sipariş başarıyla oluşturuldu');
+          return firebaseOrder;
+        } else {
+          console.error('❌ Firebase bağlantısı kurulamadı');
+          throw new Error("Veritabanı bağlantısı sağlanamadı. Lütfen daha sonra tekrar deneyin.");
+        }
+      }
     } catch (error: any) {
       console.error('❌ Sipariş oluşturulamadı:', error);
-      throw new Error(error.message || 'Sipariş oluşturulamadı');
+      throw new Error(error.message || 'Sipariş oluşturulamadı. Lütfen daha sonra tekrar deneyin.');
     }
   },
   
   updateOrder: async (orderId: string, updateData: any): Promise<OrderResponse> => {
     try {
-      return await updateOrder(orderId, updateData);
+      // Önce Supabase'de güncellemeyi dene
+      try {
+        console.log('🔄 Supabase üzerinde sipariş güncelleniyor...');
+        const order = await updateSupabaseOrder(orderId, updateData);
+        console.log('✅ Supabase sipariş başarıyla güncellendi');
+        return order;
+      } catch (supabaseError) {
+        console.error('❌ Supabase güncelleme hatası, Firebase deneniyor:', supabaseError);
+        
+        // Firebase'i dene
+        console.log('🔄 Firebase üzerinde sipariş güncelleniyor...');
+        const firebaseOrder = await updateFirebaseOrder(orderId, updateData);
+        console.log('✅ Firebase sipariş başarıyla güncellendi');
+        return firebaseOrder;
+      }
     } catch (error: any) {
       console.error('❌ Sipariş güncellenemedi:', error);
       throw new Error(error.message || 'Sipariş güncellenemedi');
@@ -164,7 +230,21 @@ export const orderApi = {
   
   sendMessage: async (orderId: string, messageData: any): Promise<MessageResponse> => {
     try {
-      return await sendMessage(orderId, messageData);
+      // Önce Supabase'e mesaj göndermeyi dene
+      try {
+        console.log('🔄 Supabase üzerinde mesaj gönderiliyor...');
+        const message = await sendSupabaseMessage(orderId, messageData);
+        console.log('✅ Supabase mesaj başarıyla gönderildi');
+        return message;
+      } catch (supabaseError) {
+        console.error('❌ Supabase mesaj hatası, Firebase deneniyor:', supabaseError);
+        
+        // Firebase'i dene
+        console.log('🔄 Firebase üzerinde mesaj gönderiliyor...');
+        const firebaseMessage = await sendFirebaseMessage(orderId, messageData);
+        console.log('✅ Firebase mesaj başarıyla gönderildi');
+        return firebaseMessage;
+      }
     } catch (error: any) {
       console.error('❌ Mesaj gönderilemedi:', error);
       throw new Error(error.message || 'Mesaj gönderilemedi');

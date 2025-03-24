@@ -8,7 +8,8 @@ import {
   getDoc,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  Firestore
 } from "firebase/firestore";
 import { db } from "./config";
 
@@ -35,6 +36,20 @@ export interface FirebaseMessage {
   senderName: string;
   content: string;
   timestamp: string;
+}
+
+// Firebase bağlantısını kontrol et
+export const checkFirebaseConnection = async (): Promise<boolean> => {
+  try {
+    // Basit bir okuma işlemi yaparak bağlantıyı kontrol et
+    const testQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"), orderBy("createdAt", "desc"));
+    await getDocs(testQuery);
+    console.log("Firebase bağlantısı başarılı");
+    return true;
+  } catch (error) {
+    console.error("Firebase bağlantısı başarısız:", error);
+    return false;
+  }
 }
 
 // Tüm siparişleri getir
@@ -71,6 +86,13 @@ export const createOrder = async (orderData: {
   gamePassword?: string;
 }): Promise<FirebaseOrder> => {
   try {
+    // Firebase bağlantısını kontrol et
+    const isConnected = await checkFirebaseConnection();
+    if (!isConnected) {
+      throw new Error("Firebase bağlantısı kurulamadı");
+    }
+    
+    console.log("Firebase'de sipariş oluşturuluyor:", orderData);
     const timestamp = serverTimestamp();
     
     const orderRef = await addDoc(collection(db, "orders"), {
@@ -102,10 +124,11 @@ export const createOrder = async (orderData: {
       gamePassword: orderData.gamePassword
     };
     
+    console.log("Firebase sipariş başarıyla oluşturuldu:", newOrder.id);
     return newOrder;
   } catch (error: any) {
-    console.error("Sipariş oluşturma hatası:", error.message);
-    throw new Error(error.message);
+    console.error("Firebase sipariş oluşturma hatası:", error.message);
+    throw new Error("Firebase sipariş oluşturulamadı: " + error.message);
   }
 };
 
