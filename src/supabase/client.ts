@@ -23,100 +23,118 @@ const checkIfTableExists = async (tableName: string): Promise<boolean> => {
   }
 };
 
-// Create necessary tables if they don't exist
-const initializeSupabase = async () => {
+// Create necessary tables directly via SQL
+const createTablesDirectly = async () => {
   try {
-    console.log("Supabase durumu kontrol ediliyor...");
+    console.log("SQL ile tablo oluşturma işlemi başlatılıyor...");
     
     // Create users table
-    const createUsersTable = async () => {
-      // Check if users table exists
-      const usersTableExists = await checkIfTableExists('users');
-      
-      if (!usersTableExists) {
-        console.log("Users tablosu bulunamadı, oluşturma deneniyor...");
-        
-        // Try to create the users table by inserting a dummy record
-        try {
-          const { error } = await supabase
-            .from('users')
-            .insert({
-              id: '00000000-0000-0000-0000-000000000000',
-              email: 'system@example.com',
-              username: 'system',
-              role: 'system',
-              balance: 0
-            });
-            
-          if (error && !error.message.includes('already exists')) {
-            console.error("Users tablosu oluşturma hatası:", error.message);
-          } else {
-            console.log("Users tablosu başarıyla oluşturuldu veya mevcuttu");
-          }
-        } catch (e) {
-          console.error("Fallback kullanıcı oluşturma hatası:", e);
-        }
-      } else {
-        console.log("Users tablosu mevcut");
-      }
-    };
+    const usersTableSQL = `
+      CREATE TABLE IF NOT EXISTS public.users (
+        id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+        email text UNIQUE NOT NULL,
+        username text UNIQUE NOT NULL,
+        password text NOT NULL,
+        role text DEFAULT 'customer'::text,
+        balance numeric DEFAULT 0
+      );
+    `;
     
     // Create orders table
-    const createOrdersTable = async () => {
-      // Check if orders table exists
-      const ordersTableExists = await checkIfTableExists('orders');
+    const ordersTableSQL = `
+      CREATE TABLE IF NOT EXISTS public.orders (
+        id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+        user_id text NOT NULL,
+        current_rank integer NOT NULL,
+        target_rank integer NOT NULL,
+        price numeric NOT NULL,
+        status text NOT NULL,
+        booster_id text,
+        booster_username text,
+        created_at timestamp with time zone DEFAULT now(),
+        messages jsonb DEFAULT '[]'::jsonb,
+        game_username text,
+        game_password text
+      );
+    `;
+    
+    // Execute the create table SQL
+    try {
+      // Enable UUID extension
+      const { error: uuidError } = await supabase.rpc('enable_uuid_extension');
+      if (uuidError) console.error("UUID extension hatası:", uuidError);
       
-      if (!ordersTableExists) {
-        console.log("Orders tablosu bulunamadı, oluşturma deneniyor...");
-        
-        // Try to create the orders table by inserting a dummy record
-        try {
-          const { error } = await supabase
-            .from('orders')
-            .insert({
-              id: '00000000-0000-0000-0000-000000000000',
-              user_id: '00000000-0000-0000-0000-000000000000',
-              current_rank: 0,
-              target_rank: 0,
-              price: 0,
-              status: 'system',
-              created_at: new Date().toISOString(),
-              messages: []
-            });
-            
-          if (error && !error.message.includes('already exists')) {
-            console.error("Orders tablosu oluşturma hatası:", error.message);
-          } else {
-            console.log("Orders tablosu başarıyla oluşturuldu veya mevcuttu");
-          }
-        } catch (e) {
-          console.error("Fallback sipariş oluşturma hatası:", e);
-        }
-      } else {
-        console.log("Orders tablosu mevcut");
-      }
-    };
-    
-    // Initialize UUID extension (this will need to be done manually in Supabase dashboard)
-    const initializeUuidExtension = async () => {
-      console.log("UUID extension kontrolü (bu işlemi Supabase panelinden manuel olarak yapmanız gerekebilir)");
-      // UUID extension needs to be enabled in the Supabase dashboard
-    };
-    
-    // Run initialization in sequence
-    await initializeUuidExtension();
-    await createUsersTable();
-    await createOrdersTable();
-    
-    console.log("Supabase tabloları başarıyla kontrol edildi ve/veya oluşturuldu");
-    return true;
-  } catch (error: any) {
-    console.error("Supabase kontrol hatası:", error.message);
-    return false;
+      // Make SQL queries available
+      await supabase.rpc('create_sql_query_function');
+      
+      // Create tables
+      const { error: usersError } = await supabase.rpc('execute_sql', { sql: usersTableSQL });
+      if (usersError) console.error("Users tablosu oluşturma hatası:", usersError);
+      
+      const { error: ordersError } = await supabase.rpc('execute_sql', { sql: ordersTableSQL });
+      if (ordersError) console.error("Orders tablosu oluşturma hatası:", ordersError);
+      
+      console.log("SQL ile tablolar oluşturuldu veya mevcut");
+    } catch (sqlError) {
+      console.error("SQL çalıştırma hatası:", sqlError);
+      
+      // Fallback to create tables by inserting records
+      console.log("Fallback: Kayıt ekleyerek tablo oluşturma deneniyor...");
+      fallbackTableCreation();
+    }
+  } catch (error) {
+    console.error("Tablo oluşturma hatası:", error);
+    fallbackTableCreation();
   }
 };
 
-// Initialize tables
-initializeSupabase();
+// Fallback function to create tables by inserting records
+const fallbackTableCreation = async () => {
+  try {
+    console.log("Fallback tablo oluşturma başlatılıyor...");
+    
+    // Create users table
+    const usersExist = await checkIfTableExists('users');
+    if (!usersExist) {
+      console.log("Users tablosu oluşturuluyor...");
+      const { error: userError } = await supabase.from('users').insert({
+        id: '00000000-0000-0000-0000-000000000000',
+        email: 'system@example.com',
+        username: 'system',
+        role: 'system',
+        balance: 0,
+        password: 'system-password'
+      });
+      console.log("Users tablosu oluşturma sonucu:", userError ? `Hata: ${userError.message}` : "Başarılı");
+    }
+    
+    // Create orders table
+    const ordersExist = await checkIfTableExists('orders');
+    if (!ordersExist) {
+      console.log("Orders tablosu oluşturuluyor...");
+      const { error: orderError } = await supabase.from('orders').insert({
+        id: '00000000-0000-0000-0000-000000000000',
+        user_id: '00000000-0000-0000-0000-000000000000',
+        current_rank: 0,
+        target_rank: 0,
+        price: 0,
+        status: 'system',
+        created_at: new Date().toISOString(),
+        messages: []
+      });
+      console.log("Orders tablosu oluşturma sonucu:", orderError ? `Hata: ${orderError.message}` : "Başarılı");
+    }
+    
+    console.log("Fallback tablo oluşturma tamamlandı");
+  } catch (error) {
+    console.error("Fallback tablo oluşturma hatası:", error);
+  }
+};
+
+// Try to initialize the database
+createTablesDirectly().catch(error => {
+  console.error("Veritabanı başlatma hatası:", error);
+  fallbackTableCreation();
+});
 
 export default supabase;

@@ -88,12 +88,21 @@ export const createOrder = async (orderData: {
     }
     
     const data = newOrderSnap.data();
-    return {
+    
+    const newOrder: FirebaseOrder = {
       id: orderRef.id,
-      ...data,
+      userId: orderData.userId,
+      currentRank: orderData.currentRank,
+      targetRank: orderData.targetRank,
+      price: orderData.price,
+      status: "pending",
       createdAt: new Date().toISOString(),
-      messages: []
-    } as FirebaseOrder;
+      messages: [],
+      gameUsername: orderData.gameUsername,
+      gamePassword: orderData.gamePassword
+    };
+    
+    return newOrder;
   } catch (error: any) {
     console.error("Sipariş oluşturma hatası:", error.message);
     throw new Error(error.message);

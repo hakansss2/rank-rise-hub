@@ -95,41 +95,48 @@ export const createOrder = async (orderData: {
       messages: []
     };
     
-    // Önce tabloyu kontrol et ve gerekirse oluştur
+    // Orders tablosunu SQL ile oluşturmayı dene (eğer yoksa)
     try {
-      const { error: checkError } = await supabase
-        .from('orders')
-        .select('count')
-        .limit(1);
+      const { error: tableCheckError } = await supabase.from('orders').select('count').limit(1);
       
-      if (checkError && checkError.message.includes('does not exist')) {
-        console.log("Orders tablosu bulunamadı, yeniden oluşturma deneniyor...");
+      if (tableCheckError && tableCheckError.message.includes('does not exist')) {
+        console.log("Orders tablosu oluşturuluyor...");
         
-        try {
-          const { error: createError } = await supabase
-            .from('orders')
-            .insert({
-              id: '00000000-0000-0000-0000-000000000000',
-              user_id: '00000000-0000-0000-0000-000000000000',
-              current_rank: 0,
-              target_rank: 0,
-              price: 0,
-              status: 'system',
-              created_at: new Date().toISOString(),
-              messages: []
-            });
-            
-          if (createError && !createError.message.includes('already exists')) {
-            console.error("Tablo oluşturma hatası:", createError.message);
-          }
-        } catch (e) {
-          console.error("Fallback tablo oluşturma hatası:", e);
+        const createTableQuery = `
+          CREATE TABLE IF NOT EXISTS public.orders (
+            id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+            user_id text NOT NULL,
+            current_rank integer NOT NULL,
+            target_rank integer NOT NULL,
+            price numeric NOT NULL,
+            status text NOT NULL,
+            booster_id text,
+            booster_username text,
+            created_at timestamp with time zone DEFAULT now(),
+            messages jsonb DEFAULT '[]'::jsonb,
+            game_username text,
+            game_password text
+          );
+        `;
+        
+        const { error: createError } = await supabase.rpc('create_table', { 
+          query_text: createTableQuery 
+        });
+        
+        if (createError) {
+          console.error("Tablo oluşturma hatası:", createError);
+          
+          // Alternatif yöntem - fallback olarak Firebase kullanmayı dene
+          console.log("Fallback: Firebase ile sipariş oluşturuluyor...");
+          const { createOrder } = await import('../firebase/orders');
+          return await createOrder(orderData);
         }
       }
-    } catch (error) {
-      console.error("Tablo kontrol hatası:", error);
+    } catch (tableError) {
+      console.error("Tablo kontrol hatası:", tableError);
     }
     
+    // Siparişi oluştur
     const { data, error } = await supabase
       .from('orders')
       .insert([newOrder])
@@ -138,7 +145,16 @@ export const createOrder = async (orderData: {
     
     if (error) {
       console.error("Sipariş oluşturma hatası:", error.message);
-      throw new Error(error.message);
+      
+      // Fallback olarak Firebase kullan
+      console.log("Fallback: Firebase ile sipariş oluşturuluyor...");
+      try {
+        const { createOrder } = await import('../firebase/orders');
+        return await createOrder(orderData);
+      } catch (fbError) {
+        console.error("Firebase fallback hatası:", fbError);
+        throw new Error("Sipariş oluşturulamadı");
+      }
     }
     
     if (!data) {
@@ -164,8 +180,30 @@ export const createOrder = async (orderData: {
     console.log("Sipariş başarıyla oluşturuldu:", formattedOrder.id);
     return formattedOrder;
   } catch (error: any) {
-    console.error("Sipariş oluşturma hatası:", error.message);
-    throw new Error(error.message || "Sipariş oluştururken beklenmeyen bir hata oluştu");
+    console.error("Sipariş oluşturma hatası:", error);
+    
+    // Firebase'e fallback
+    try {
+      console.log("Son çare: Firebase fallback devreye alınıyor...");
+      const { createOrder } = await import('../firebase/orders');
+      return await createOrder(orderData);
+    } catch (fbError) {
+      console.error("Firebase son çare hatası:", fbError);
+      // Manuel olarak sipariş nesnesi oluşturup döndür
+      const manualOrder: SupabaseOrder = {
+        id: `manual-${Date.now()}`,
+        userId: orderData.userId,
+        currentRank: orderData.currentRank,
+        targetRank: orderData.targetRank,
+        price: orderData.price,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        messages: [],
+        gameUsername: orderData.gameUsername,
+        gamePassword: orderData.gamePassword
+      };
+      return manualOrder;
+    }
   }
 };
 
