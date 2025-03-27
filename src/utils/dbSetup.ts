@@ -17,6 +17,7 @@ declare global {
     }>;
     createOrdersTable: () => Promise<{ success: boolean; message: string }>;
     checkRlsSettings: () => void;
+    setupDatabaseHelper: () => void;
   }
 }
 
@@ -85,11 +86,18 @@ export const checkDatabaseStatus = async () => {
     console.log("localStorage durumu: Çalışmıyor");
   }
   
+  const anyServiceWorking = supabaseStatus || firebaseStatus || localStorageStatus;
+  
+  // Hiçbir servis çalışmıyorsa konsol uyarısı
+  if (!anyServiceWorking) {
+    console.error("❌ UYARI: Hiçbir veritabanı servisi çalışmıyor!");
+  }
+  
   return {
     supabase: supabaseStatus,
     firebase: firebaseStatus,
     localStorage: localStorageStatus,
-    anyServiceWorking: supabaseStatus || firebaseStatus || localStorageStatus
+    anyServiceWorking
   };
 };
 
@@ -123,6 +131,7 @@ export const createDemoOrder = () => {
     return demoOrder;
   } catch (error) {
     console.error("Demo sipariş oluşturma hatası:", error);
+    return null;
   }
 };
 
@@ -197,6 +206,7 @@ export const setupDatabaseHelper = () => {
   window.clearLocalOrders = clearLocalOrders;
   window.checkDatabaseStatus = checkDatabaseStatus;
   window.createOrdersTable = createOrdersTable;
+  window.checkRlsSettings = checkRlsSettings;
   
   console.log("Kullanılabilir fonksiyonlar:");
   console.log("- setupDatabase(): Tüm veritabanı kurulumunu yapar");
@@ -216,8 +226,8 @@ export const checkRlsSettings = () => {
   console.log("   - Ya da 'Enable Row Level Security' seçeneğini geçici olarak kapatın");
   console.log("4. Sayfayı yenileyip tekrar deneyin");
   
-  // @ts-ignore - global window objesine ekleme
-  window.checkRlsSettings = checkRlsSettings;
+  // Uygulamayı başlatırken helper fonksiyonları otomatik olarak tanımla
+  setupDatabaseHelper();
   
   console.log("Bu fonksiyonu istediğiniz zaman 'checkRlsSettings()' yazarak çalıştırabilirsiniz.");
 };

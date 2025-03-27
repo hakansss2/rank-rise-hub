@@ -45,45 +45,63 @@ export const initializeOrdersTable = async (): Promise<boolean> => {
     console.log("Orders tablosu oluşturuluyor...");
     
     // Safe error check - ensure error property exists and has a message property
-    if (checkError && typeof checkError === 'object') {
-      // Admin hesabı için SQL yetkisi olmadığından, ilk kaydı ekleyerek tabloyu oluşturmayı deneyelim
-      const { error: createError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: '00000000-0000-0000-0000-000000000000',
-          current_rank: 0,
-          target_rank: 0,
-          price: 0,
-          status: 'system',
-          created_at: new Date().toISOString(),
-          messages: []
-        });
-      
-      // Safe error check for createError
-      if (createError && typeof createError === 'object' && 
-          createError.message && 
-          !createError.message.includes('already exists')) {
-        console.error("Orders tablosu oluşturma hatası:", createError);
+    if (checkError && typeof checkError === 'object' && checkError.message) {
+      if (checkError.message.includes('does not exist')) {
+        console.log("Orders tablosu bulunamadı, oluşturma denemesi yapılacak");
+        
+        // Tablo oluşturmayı dene
+        try {
+          // Dummy order verisi oluştur
+          const { error: insertError } = await supabase
+            .from('orders')
+            .insert({
+              user_id: '00000000-0000-0000-0000-000000000000',
+              current_rank: 0,
+              target_rank: 0,
+              price: 0,
+              status: 'system',
+              created_at: new Date().toISOString(),
+              messages: []
+            });
+          
+          if (!insertError) {
+            console.log("Orders tablosu başarıyla oluşturuldu!");
+            return true;
+          } else {
+            // Tablo oluşturulamadı, localStorage kullanılacak
+            console.error("Orders tablosu oluşturma hatası:", insertError.message);
+            return false;
+          }
+        } catch (e: any) {
+          console.error("SQL işlemi hatası:", e?.message || e);
+          return false;
+        }
+      } else {
+        console.error("Tablo kontrolünde beklenmeyen hata:", checkError.message);
         return false;
       }
-      
-      console.log("Orders tablosu başarıyla oluşturuldu!");
-      return true;
     } else {
       console.error("Beklenmeyen hata formatı:", checkError);
       return false;
     }
-  } catch (error) {
-    console.error("Orders tablosu başlatma hatası:", error);
+  } catch (error: any) {
+    console.error("Orders tablosu başlatma hatası:", error?.message || error);
     return false;
   }
+  
+  return false; // Default return eğer hiçbir koşul karşılanmazsa
 };
 
 // Tüm siparişleri getir
 export const getOrders = async (): Promise<SupabaseOrder[]> => {
   try {
     // Önce tabloyu kontrol et ve oluştur
-    await initializeOrdersTable();
+    const tableExists = await initializeOrdersTable();
+    
+    if (!tableExists) {
+      console.log("Orders tablosu bulunamadı, boş liste dönülüyor");
+      return [];
+    }
     
     const { data, error } = await supabase
       .from('orders')

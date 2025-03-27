@@ -55,6 +55,13 @@ export const checkFirebaseConnection = async (): Promise<boolean> => {
 // Tüm siparişleri getir
 export const getOrders = async (): Promise<FirebaseOrder[]> => {
   try {
+    // Önce bağlantıyı kontrol et
+    const isConnected = await checkFirebaseConnection();
+    if (!isConnected) {
+      console.error("Firebase bağlantısı kurulamadı");
+      return [];
+    }
+    
     const ordersQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(ordersQuery);
     

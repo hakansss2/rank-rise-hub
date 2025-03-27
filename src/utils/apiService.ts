@@ -202,14 +202,34 @@ export const orderApi = {
         console.error('❌ localStorage sipariş getirme hatası:', localError);
       }
       
-      // Hiçbir yerden veri alınamazsa boş dizi dön
-      console.log('⚠️ Hiçbir yerden sipariş alınamadı, boş dizi dönülüyor');
+      // Hiçbir yerden veri alınamazsa mock sipariş gönder
+      console.log('⚠️ Hiçbir yerden sipariş alınamadı, mock sipariş dönülüyor');
+      
+      // Mock siparişi localStorage'a kaydet
+      try {
+        saveOrderToLocalStorage(mockOrder);
+        const orders = [mockOrder];
+        localStorage.setItem('orders', JSON.stringify(orders));
+      } catch (e) {
+        console.error('Mock sipariş localStorage kayıt hatası:', e);
+      }
+      
       return [mockOrder];
     } catch (error) {
       console.error('❌ Sipariş getirme hatası:', error);
       
-      // Son çare olarak boş dizi döndür
-      console.log('⚠️ Genel hata nedeniyle boş dizi dönülüyor');
+      // Son çare olarak mock sipariş döndür
+      console.log('⚠️ Genel hata nedeniyle mock sipariş dönülüyor');
+      
+      // Mock siparişi localStorage'a kaydet
+      try {
+        saveOrderToLocalStorage(mockOrder);
+        const orders = [mockOrder];
+        localStorage.setItem('orders', JSON.stringify(orders));
+      } catch (e) {
+        console.error('Mock sipariş localStorage kayıt hatası:', e);
+      }
+      
       return [mockOrder];
     }
   },
@@ -225,7 +245,7 @@ export const orderApi = {
   }): Promise<OrderResponse> => {
     console.log('🔄 Yeni sipariş oluşturuluyor:', orderData);
     
-    const mockOrder: OrderResponse = {
+    const localOrder: OrderResponse = {
       id: "local-" + Date.now().toString(),
       userId: orderData.userId,
       currentRank: orderData.currentRank,
@@ -238,6 +258,9 @@ export const orderApi = {
       gamePassword: orderData.gamePassword
     };
     
+    // Her durumda önce localStorage'a kaydet
+    saveOrderToLocalStorage(localOrder);
+    
     try {
       // Önce Supabase'de sipariş oluşturmayı dene
       console.log('Supabase üzerinden sipariş oluşturuluyor...');
@@ -245,10 +268,16 @@ export const orderApi = {
         const supabaseOrder = await createSupabaseOrder(orderData);
         console.log('✅ Supabase sipariş başarıyla oluşturuldu:', supabaseOrder.id);
         
-        // localStorage'a da kaydet
-        saveOrderToLocalStorage(supabaseOrder as OrderResponse);
+        // Supabase başarılı olursa, Supabase ID'sini kullan
+        const updatedOrder = {
+          ...localOrder,
+          id: supabaseOrder.id
+        };
         
-        return supabaseOrder as OrderResponse;
+        // localStorage'u güncelle
+        updateOrderInLocalStorage(localOrder.id, updatedOrder);
+        
+        return updatedOrder as OrderResponse;
       } catch (supabaseError) {
         console.error('❌ Supabase sipariş oluşturma hatası:', supabaseError);
       }
@@ -259,29 +288,30 @@ export const orderApi = {
         const firebaseOrder = await createFirebaseOrder(orderData);
         console.log('✅ Firebase sipariş başarıyla oluşturuldu:', firebaseOrder.id);
         
-        // localStorage'a da kaydet
-        saveOrderToLocalStorage(firebaseOrder as OrderResponse);
+        // Firebase başarılı olursa, Firebase ID'sini kullan
+        const updatedOrder = {
+          ...localOrder,
+          id: firebaseOrder.id
+        };
         
-        return firebaseOrder as OrderResponse;
+        // localStorage'u güncelle
+        updateOrderInLocalStorage(localOrder.id, updatedOrder);
+        
+        return updatedOrder as OrderResponse;
       } catch (firebaseError) {
         console.error('❌ Firebase fallback hatası:', firebaseError);
       }
       
-      // Son çare olarak localStorage'a kaydet
-      console.log('Son çare: localStorage kullanılıyor...');
+      // Supabase ve Firebase başarısız olursa, localStorage sipariş kullan
+      console.log('✅ Sipariş sadece localStorage\'a kaydedildi:', localOrder.id);
+      return localOrder;
       
-      // localStorage'a kaydet
-      saveOrderToLocalStorage(mockOrder);
-      
-      return mockOrder;
     } catch (error) {
       console.error('❌ Sipariş oluşturma hatası:', error);
       
-      // Son çare olarak localStorage'a kaydet
-      console.log('Son çare: localStorage kullanılıyor (genel hata sonrası)...');
-      saveOrderToLocalStorage(mockOrder);
-      
-      return mockOrder;
+      // Her durumda localStorage siparişini döndür
+      console.log('✅ Genel hata sonrası localStorage sipariş dönülüyor:', localOrder.id);
+      return localOrder;
     }
   },
   
