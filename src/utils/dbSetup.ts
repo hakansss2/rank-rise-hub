@@ -91,6 +91,26 @@ export const checkDatabaseStatus = async () => {
   // Hiçbir servis çalışmıyorsa konsol uyarısı
   if (!anyServiceWorking) {
     console.error("❌ UYARI: Hiçbir veritabanı servisi çalışmıyor!");
+  } else {
+    // Çalışan bir veritabanı var, duruma göre stratejileri oluştur
+    // localStorage'ı her zaman etkinleştir (yedek mekanizma olarak)
+    if (localStorageStatus && !supabaseStatus && !firebaseStatus) {
+      console.log("⚠️ Veritabanları erişilemez durumda. localStorage yedek mekanizması etkinleştirildi.");
+      createDemoOrder(); // Demo sipariş oluştur
+    }
+    
+    // localStorage'da veri varsa ve veritabanları çalışıyorsa
+    if (localStorageStatus && (supabaseStatus || firebaseStatus)) {
+      try {
+        const storedOrders = localStorage.getItem('orders');
+        if (storedOrders) {
+          const orders = JSON.parse(storedOrders);
+          console.log(`localStorage'da ${orders.length} sipariş bulundu. Veritabanları çalışır durumda.`);
+        }
+      } catch (e) {
+        console.error("localStorage okuma hatası:", e);
+      }
+    }
   }
   
   return {

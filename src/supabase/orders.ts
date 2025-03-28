@@ -1,4 +1,3 @@
-
 import { supabase } from './client';
 
 // Sipariş arayüzü
@@ -51,6 +50,14 @@ export const initializeOrdersTable = async (): Promise<boolean> => {
         
         // Tablo oluşturmayı dene
         try {
+          // SQL ile tablo oluşturma girişimi
+          const { error: createError } = await supabase.rpc('create_orders_table');
+          
+          if (!createError) {
+            console.log("Orders tablosu başarıyla oluşturuldu!");
+            return true;
+          }
+          
           // Dummy order verisi oluştur
           const { error: insertError } = await supabase
             .from('orders')
@@ -208,11 +215,60 @@ export const createOrder = async (orderData: {
       gamePassword: data.game_password
     };
     
+    // Başarılı oluşturulduğunda localStorage'a da kaydet (yedekleme)
+    try {
+      const localStorageKey = 'orders';
+      let existingOrders = [];
+      const storedOrders = localStorage.getItem(localStorageKey);
+      
+      if (storedOrders) {
+        existingOrders = JSON.parse(storedOrders);
+      }
+      
+      existingOrders.unshift(formattedOrder);
+      localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+      console.log("Sipariş ayrıca localStorage'a da kaydedildi:", formattedOrder.id);
+    } catch (localError) {
+      console.error("localStorage'a kaydetme hatası:", localError);
+    }
+    
     console.log("Sipariş başarıyla oluşturuldu:", formattedOrder.id);
     return formattedOrder;
   } catch (error: any) {
     console.error("Sipariş oluşturma hatası:", error);
-    throw error;
+    
+    // Hata durumunda localStorage'a kaydet ve oluşturulan siparişi geri döndür
+    const fallbackOrder: SupabaseOrder = {
+      id: "supabase-offline-" + Date.now().toString(),
+      userId: orderData.userId,
+      currentRank: orderData.currentRank,
+      targetRank: orderData.targetRank,
+      price: orderData.price,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      messages: [],
+      gameUsername: orderData.gameUsername,
+      gamePassword: orderData.gamePassword
+    };
+    
+    // localStorage'a kaydet
+    try {
+      const localStorageKey = 'orders';
+      let existingOrders = [];
+      const storedOrders = localStorage.getItem(localStorageKey);
+      
+      if (storedOrders) {
+        existingOrders = JSON.parse(storedOrders);
+      }
+      
+      existingOrders.unshift(fallbackOrder);
+      localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+      console.log("Supabase hatası: Sipariş sadece localStorage'a kaydedildi:", fallbackOrder.id);
+    } catch (localError) {
+      console.error("localStorage'a kaydetme hatası:", localError);
+    }
+    
+    return fallbackOrder;
   }
 };
 

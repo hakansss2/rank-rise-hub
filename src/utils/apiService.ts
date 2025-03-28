@@ -10,7 +10,6 @@ import {
 } from '../firebase/auth';
 import { toast } from '@/components/ui/use-toast';
 
-// Kullanıcı yanıt arayüzü
 export interface UserResponse {
   id: string;
   email: string;
@@ -19,7 +18,6 @@ export interface UserResponse {
   balance: number;
 }
 
-// Sipariş arayüzü
 export interface OrderResponse {
   id: string;
   userId: string;
@@ -35,7 +33,6 @@ export interface OrderResponse {
   gamePassword?: string;
 }
 
-// Mesaj arayüzü
 export interface MessageResponse {
   id: string;
   senderId: string;
@@ -44,9 +41,7 @@ export interface MessageResponse {
   timestamp: string;
 }
 
-// Auth API
 export const authApi = {
-  // Kullanıcı kaydı
   register: async (email: string, username: string, password: string): Promise<UserResponse> => {
     try {
       const userData = await registerUser(email, username, password);
@@ -57,7 +52,6 @@ export const authApi = {
     }
   },
   
-  // Kullanıcı girişi
   login: async (email: string, password: string): Promise<UserResponse> => {
     try {
       const userData = await loginUser(email, password);
@@ -68,7 +62,6 @@ export const authApi = {
     }
   },
   
-  // Çıkış
   signOut: async (): Promise<void> => {
     try {
       await signOut();
@@ -78,7 +71,6 @@ export const authApi = {
     }
   },
   
-  // Kullanıcı sayısını al
   getUserCount: async (): Promise<{count: number}> => {
     try {
       const count = await getUserCount();
@@ -90,12 +82,9 @@ export const authApi = {
   }
 };
 
-// User API
 export const userApi = {
-  // Kullanıcı bakiyesini güncelle
   updateBalance: async (userId: string, amount: number): Promise<UserResponse> => {
     try {
-      // Handle admin users directly in localStorage if they exist
       if (userId === "admin-user-id-1" || userId === "admin-user-id" || userId === "1") {
         console.log("Admin kullanıcısı için bakiye güncelleniyor");
         
@@ -107,7 +96,6 @@ export const userApi = {
           balance: 5000 + amount
         };
         
-        // Güncellenen veriyi localStorage'a da kaydet
         const stored = localStorage.getItem('valorant_user');
         if (stored) {
           const currentUser = JSON.parse(stored);
@@ -126,7 +114,6 @@ export const userApi = {
       } catch (error) {
         console.error("Update balance error:", error);
         
-        // Firebase/Supabase failed, fallback to localStorage
         const stored = localStorage.getItem('valorant_user');
         if (stored) {
           const currentUser = JSON.parse(stored);
@@ -146,13 +133,10 @@ export const userApi = {
   }
 };
 
-// Veritabanı bağlantısı ve işlemleri için yardımcı API
 export const orderApi = {
-  // Tüm siparişleri getirme
   getOrders: async (): Promise<OrderResponse[]> => {
     console.log('🔄 Siparişler alınıyor...');
     
-    // Mock order for testing when everything fails
     const mockOrder: OrderResponse = {
       id: "mock-" + Date.now().toString(),
       userId: "admin-user-id-1",
@@ -167,30 +151,59 @@ export const orderApi = {
     };
     
     try {
-      // Önce Supabase'den siparişleri almaya çalış
+      try {
+        const localOrders = localStorage.getItem('orders');
+        if (localOrders) {
+          const parsedOrders = JSON.parse(localOrders);
+          if (parsedOrders && parsedOrders.length > 0) {
+            console.log('✅ localStorage:', parsedOrders.length, 'sipariş bulundu');
+            return parsedOrders;
+          }
+        }
+      } catch (localError) {
+        console.error('❌ localStorage sipariş getirme hatası:', localError);
+      }
+      
       console.log('🔄 Supabase üzerinden siparişler alınıyor...');
       try {
         const supabaseOrders = await getSupabaseOrders();
         
         if (supabaseOrders && supabaseOrders.length > 0) {
           console.log('✅ Supabase:', supabaseOrders.length, 'sipariş bulundu');
+          
+          try {
+            localStorage.setItem('orders', JSON.stringify(supabaseOrders));
+          } catch (e) {
+            console.error('localStorage güncelleme hatası:', e);
+          }
+          
           return supabaseOrders as OrderResponse[];
         }
       } catch (supabaseError) {
         console.error('❌ Supabase sipariş getirme hatası:', supabaseError);
       }
       
-      // Supabase'den veri alınamazsa Firebase'den almayı dene
       console.log('🔄 Firebase üzerinden siparişler alınıyor...');
       try {
         const firebaseOrders = await getFirebaseOrders();
-        console.log('✅ Firebase:', firebaseOrders.length, 'sipariş bulundu');
-        return firebaseOrders as OrderResponse[];
+        
+        if (firebaseOrders && firebaseOrders.length > 0) {
+          console.log('✅ Firebase:', firebaseOrders.length, 'sipariş bulundu');
+          
+          try {
+            localStorage.setItem('orders', JSON.stringify(firebaseOrders));
+          } catch (e) {
+            console.error('localStorage güncelleme hatası:', e);
+          }
+          
+          return firebaseOrders as OrderResponse[];
+        }
+        
+        console.log('Firebase\'den 0 sipariş döndü');
       } catch (firebaseError) {
         console.error('❌ Firebase sipariş getirme hatası:', firebaseError);
       }
       
-      // Eğer hem Supabase hem Firebase başarısız olursa localStorage'dan almayı dene
       try {
         const localOrders = localStorage.getItem('orders');
         if (localOrders) {
@@ -202,10 +215,8 @@ export const orderApi = {
         console.error('❌ localStorage sipariş getirme hatası:', localError);
       }
       
-      // Hiçbir yerden veri alınamazsa mock sipariş gönder
       console.log('⚠️ Hiçbir yerden sipariş alınamadı, mock sipariş dönülüyor');
       
-      // Mock siparişi localStorage'a kaydet
       try {
         saveOrderToLocalStorage(mockOrder);
         const orders = [mockOrder];
@@ -218,10 +229,8 @@ export const orderApi = {
     } catch (error) {
       console.error('❌ Sipariş getirme hatası:', error);
       
-      // Son çare olarak mock sipariş döndür
       console.log('⚠️ Genel hata nedeniyle mock sipariş dönülüyor');
       
-      // Mock siparişi localStorage'a kaydet
       try {
         saveOrderToLocalStorage(mockOrder);
         const orders = [mockOrder];
@@ -234,7 +243,6 @@ export const orderApi = {
     }
   },
   
-  // Yeni sipariş oluşturma
   createOrder: async (orderData: {
     userId: string;
     currentRank: number;
@@ -258,64 +266,72 @@ export const orderApi = {
       gamePassword: orderData.gamePassword
     };
     
-    // Her durumda önce localStorage'a kaydet
     saveOrderToLocalStorage(localOrder);
     
     try {
-      // Önce Supabase'de sipariş oluşturmayı dene
       console.log('Supabase üzerinden sipariş oluşturuluyor...');
       try {
         const supabaseOrder = await createSupabaseOrder(orderData);
-        console.log('✅ Supabase sipariş başarıyla oluşturuldu:', supabaseOrder.id);
-        
-        // Supabase başarılı olursa, Supabase ID'sini kullan
-        const updatedOrder = {
-          ...localOrder,
-          id: supabaseOrder.id
-        };
-        
-        // localStorage'u güncelle
-        updateOrderInLocalStorage(localOrder.id, updatedOrder);
-        
-        return updatedOrder as OrderResponse;
+        if (supabaseOrder && supabaseOrder.id) {
+          console.log('✅ Supabase sipariş başarıyla oluşturuldu:', supabaseOrder.id);
+          
+          const updatedOrder = {
+            ...localOrder,
+            id: supabaseOrder.id
+          };
+          
+          updateOrderInLocalStorage(localOrder.id, updatedOrder);
+          
+          return updatedOrder as OrderResponse;
+        }
       } catch (supabaseError) {
         console.error('❌ Supabase sipariş oluşturma hatası:', supabaseError);
       }
       
-      // Supabase hatası durumunda Firebase'e yönlendir
+      console.log('Fallback: Firebase ile sipariş oluşturuluyor...');
       try {
-        console.log('Fallback: Firebase ile sipariş oluşturuluyor...');
         const firebaseOrder = await createFirebaseOrder(orderData);
-        console.log('✅ Firebase sipariş başarıyla oluşturuldu:', firebaseOrder.id);
-        
-        // Firebase başarılı olursa, Firebase ID'sini kullan
-        const updatedOrder = {
-          ...localOrder,
-          id: firebaseOrder.id
-        };
-        
-        // localStorage'u güncelle
-        updateOrderInLocalStorage(localOrder.id, updatedOrder);
-        
-        return updatedOrder as OrderResponse;
+        if (firebaseOrder && firebaseOrder.id) {
+          console.log('✅ Firebase sipariş başarıyla oluşturuldu:', firebaseOrder.id);
+          
+          const updatedOrder = {
+            ...localOrder,
+            id: firebaseOrder.id
+          };
+          
+          updateOrderInLocalStorage(localOrder.id, updatedOrder);
+          
+          return updatedOrder as OrderResponse;
+        }
       } catch (firebaseError) {
         console.error('❌ Firebase fallback hatası:', firebaseError);
       }
       
-      // Supabase ve Firebase başarısız olursa, localStorage sipariş kullan
-      console.log('✅ Sipariş sadece localStorage\'a kaydedildi:', localOrder.id);
+      console.log('✅ Veri tabanları erişilemez, sipariş sadece localStorage\'a kaydedildi:', localOrder.id);
+      
       return localOrder;
       
     } catch (error) {
       console.error('❌ Sipariş oluşturma hatası:', error);
       
-      // Her durumda localStorage siparişini döndür
       console.log('✅ Genel hata sonrası localStorage sipariş dönülüyor:', localOrder.id);
+      
+      try {
+        const updatedLocalOrder = {
+          ...localOrder, 
+          id: "error-" + Date.now().toString()
+        };
+        
+        updateOrderInLocalStorage(localOrder.id, updatedLocalOrder);
+        return updatedLocalOrder;
+      } catch (e) {
+        console.error('Sipariş güncelleme hatası:', e);
+      }
+      
       return localOrder;
     }
   },
   
-  // Sipariş güncelleme
   updateOrder: async (
     orderId: string, 
     updateData: Partial<OrderResponse>
@@ -323,13 +339,11 @@ export const orderApi = {
     console.log('🔄 Sipariş güncelleniyor:', orderId, updateData);
     
     try {
-      // Önce Supabase'de güncellemeyi dene
       console.log('Supabase üzerinden sipariş güncelleniyor...');
       try {
         const supabaseOrder = await updateSupabaseOrder(orderId, updateData);
         console.log('✅ Supabase sipariş başarıyla güncellendi:', orderId);
         
-        // localStorage'ı da güncelle
         updateOrderInLocalStorage(orderId, updateData);
         
         return supabaseOrder as OrderResponse;
@@ -337,13 +351,11 @@ export const orderApi = {
         console.error('❌ Supabase sipariş güncelleme hatası:', supabaseError);
       }
       
-      // Supabase hatası durumunda Firebase'e yönlendir
+      console.log('Fallback: Firebase ile sipariş güncelleniyor...');
       try {
-        console.log('Fallback: Firebase ile sipariş güncelleniyor...');
         const firebaseOrder = await updateFirebaseOrder(orderId, updateData);
         console.log('✅ Firebase sipariş başarıyla güncellendi:', orderId);
         
-        // localStorage'ı da güncelle
         updateOrderInLocalStorage(orderId, updateData);
         
         return firebaseOrder as OrderResponse;
@@ -351,7 +363,6 @@ export const orderApi = {
         console.error('❌ Firebase fallback hatası:', fallbackError);
       }
       
-      // Veritabanlarına erişilemiyorsa sadece localStorage güncelle
       const updatedOrder = updateOrderInLocalStorage(orderId, updateData);
       if (updatedOrder) {
         return updatedOrder;
@@ -364,7 +375,6 @@ export const orderApi = {
     }
   },
   
-  // Siparişe mesaj gönderme
   sendMessage: async (
     orderId: string,
     messageData: {
@@ -376,13 +386,11 @@ export const orderApi = {
     console.log('🔄 Mesaj gönderiliyor:', orderId, messageData);
     
     try {
-      // Önce Supabase'de mesaj göndermeyi dene
       console.log('Supabase üzerinden mesaj gönderiliyor...');
       try {
         const supabaseMessage = await sendSupabaseMessage(orderId, messageData);
         console.log('✅ Supabase mesaj başarıyla gönderildi');
         
-        // localStorage'ı da güncelle
         addMessageToLocalStorage(orderId, supabaseMessage as MessageResponse);
         
         return supabaseMessage as MessageResponse;
@@ -390,13 +398,11 @@ export const orderApi = {
         console.error('❌ Supabase mesaj gönderme hatası:', supabaseError);
       }
       
-      // Supabase hatası durumunda Firebase'e yönlendir
+      console.log('Fallback: Firebase ile mesaj gönderiliyor...');
       try {
-        console.log('Fallback: Firebase ile mesaj gönderiliyor...');
         const firebaseMessage = await sendFirebaseMessage(orderId, messageData);
         console.log('✅ Firebase mesaj başarıyla gönderildi');
         
-        // localStorage'ı da güncelle
         addMessageToLocalStorage(orderId, firebaseMessage as MessageResponse);
         
         return firebaseMessage as MessageResponse;
@@ -404,7 +410,6 @@ export const orderApi = {
         console.error('❌ Firebase fallback hatası:', fallbackError);
       }
       
-      // Veritabanlarına erişilemiyorsa sadece localStorage güncelle
       const newMessage: MessageResponse = {
         id: Date.now().toString(),
         ...messageData,
@@ -422,14 +427,12 @@ export const orderApi = {
         timestamp: new Date().toISOString()
       };
       
-      // Son çare olarak mesajı sadece localStorage'a ekle
       addMessageToLocalStorage(orderId, newMessage);
       return newMessage;
     }
   }
 };
 
-// localStorage işlemleri için yardımcı fonksiyonlar
 function saveOrderToLocalStorage(order: OrderResponse) {
   try {
     let orders: OrderResponse[] = [];
@@ -439,12 +442,11 @@ function saveOrderToLocalStorage(order: OrderResponse) {
       orders = JSON.parse(storedOrders);
     }
     
-    // Aynı ID'ye sahip siparişi güncelle ya da yeni ekle
     const existingOrderIndex = orders.findIndex(o => o.id === order.id);
     if (existingOrderIndex >= 0) {
       orders[existingOrderIndex] = order;
     } else {
-      orders.unshift(order); // Yeni siparişi başa ekle
+      orders.unshift(order);
     }
     
     localStorage.setItem('orders', JSON.stringify(orders));
@@ -464,7 +466,6 @@ function updateOrderInLocalStorage(orderId: string, updateData: Partial<OrderRes
     
     if (orderIndex < 0) return null;
     
-    // Siparişi güncelle
     const updatedOrder = { ...orders[orderIndex], ...updateData };
     orders[orderIndex] = updatedOrder;
     
@@ -488,7 +489,6 @@ function addMessageToLocalStorage(orderId: string, message: MessageResponse) {
     
     if (orderIndex < 0) return;
     
-    // Mesajı ekle
     if (!orders[orderIndex].messages) {
       orders[orderIndex].messages = [];
     }

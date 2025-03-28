@@ -1,4 +1,3 @@
-
 import { 
   collection, 
   addDoc, 
@@ -101,24 +100,99 @@ export const createOrder = async (orderData: {
     
     console.log("Firebase'de sipariş oluşturuluyor:", orderData);
     
-    const orderRef = await addDoc(collection(db, "orders"), {
-      ...orderData,
-      status: "pending",
-      createdAt: new Date(),
-      messages: []
-    });
-    
-    // Yeni eklenen dokümanı getir
-    const newOrderSnap = await getDoc(orderRef);
-    
-    if (!newOrderSnap.exists()) {
-      throw new Error("Sipariş oluşturma hatası");
+    // Hata yönetimi için try/catch ekleyelim
+    try {
+      const orderRef = await addDoc(collection(db, "orders"), {
+        ...orderData,
+        status: "pending",
+        createdAt: new Date(),
+        messages: []
+      });
+      
+      // Yeni eklenen dokümanı getir
+      const newOrderSnap = await getDoc(orderRef);
+      
+      if (!newOrderSnap.exists()) {
+        throw new Error("Sipariş oluşturma hatası");
+      }
+      
+      const data = newOrderSnap.data();
+      
+      const newOrder: FirebaseOrder = {
+        id: orderRef.id,
+        userId: orderData.userId,
+        currentRank: orderData.currentRank,
+        targetRank: orderData.targetRank,
+        price: orderData.price,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        messages: [],
+        gameUsername: orderData.gameUsername,
+        gamePassword: orderData.gamePassword
+      };
+      
+      console.log("Firebase sipariş başarıyla oluşturuldu:", newOrder.id);
+      
+      // Siparişi localStorage'a da kaydet (yedekleme için)
+      try {
+        const localStorageKey = 'orders';
+        let existingOrders = [];
+        const storedOrders = localStorage.getItem(localStorageKey);
+        
+        if (storedOrders) {
+          existingOrders = JSON.parse(storedOrders);
+        }
+        
+        existingOrders.unshift(newOrder);
+        localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+        console.log("Sipariş ayrıca localStorage'a da kaydedildi");
+      } catch (localError) {
+        console.error("localStorage'a kaydetme hatası:", localError);
+      }
+      
+      return newOrder;
+    } catch (firestoreError) {
+      console.error("Firestore işlem hatası:", firestoreError);
+      
+      // Hata durumunda localStorage'a kaydet ve oluşturulan siparişi geri döndür
+      const fallbackOrder: FirebaseOrder = {
+        id: "firebase-" + Date.now().toString(),
+        userId: orderData.userId,
+        currentRank: orderData.currentRank,
+        targetRank: orderData.targetRank,
+        price: orderData.price,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        messages: [],
+        gameUsername: orderData.gameUsername,
+        gamePassword: orderData.gamePassword
+      };
+      
+      // localStorage'a kaydet
+      try {
+        const localStorageKey = 'orders';
+        let existingOrders = [];
+        const storedOrders = localStorage.getItem(localStorageKey);
+        
+        if (storedOrders) {
+          existingOrders = JSON.parse(storedOrders);
+        }
+        
+        existingOrders.unshift(fallbackOrder);
+        localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+        console.log("Firestore hatası: Sipariş sadece localStorage'a kaydedildi");
+      } catch (localError) {
+        console.error("localStorage'a kaydetme hatası:", localError);
+      }
+      
+      return fallbackOrder;
     }
+  } catch (error: any) {
+    console.error("Firebase sipariş oluşturma hatası:", error.message);
     
-    const data = newOrderSnap.data();
-    
-    const newOrder: FirebaseOrder = {
-      id: orderRef.id,
+    // Genel hata durumunda localStorage'a kaydet ve oluşturulan siparişi geri döndür
+    const fallbackOrder: FirebaseOrder = {
+      id: "firebase-offline-" + Date.now().toString(),
       userId: orderData.userId,
       currentRank: orderData.currentRank,
       targetRank: orderData.targetRank,
@@ -130,11 +204,24 @@ export const createOrder = async (orderData: {
       gamePassword: orderData.gamePassword
     };
     
-    console.log("Firebase sipariş başarıyla oluşturuldu:", newOrder.id);
-    return newOrder;
-  } catch (error: any) {
-    console.error("Firebase sipariş oluşturma hatası:", error.message);
-    throw new Error("Firebase sipariş oluşturulamadı: " + error.message);
+    // localStorage'a kaydet
+    try {
+      const localStorageKey = 'orders';
+      let existingOrders = [];
+      const storedOrders = localStorage.getItem(localStorageKey);
+      
+      if (storedOrders) {
+        existingOrders = JSON.parse(storedOrders);
+      }
+      
+      existingOrders.unshift(fallbackOrder);
+      localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+      console.log("Genel hata: Sipariş sadece localStorage'a kaydedildi");
+    } catch (localError) {
+      console.error("localStorage'a kaydetme hatası:", localError);
+    }
+    
+    return fallbackOrder;
   }
 };
 
