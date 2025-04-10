@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Add UserResponse type that was missing
@@ -56,12 +55,12 @@ export const authApi = {
       if (userError) {
         // If user doesn't exist in the users table yet, create a new entry
         if (userError.code === 'PGRST116') {
-          // Create a new user entry
-          const newUser = {
+          // Create a new user entry with explicitly typed role
+          const newUser: UserResponse = {
             id: data.user.id,
             email: data.user.email || '',
             username: data.user.email?.split('@')[0] || 'user',
-            role: 'customer',
+            role: 'customer', // Explicitly set as one of the allowed roles
             balance: 0
           };
           
