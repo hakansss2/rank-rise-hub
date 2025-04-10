@@ -11,8 +11,7 @@ import { formatCurrency, getRankById } from '@/utils/rankData';
 import { Clock, CheckCircle, ArrowRight, MessageCircle, XCircle, RefreshCw } from 'lucide-react';
 import Image from '@/components/ui/image';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
-import { Toaster } from '@/components/ui/toaster';
+import { toast } from '@/hooks/use-toast';
 
 const BoosterPanel = () => {
   const {
@@ -30,24 +29,8 @@ const BoosterPanel = () => {
   const navigate = useNavigate();
   const [currency, setCurrency] = useState<'TRY' | 'USD'>('TRY');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   
-  useEffect(() => {
-    if (isAuthenticated && isBooster) {
-      console.log("BoosterPanel - Refreshing orders");
-      refreshOrders();
-    }
-  }, [refreshOrders, refreshKey, isAuthenticated, isBooster]);
-  
-  const boosterOrders = getBoosterOrders();
-  const availableOrders = getAvailableOrders();
-  
-  console.log('BoosterPanel - Available Orders:', availableOrders);
-  console.log('BoosterPanel - Booster Orders:', boosterOrders);
-  
-  const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
-  const completedOrders = boosterOrders.filter(o => o.status === 'completed');
-  const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
-
   useEffect(() => {
     if (!isAuthenticated) {
       console.log('BoosterPanel - User not authenticated, redirecting to login');
@@ -61,16 +44,32 @@ const BoosterPanel = () => {
       return;
     }
     
-    console.log('BoosterPanel - Current user:', user);
-    console.log('BoosterPanel - isAuthenticated:', isAuthenticated);
-    console.log('BoosterPanel - isBooster:', isBooster);
-  }, [isAuthenticated, isBooster, navigate, user]);
+    if (isAuthenticated && isBooster) {
+      console.log("BoosterPanel - Refreshing orders");
+      refreshOrders();
+    }
+  }, [refreshOrders, refreshKey, isAuthenticated, isBooster, navigate]);
+  
+  const boosterOrders = getBoosterOrders();
+  const availableOrders = getAvailableOrders();
+  
+  console.log('BoosterPanel - Available Orders:', availableOrders);
+  console.log('BoosterPanel - Booster Orders:', boosterOrders);
+  
+  const activeOrders = boosterOrders.filter(o => o.status === 'in_progress');
+  const completedOrders = boosterOrders.filter(o => o.status === 'completed');
+  const cancelledOrders = boosterOrders.filter(o => o.status === 'cancelled');
 
   const handleRefresh = () => {
+    if (isProcessing) return;
+    
     console.log("BoosterPanel - Manual refresh requested");
     refreshOrders();
     setRefreshKey(prev => prev + 1);
-    toast.success('Siparişler güncellendi');
+    toast({
+      title: 'Başarılı',
+      description: 'Siparişler güncellendi',
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -119,23 +118,42 @@ const BoosterPanel = () => {
   };
 
   const handleViewOrder = (orderId: string) => {
-    const order = [...boosterOrders, ...availableOrders].find(o => o.id === orderId);
-    if (order) {
-      setActiveOrder(order);
-      navigate(`/order/${orderId}`);
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      const order = [...boosterOrders, ...availableOrders].find(o => o.id === orderId);
+      if (order) {
+        setActiveOrder(order);
+        navigate(`/order/${orderId}`);
+      }
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleClaimOrder = async (orderId: string) => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
     try {
       await claimOrder(orderId);
       refreshOrders();
       setRefreshKey(prev => prev + 1);
-      toast.success('Sipariş başarıyla alındı');
+      toast({
+        title: 'Başarılı',
+        description: 'Sipariş başarıyla alındı',
+      });
       navigate(`/order/${orderId}`);
     } catch (error) {
       console.error('Error claiming order:', error);
-      toast.error('Sipariş alınırken hata oluştu');
+      toast({
+        title: 'Hata',
+        description: 'Sipariş alınırken hata oluştu',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -150,15 +168,19 @@ const BoosterPanel = () => {
   return (
     <div className="min-h-screen bg-valorant-black text-white">
       <Navbar />
-      <Toaster />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-10 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold mb-2 font-heading">Booster <span className="text-valorant-green">Paneli</span></h1>
             <p className="text-gray-400">Mevcut siparişleri görüntüleyin ve yeni siparişler alın.</p>
           </div>
-          <Button onClick={handleRefresh} variant="outline" className="flex gap-2 items-center">
-            <RefreshCw size={16} />
+          <Button 
+            onClick={handleRefresh} 
+            variant="outline" 
+            className="flex gap-2 items-center"
+            disabled={isProcessing}
+          >
+            <RefreshCw size={16} className={isProcessing ? "animate-spin" : ""} />
             Yenile
           </Button>
         </div>
@@ -260,8 +282,12 @@ const BoosterPanel = () => {
                               {formatCurrency(order.price, currency)}
                             </div>
                             
-                            <Button onClick={() => handleClaimOrder(order.id)} className="bg-valorant-green hover:bg-valorant-darkGreen text-white">
-                              Siparişi Al
+                            <Button 
+                              onClick={() => handleClaimOrder(order.id)} 
+                              className="bg-valorant-green hover:bg-valorant-darkGreen text-white"
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? 'İşleniyor...' : 'Siparişi Al'}
                             </Button>
                           </div>
                         </div>
@@ -322,7 +348,11 @@ const BoosterPanel = () => {
                               {formatCurrency(order.price, currency)}
                             </div>
                             
-                            <Button onClick={() => handleViewOrder(order.id)} className="bg-valorant-green hover:bg-valorant-darkGreen text-white">
+                            <Button 
+                              onClick={() => handleViewOrder(order.id)} 
+                              className="bg-valorant-green hover:bg-valorant-darkGreen text-white"
+                              disabled={isProcessing}
+                            >
                               <MessageCircle className="w-4 h-4 mr-2" />
                               Mesajlar ({order.messages.length})
                             </Button>
@@ -385,7 +415,11 @@ const BoosterPanel = () => {
                               {formatCurrency(order.price, currency)}
                             </div>
                             
-                            <Button onClick={() => handleViewOrder(order.id)} className="bg-valorant-green hover:bg-valorant-darkGreen text-white">
+                            <Button 
+                              onClick={() => handleViewOrder(order.id)} 
+                              className="bg-valorant-green hover:bg-valorant-darkGreen text-white"
+                              disabled={isProcessing}
+                            >
                               Detaylar
                             </Button>
                           </div>

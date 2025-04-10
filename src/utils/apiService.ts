@@ -1,22 +1,5 @@
-import { getOrders as getSupabaseOrders, createOrder as createSupabaseOrder, updateOrder as updateSupabaseOrder, sendMessage as sendSupabaseMessage } from '../supabase/orders';
-import { getOrders as getFirebaseOrders, createOrder as createFirebaseOrder, updateOrder as updateFirebaseOrder, sendMessage as sendFirebaseMessage } from '../firebase/orders';
-import { 
-  registerUser, 
-  loginUser, 
-  signOut, 
-  getUserCount, 
-  updateUserBalance,
-  FirebaseUser
-} from '../firebase/auth';
-import { toast } from '@/components/ui/use-toast';
 
-export interface UserResponse {
-  id: string;
-  email: string;
-  username: string;
-  role: 'customer' | 'booster' | 'admin';
-  balance: number;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 export interface OrderResponse {
   id: string;
@@ -41,208 +24,62 @@ export interface MessageResponse {
   timestamp: string;
 }
 
-export const authApi = {
-  register: async (email: string, username: string, password: string): Promise<UserResponse> => {
+export const orderApi = {
+  // Get all orders
+  getOrders: async (): Promise<OrderResponse[]> => {
+    console.log('🔄 API Service - Fetching orders from Supabase');
+    
     try {
-      const userData = await registerUser(email, username, password);
-      return userData as UserResponse;
-    } catch (error) {
-      console.error("Register error:", error);
-      throw error;
-    }
-  },
-  
-  login: async (email: string, password: string): Promise<UserResponse> => {
-    try {
-      const userData = await loginUser(email, password);
-      return userData as UserResponse;
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
-  },
-  
-  signOut: async (): Promise<void> => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-      throw error;
-    }
-  },
-  
-  getUserCount: async (): Promise<{count: number}> => {
-    try {
-      const count = await getUserCount();
-      return { count };
-    } catch (error) {
-      console.error("Get user count error:", error);
-      return { count: 0 };
-    }
-  }
-};
-
-export const userApi = {
-  updateBalance: async (userId: string, amount: number): Promise<UserResponse> => {
-    try {
-      if (userId === "admin-user-id-1" || userId === "admin-user-id" || userId === "1") {
-        console.log("Admin kullanıcısı için bakiye güncelleniyor");
-        
-        const adminUser = {
-          id: "admin-user-id-1",
-          email: "hakan200505@gmail.com",
-          username: "admin",
-          role: "admin" as const,
-          balance: 5000 + amount
-        };
-        
-        const stored = localStorage.getItem('valorant_user');
-        if (stored) {
-          const currentUser = JSON.parse(stored);
-          if (currentUser.id === userId || currentUser.email === "hakan200505@gmail.com") {
-            currentUser.balance = adminUser.balance;
-            localStorage.setItem('valorant_user', JSON.stringify(currentUser));
-          }
-        }
-        
-        return adminUser;
-      }
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      try {
-        const updatedUser = await updateUserBalance(userId, amount);
-        return updatedUser as UserResponse;
-      } catch (error) {
-        console.error("Update balance error:", error);
-        
-        const stored = localStorage.getItem('valorant_user');
-        if (stored) {
-          const currentUser = JSON.parse(stored);
-          if (currentUser.id === userId) {
-            currentUser.balance = (currentUser.balance || 0) + amount;
-            localStorage.setItem('valorant_user', JSON.stringify(currentUser));
-            return currentUser as UserResponse;
-          }
-        }
-        
+      if (error) {
+        console.error('❌ API Service - Error fetching orders:', error);
         throw error;
       }
+      
+      if (!data) {
+        return [];
+      }
+      
+      // Transform snake_case to camelCase
+      const orders: OrderResponse[] = data.map(order => ({
+        id: order.id,
+        userId: order.user_id,
+        currentRank: order.current_rank,
+        targetRank: order.target_rank,
+        price: order.price,
+        status: order.status,
+        boosterId: order.booster_id,
+        boosterUsername: order.booster_username,
+        createdAt: order.created_at,
+        messages: order.messages || [],
+        gameUsername: order.game_username,
+        gamePassword: order.game_password
+      }));
+      
+      console.log(`✅ API Service - Successfully fetched ${orders.length} orders`);
+      return orders;
     } catch (error) {
-      console.error("Update balance error:", error);
-      throw error;
-    }
-  }
-};
-
-export const orderApi = {
-  getOrders: async (): Promise<OrderResponse[]> => {
-    console.log('🔄 Siparişler alınıyor...');
-    
-    const mockOrder: OrderResponse = {
-      id: "mock-" + Date.now().toString(),
-      userId: "admin-user-id-1",
-      currentRank: 15, 
-      targetRank: 20,
-      price: 400,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      messages: [],
-      gameUsername: "test-user",
-      gamePassword: "test-pass"
-    };
-    
-    try {
+      console.error('❌ API Service - Failed to fetch orders:', error);
+      
+      // Fallback to localStorage
       try {
         const localOrders = localStorage.getItem('orders');
         if (localOrders) {
-          const parsedOrders = JSON.parse(localOrders);
-          if (parsedOrders && parsedOrders.length > 0) {
-            console.log('✅ localStorage:', parsedOrders.length, 'sipariş bulundu');
-            return parsedOrders;
-          }
+          return JSON.parse(localOrders);
         }
       } catch (localError) {
-        console.error('❌ localStorage sipariş getirme hatası:', localError);
+        console.error('❌ API Service - LocalStorage fallback failed:', localError);
       }
       
-      console.log('🔄 Supabase üzerinden siparişler alınıyor...');
-      try {
-        const supabaseOrders = await getSupabaseOrders();
-        
-        if (supabaseOrders && supabaseOrders.length > 0) {
-          console.log('✅ Supabase:', supabaseOrders.length, 'sipariş bulundu');
-          
-          try {
-            localStorage.setItem('orders', JSON.stringify(supabaseOrders));
-          } catch (e) {
-            console.error('localStorage güncelleme hatası:', e);
-          }
-          
-          return supabaseOrders as OrderResponse[];
-        }
-      } catch (supabaseError) {
-        console.error('❌ Supabase sipariş getirme hatası:', supabaseError);
-      }
-      
-      console.log('🔄 Firebase üzerinden siparişler alınıyor...');
-      try {
-        const firebaseOrders = await getFirebaseOrders();
-        
-        if (firebaseOrders && firebaseOrders.length > 0) {
-          console.log('✅ Firebase:', firebaseOrders.length, 'sipariş bulundu');
-          
-          try {
-            localStorage.setItem('orders', JSON.stringify(firebaseOrders));
-          } catch (e) {
-            console.error('localStorage güncelleme hatası:', e);
-          }
-          
-          return firebaseOrders as OrderResponse[];
-        }
-        
-        console.log('Firebase\'den 0 sipariş döndü');
-      } catch (firebaseError) {
-        console.error('❌ Firebase sipariş getirme hatası:', firebaseError);
-      }
-      
-      try {
-        const localOrders = localStorage.getItem('orders');
-        if (localOrders) {
-          const parsedOrders = JSON.parse(localOrders);
-          console.log('✅ localStorage:', parsedOrders.length, 'sipariş bulundu');
-          return parsedOrders;
-        }
-      } catch (localError) {
-        console.error('❌ localStorage sipariş getirme hatası:', localError);
-      }
-      
-      console.log('⚠️ Hiçbir yerden sipariş alınamadı, mock sipariş dönülüyor');
-      
-      try {
-        saveOrderToLocalStorage(mockOrder);
-        const orders = [mockOrder];
-        localStorage.setItem('orders', JSON.stringify(orders));
-      } catch (e) {
-        console.error('Mock sipariş localStorage kayıt hatası:', e);
-      }
-      
-      return [mockOrder];
-    } catch (error) {
-      console.error('❌ Sipariş getirme hatası:', error);
-      
-      console.log('⚠️ Genel hata nedeniyle mock sipariş dönülüyor');
-      
-      try {
-        saveOrderToLocalStorage(mockOrder);
-        const orders = [mockOrder];
-        localStorage.setItem('orders', JSON.stringify(orders));
-      } catch (e) {
-        console.error('Mock sipariş localStorage kayıt hatası:', e);
-      }
-      
-      return [mockOrder];
+      return [];
     }
   },
   
+  // Create a new order
   createOrder: async (orderData: {
     userId: string;
     currentRank: number;
@@ -251,130 +88,168 @@ export const orderApi = {
     gameUsername?: string;
     gamePassword?: string;
   }): Promise<OrderResponse> => {
-    console.log('🔄 Yeni sipariş oluşturuluyor:', orderData);
-    
-    const localOrder: OrderResponse = {
-      id: "local-" + Date.now().toString(),
-      userId: orderData.userId,
-      currentRank: orderData.currentRank,
-      targetRank: orderData.targetRank,
-      price: orderData.price,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      messages: [],
-      gameUsername: orderData.gameUsername,
-      gamePassword: orderData.gamePassword
-    };
-    
-    saveOrderToLocalStorage(localOrder);
+    console.log('🔄 API Service - Creating new order:', orderData);
     
     try {
-      console.log('Supabase üzerinden sipariş oluşturuluyor...');
-      try {
-        const supabaseOrder = await createSupabaseOrder(orderData);
-        if (supabaseOrder && supabaseOrder.id) {
-          console.log('✅ Supabase sipariş başarıyla oluşturuldu:', supabaseOrder.id);
-          
-          const updatedOrder = {
-            ...localOrder,
-            id: supabaseOrder.id
-          };
-          
-          updateOrderInLocalStorage(localOrder.id, updatedOrder);
-          
-          return updatedOrder as OrderResponse;
-        }
-      } catch (supabaseError) {
-        console.error('❌ Supabase sipariş oluşturma hatası:', supabaseError);
+      // Transform to snake_case for Supabase
+      const supabaseOrderData = {
+        user_id: orderData.userId,
+        current_rank: orderData.currentRank,
+        target_rank: orderData.targetRank,
+        price: orderData.price,
+        status: 'pending',
+        game_username: orderData.gameUsername || '',
+        game_password: orderData.gamePassword || '',
+        created_at: new Date().toISOString(),
+        messages: []
+      };
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .insert(supabaseOrderData)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ API Service - Error creating order:', error);
+        throw error;
       }
       
-      console.log('Fallback: Firebase ile sipariş oluşturuluyor...');
-      try {
-        const firebaseOrder = await createFirebaseOrder(orderData);
-        if (firebaseOrder && firebaseOrder.id) {
-          console.log('✅ Firebase sipariş başarıyla oluşturuldu:', firebaseOrder.id);
-          
-          const updatedOrder = {
-            ...localOrder,
-            id: firebaseOrder.id
-          };
-          
-          updateOrderInLocalStorage(localOrder.id, updatedOrder);
-          
-          return updatedOrder as OrderResponse;
-        }
-      } catch (firebaseError) {
-        console.error('❌ Firebase fallback hatası:', firebaseError);
+      if (!data) {
+        throw new Error('No data returned from order creation');
       }
       
-      console.log('✅ Veri tabanları erişilemez, sipariş sadece localStorage\'a kaydedildi:', localOrder.id);
+      // Transform response
+      const order: OrderResponse = {
+        id: data.id,
+        userId: data.user_id,
+        currentRank: data.current_rank,
+        targetRank: data.target_rank,
+        price: data.price,
+        status: data.status,
+        createdAt: data.created_at,
+        messages: data.messages || [],
+        gameUsername: data.game_username,
+        gamePassword: data.game_password
+      };
       
-      return localOrder;
-      
-    } catch (error) {
-      console.error('❌ Sipariş oluşturma hatası:', error);
-      
-      console.log('✅ Genel hata sonrası localStorage sipariş dönülüyor:', localOrder.id);
-      
+      // Save to localStorage as backup
       try {
-        const updatedLocalOrder = {
-          ...localOrder, 
-          id: "error-" + Date.now().toString()
-        };
+        const localStorageKey = 'orders';
+        let existingOrders = [];
+        const storedOrders = localStorage.getItem(localStorageKey);
         
-        updateOrderInLocalStorage(localOrder.id, updatedLocalOrder);
-        return updatedLocalOrder;
-      } catch (e) {
-        console.error('Sipariş güncelleme hatası:', e);
+        if (storedOrders) {
+          existingOrders = JSON.parse(storedOrders);
+        }
+        
+        existingOrders.unshift(order);
+        localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+      } catch (localError) {
+        console.error('❌ API Service - LocalStorage backup failed:', localError);
       }
       
-      return localOrder;
+      console.log('✅ API Service - Order created successfully:', order.id);
+      return order;
+    } catch (error) {
+      console.error('❌ API Service - Failed to create order:', error);
+      
+      // Create a fallback order
+      const fallbackOrder: OrderResponse = {
+        id: `local-${Date.now()}`,
+        userId: orderData.userId,
+        currentRank: orderData.currentRank,
+        targetRank: orderData.targetRank,
+        price: orderData.price,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        messages: [],
+        gameUsername: orderData.gameUsername,
+        gamePassword: orderData.gamePassword
+      };
+      
+      // Save to localStorage
+      try {
+        const localStorageKey = 'orders';
+        let existingOrders = [];
+        const storedOrders = localStorage.getItem(localStorageKey);
+        
+        if (storedOrders) {
+          existingOrders = JSON.parse(storedOrders);
+        }
+        
+        existingOrders.unshift(fallbackOrder);
+        localStorage.setItem(localStorageKey, JSON.stringify(existingOrders));
+      } catch (localError) {
+        console.error('❌ API Service - LocalStorage fallback failed:', localError);
+      }
+      
+      return fallbackOrder;
     }
   },
   
+  // Update an order
   updateOrder: async (
-    orderId: string, 
+    orderId: string,
     updateData: Partial<OrderResponse>
   ): Promise<OrderResponse> => {
-    console.log('🔄 Sipariş güncelleniyor:', orderId, updateData);
+    console.log('🔄 API Service - Updating order:', orderId, updateData);
     
     try {
-      console.log('Supabase üzerinden sipariş güncelleniyor...');
-      try {
-        const supabaseOrder = await updateSupabaseOrder(orderId, updateData);
-        console.log('✅ Supabase sipariş başarıyla güncellendi:', orderId);
-        
-        updateOrderInLocalStorage(orderId, updateData);
-        
-        return supabaseOrder as OrderResponse;
-      } catch (supabaseError) {
-        console.error('❌ Supabase sipariş güncelleme hatası:', supabaseError);
+      // Transform to snake_case for Supabase
+      const supabaseUpdateData: any = {};
+      
+      if (updateData.currentRank !== undefined) supabaseUpdateData.current_rank = updateData.currentRank;
+      if (updateData.targetRank !== undefined) supabaseUpdateData.target_rank = updateData.targetRank;
+      if (updateData.status !== undefined) supabaseUpdateData.status = updateData.status;
+      if (updateData.price !== undefined) supabaseUpdateData.price = updateData.price;
+      if (updateData.boosterId !== undefined) supabaseUpdateData.booster_id = updateData.boosterId;
+      if (updateData.boosterUsername !== undefined) supabaseUpdateData.booster_username = updateData.boosterUsername;
+      if (updateData.messages !== undefined) supabaseUpdateData.messages = updateData.messages;
+      if (updateData.gameUsername !== undefined) supabaseUpdateData.game_username = updateData.gameUsername;
+      if (updateData.gamePassword !== undefined) supabaseUpdateData.game_password = updateData.gamePassword;
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .update(supabaseUpdateData)
+        .eq('id', orderId)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ API Service - Error updating order:', error);
+        throw error;
       }
       
-      console.log('Fallback: Firebase ile sipariş güncelleniyor...');
-      try {
-        const firebaseOrder = await updateFirebaseOrder(orderId, updateData);
-        console.log('✅ Firebase sipariş başarıyla güncellendi:', orderId);
-        
-        updateOrderInLocalStorage(orderId, updateData);
-        
-        return firebaseOrder as OrderResponse;
-      } catch (fallbackError) {
-        console.error('❌ Firebase fallback hatası:', fallbackError);
+      if (!data) {
+        throw new Error('No data returned from order update');
       }
       
-      const updatedOrder = updateOrderInLocalStorage(orderId, updateData);
-      if (updatedOrder) {
-        return updatedOrder;
-      }
+      // Transform response
+      const order: OrderResponse = {
+        id: data.id,
+        userId: data.user_id,
+        currentRank: data.current_rank,
+        targetRank: data.target_rank,
+        price: data.price,
+        status: data.status,
+        boosterId: data.booster_id,
+        boosterUsername: data.booster_username,
+        createdAt: data.created_at,
+        messages: data.messages || [],
+        gameUsername: data.game_username,
+        gamePassword: data.game_password
+      };
       
-      throw new Error('Sipariş güncellenemedi. Lütfen daha sonra tekrar deneyin.');
+      console.log('✅ API Service - Order updated successfully:', order.id);
+      return order;
     } catch (error) {
-      console.error('❌ Sipariş güncelleme hatası:', error);
+      console.error('❌ API Service - Failed to update order:', error);
       throw error;
     }
   },
   
+  // Send a message for an order
   sendMessage: async (
     orderId: string,
     messageData: {
@@ -383,120 +258,90 @@ export const orderApi = {
       content: string;
     }
   ): Promise<MessageResponse> => {
-    console.log('🔄 Mesaj gönderiliyor:', orderId, messageData);
+    console.log('🔄 API Service - Sending message for order:', orderId);
     
     try {
-      console.log('Supabase üzerinden mesaj gönderiliyor...');
-      try {
-        const supabaseMessage = await sendSupabaseMessage(orderId, messageData);
-        console.log('✅ Supabase mesaj başarıyla gönderildi');
-        
-        addMessageToLocalStorage(orderId, supabaseMessage as MessageResponse);
-        
-        return supabaseMessage as MessageResponse;
-      } catch (supabaseError) {
-        console.error('❌ Supabase mesaj gönderme hatası:', supabaseError);
+      // First get the current order messages
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('messages')
+        .eq('id', orderId)
+        .single();
+      
+      if (orderError) {
+        console.error('❌ API Service - Error fetching order messages:', orderError);
+        throw orderError;
       }
       
-      console.log('Fallback: Firebase ile mesaj gönderiliyor...');
-      try {
-        const firebaseMessage = await sendFirebaseMessage(orderId, messageData);
-        console.log('✅ Firebase mesaj başarıyla gönderildi');
-        
-        addMessageToLocalStorage(orderId, firebaseMessage as MessageResponse);
-        
-        return firebaseMessage as MessageResponse;
-      } catch (fallbackError) {
-        console.error('❌ Firebase fallback hatası:', fallbackError);
-      }
-      
+      // Create new message
       const newMessage: MessageResponse = {
         id: Date.now().toString(),
-        ...messageData,
+        senderId: messageData.senderId,
+        senderName: messageData.senderName,
+        content: messageData.content,
         timestamp: new Date().toISOString()
       };
       
-      addMessageToLocalStorage(orderId, newMessage);
+      // Append new message to existing ones
+      const messages = [...(orderData?.messages || []), newMessage];
+      
+      // Update order with new messages
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ messages })
+        .eq('id', orderId);
+      
+      if (updateError) {
+        console.error('❌ API Service - Error updating order messages:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ API Service - Message sent successfully');
       return newMessage;
     } catch (error) {
-      console.error('❌ Mesaj gönderme hatası:', error);
-      
-      const newMessage: MessageResponse = {
-        id: Date.now().toString(),
-        ...messageData,
-        timestamp: new Date().toISOString()
-      };
-      
-      addMessageToLocalStorage(orderId, newMessage);
-      return newMessage;
+      console.error('❌ API Service - Failed to send message:', error);
+      throw error;
     }
   }
 };
 
-function saveOrderToLocalStorage(order: OrderResponse) {
-  try {
-    let orders: OrderResponse[] = [];
-    const storedOrders = localStorage.getItem('orders');
+export const userApi = {
+  // Add balance to user
+  addBalance: async (userId: string, amount: number): Promise<number> => {
+    console.log('🔄 API Service - Adding balance for user:', userId, amount);
     
-    if (storedOrders) {
-      orders = JSON.parse(storedOrders);
+    try {
+      // First get current user balance
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', userId)
+        .single();
+      
+      if (userError) {
+        console.error('❌ API Service - Error fetching user balance:', userError);
+        throw userError;
+      }
+      
+      const currentBalance = userData?.balance || 0;
+      const newBalance = currentBalance + amount;
+      
+      // Update user balance
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ balance: newBalance })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error('❌ API Service - Error updating user balance:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ API Service - Balance added successfully. New balance:', newBalance);
+      return newBalance;
+    } catch (error) {
+      console.error('❌ API Service - Failed to add balance:', error);
+      throw error;
     }
-    
-    const existingOrderIndex = orders.findIndex(o => o.id === order.id);
-    if (existingOrderIndex >= 0) {
-      orders[existingOrderIndex] = order;
-    } else {
-      orders.unshift(order);
-    }
-    
-    localStorage.setItem('orders', JSON.stringify(orders));
-    console.log('✅ Sipariş localStorage\'a kaydedildi:', order.id);
-  } catch (error) {
-    console.error('❌ localStorage\'a kaydetme hatası:', error);
   }
-}
-
-function updateOrderInLocalStorage(orderId: string, updateData: Partial<OrderResponse>): OrderResponse | null {
-  try {
-    const storedOrders = localStorage.getItem('orders');
-    if (!storedOrders) return null;
-    
-    const orders: OrderResponse[] = JSON.parse(storedOrders);
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    
-    if (orderIndex < 0) return null;
-    
-    const updatedOrder = { ...orders[orderIndex], ...updateData };
-    orders[orderIndex] = updatedOrder;
-    
-    localStorage.setItem('orders', JSON.stringify(orders));
-    console.log('✅ Sipariş localStorage\'da güncellendi:', orderId);
-    
-    return updatedOrder;
-  } catch (error) {
-    console.error('❌ localStorage güncelleme hatası:', error);
-    return null;
-  }
-}
-
-function addMessageToLocalStorage(orderId: string, message: MessageResponse) {
-  try {
-    const storedOrders = localStorage.getItem('orders');
-    if (!storedOrders) return;
-    
-    const orders: OrderResponse[] = JSON.parse(storedOrders);
-    const orderIndex = orders.findIndex(o => o.id === orderId);
-    
-    if (orderIndex < 0) return;
-    
-    if (!orders[orderIndex].messages) {
-      orders[orderIndex].messages = [];
-    }
-    
-    orders[orderIndex].messages.push(message);
-    localStorage.setItem('orders', JSON.stringify(orders));
-    console.log('✅ Mesaj localStorage\'da kaydedildi:', orderId);
-  } catch (error) {
-    console.error('❌ localStorage mesaj ekleme hatası:', error);
-  }
-}
+};

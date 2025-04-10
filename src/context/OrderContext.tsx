@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -69,14 +70,18 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [initialFetch, setInitialFetch] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !initialFetch) {
       fetchOrders();
+      setInitialFetch(true);
     }
   }, [user]);
 
   const fetchOrders = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       console.log('🔄 OrderProvider - Fetching orders from API');
@@ -105,6 +110,22 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       console.log('🔄 OrderProvider - Creating new order');
       
+      // Prevent duplicate orders
+      if (orders.some(o => 
+        o.userId === user.id && 
+        o.currentRank === currentRank && 
+        o.targetRank === targetRank && 
+        Math.abs(Date.now() - new Date(o.createdAt).getTime()) < 10000 // Within 10 seconds
+      )) {
+        console.log('⚠️ OrderProvider - Preventing duplicate order');
+        toast({
+          title: "İşlem Engellendi",
+          description: "Aynı sipariş zaten oluşturulmuş. Lütfen biraz bekleyip tekrar deneyiniz.",
+          variant: "destructive",
+        });
+        throw new Error("Potential duplicate order detected");
+      }
+      
       const newOrder = {
         userId: user.id,
         currentRank,
@@ -124,9 +145,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Sipariş Oluşturuldu",
         description: "Siparişiniz başarıyla oluşturuldu!",
       });
-      
-      // Siparişleri yenile
-      fetchOrders();
       
       return createdOrder;
     } catch (error) {
@@ -172,9 +190,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Sipariş Alındı",
         description: "Sipariş başarıyla size atandı!",
       });
-      
-      // Siparişleri yenile
-      fetchOrders();
       
       return updatedOrder;
     } catch (error) {
@@ -234,9 +249,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: "Sipariş başarıyla tamamlandı!",
       });
       
-      // Siparişleri yenile
-      fetchOrders();
-      
       return updatedOrder;
     } catch (error) {
       console.error('❌ OrderProvider - Error completing order:', error);
@@ -274,9 +286,6 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         title: "Sipariş İptal Edildi",
         description: "Sipariş başarıyla iptal edildi.",
       });
-      
-      // Siparişleri yenile
-      fetchOrders();
       
       return updatedOrder;
     } catch (error) {
