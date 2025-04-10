@@ -37,35 +37,39 @@ export const createSupabaseTables = async (): Promise<void> => {
       );
     `;
     
-    // Execute SQL using RPC (if available)
+    // Execute SQL commands using RPC function (if available)
     try {
+      console.log("Attempting to create tables using RPC method");
+      
+      // Try first RPC method name
       await supabase.rpc('execute_sql', { sql: usersTableSQL });
       await supabase.rpc('execute_sql', { sql: ordersTableSQL });
-      console.log("Tables created or verified successfully");
-    } catch (rpcError) {
-      console.error("RPC method not available, trying direct query", rpcError);
       
-      // Fallback to sending raw SQL directly - this requires appropriate permissions 
-      // and may not work with standard client access
+      console.log("Tables created successfully using execute_sql RPC");
+    } catch (rpcError) {
+      console.error("First RPC method failed, trying alternative method", rpcError);
+      
       try {
-        // Try using the newer Supabase REST API for SQL
-        const { error: usersError } = await supabase.rpc('exec_sql', { query: usersTableSQL });
-        if (usersError) throw usersError;
+        // Try alternative RPC method
+        await supabase.rpc('exec_sql', { query: usersTableSQL });
+        await supabase.rpc('exec_sql', { query: ordersTableSQL });
+        console.log("Tables created successfully using exec_sql RPC");
+      } catch (altError) {
+        console.error("Alternative RPC method failed:", altError);
         
-        const { error: ordersError } = await supabase.rpc('exec_sql', { query: ordersTableSQL });
-        if (ordersError) throw ordersError;
-      } catch (directError) {
-        console.error("Direct SQL execution failed:", directError);
-        console.log("Please run these SQL commands in Supabase SQL Editor manually:");
+        console.warn("Automatic table creation failed. Please manually create the tables using SQL editor in Supabase dashboard");
+        console.log("==== SQL COMMANDS TO RUN MANUALLY ====");
         console.log(usersTableSQL);
         console.log(ordersTableSQL);
-        throw new Error("Could not create tables automatically, manual creation required");
+        console.log("=====================================");
+        
+        throw new Error("Failed to create tables automatically. Please run the SQL commands manually in the Supabase dashboard.");
       }
     }
     
-    console.log("Table creation completed");
+    console.log("Table setup process completed");
   } catch (error) {
-    console.error("Error creating tables:", error);
-    throw new Error("Failed to create database tables");
+    console.error("Error in createSupabaseTables:", error);
+    throw error;
   }
 };

@@ -15,67 +15,50 @@ const Register = () => {
   const { toast } = useToast();
   const [isCheckingSupabase, setIsCheckingSupabase] = useState(true);
 
-  // Supabase bağlantısı kontrolü
+  // Check Supabase connection and create tables if needed
   useEffect(() => {
     const checkSupabaseStatus = async () => {
       try {
         setIsCheckingSupabase(true);
-        console.log("Kayıt sayfası - Supabase durumu kontrol ediliyor");
+        console.log("Register page - Checking Supabase connection and tables");
         
-        // Users tablosunu kontrol et
+        // Check if the users table exists
         const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('count', { count: 'exact', head: true });
         
         if (usersError) {
-          console.log("Supabase users tablosu kontrolü hatası:", usersError.message);
+          console.log("Supabase users table check error:", usersError.message);
           
           if (usersError.message.includes('does not exist')) {
-            // Tablo oluşturma deneyin
+            // Try to create the tables
             try {
               await createSupabaseTables();
               toast({
-                title: "Veritabanı tabloları oluşturuldu",
-                description: "Kullanıcı tablosu oluşturuldu, kayıt olabilirsiniz.",
+                title: "Database tables created",
+                description: "User table has been created. You can now register.",
               });
             } catch (error: any) {
-              console.error("Tablo oluşturma hatası:", error);
+              console.error("Table creation error:", error);
               toast({
-                title: "Veritabanı oluşturma hatası",
-                description: "Kullanıcı tablosu oluşturulamadı. Lütfen tekrar deneyin.",
+                title: "Database creation error",
+                description: "Could not create user table. Please try again.",
                 variant: "destructive"
               });
             }
           }
         } else {
+          console.log("Users table exists, count:", usersData);
           toast({
-            title: "Supabase bağlantısı başarılı",
-            description: "Kayıt yapabilirsiniz."
+            title: "Supabase connection successful",
+            description: "You can now register."
           });
         }
-        
-        // Orders tablosunu kontrol et
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('count', { count: 'exact', head: true });
-        
-        if (ordersError) {
-          console.log("Supabase orders tablosu kontrolü hatası:", ordersError.message);
-          
-          if (ordersError.message.includes('does not exist')) {
-            // Tablo oluşturma deneyin
-            try {
-              await createSupabaseTables();
-            } catch (error) {
-              console.error("Orders tablosu oluşturma hatası:", error);
-            }
-          }
-        }
       } catch (error) {
-        console.error("Supabase kontrol hatası:", error);
+        console.error("Supabase check error:", error);
         toast({
-          title: "Bağlantı hatası",
-          description: "Sunucu ile bağlantı kurulamadı. Lütfen daha sonra tekrar deneyin.",
+          title: "Connection error",
+          description: "Could not connect to the server. Please try again later.",
           variant: "destructive"
         });
       } finally {
@@ -98,7 +81,7 @@ const Register = () => {
             {isCheckingSupabase ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-valorant-green mx-auto mb-4"></div>
-                <p className="text-gray-400">Supabase bağlantısı kontrol ediliyor...</p>
+                <p className="text-gray-400">Checking Supabase connection...</p>
               </div>
             ) : (
               <RegisterForm registeredUsersCount={registeredUsersCount} />
@@ -106,9 +89,9 @@ const Register = () => {
             
             <div className="mt-6 text-center text-sm">
               <p className="text-gray-400">
-                Zaten bir hesabınız var mı?{' '}
+                Already have an account?{' '}
                 <Link to="/login" className="text-valorant-green hover:text-valorant-darkGreen transition-colors font-medium">
-                  Giriş Yapın
+                  Login
                 </Link>
               </p>
             </div>
