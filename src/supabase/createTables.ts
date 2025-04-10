@@ -45,10 +45,22 @@ export const createSupabaseTables = async (): Promise<void> => {
     } catch (rpcError) {
       console.error("RPC method not available, trying direct query", rpcError);
       
-      // Fallback to direct query if RPC not available
-      // Note: This may require elevated permissions
-      await supabase.from('_database').select('*').execute(usersTableSQL);
-      await supabase.from('_database').select('*').execute(ordersTableSQL);
+      // Fallback to sending raw SQL directly - this requires appropriate permissions 
+      // and may not work with standard client access
+      try {
+        // Try using the newer Supabase REST API for SQL
+        const { error: usersError } = await supabase.rpc('exec_sql', { query: usersTableSQL });
+        if (usersError) throw usersError;
+        
+        const { error: ordersError } = await supabase.rpc('exec_sql', { query: ordersTableSQL });
+        if (ordersError) throw ordersError;
+      } catch (directError) {
+        console.error("Direct SQL execution failed:", directError);
+        console.log("Please run these SQL commands in Supabase SQL Editor manually:");
+        console.log(usersTableSQL);
+        console.log(ordersTableSQL);
+        throw new Error("Could not create tables automatically, manual creation required");
+      }
     }
     
     console.log("Table creation completed");
