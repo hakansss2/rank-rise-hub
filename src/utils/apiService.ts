@@ -55,11 +55,14 @@ export const authApi = {
       
       if (userError) throw userError;
       
+      // Use type assertion to ensure the role is of the correct type
+      const userRole = userData.role as 'customer' | 'booster' | 'admin';
+      
       return {
         id: userData.id,
         email: userData.email,
         username: userData.username,
-        role: userData.role as 'customer' | 'booster' | 'admin',
+        role: userRole,
         balance: userData.balance
       };
     } catch (error) {
@@ -87,11 +90,11 @@ export const authApi = {
       if (error) throw error;
       
       // Create user record in our users table
-      const newUser = {
-        id: data.user?.id,
+      const newUser: UserResponse = {
+        id: data.user?.id || '',
         email,
         username,
-        role: 'customer',
+        role: 'customer', // Explicitly set as one of the allowed roles
         balance: 0
       };
       
