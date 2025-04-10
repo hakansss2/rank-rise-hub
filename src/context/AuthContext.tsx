@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { 
   STORAGE_KEYS, 
@@ -61,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [registeredUsersCount, setRegisteredUsersCount] = useState<number>(0);
   const { toast } = useToast();
   
-  // İnternet bağlantı kontrolü
+  // İnternet bağlantısı kontrolü
   const checkOnlineStatus = () => {
     if (navigator.onLine) {
       if (!document.body.classList.contains('online-mode')) {
@@ -239,13 +238,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Bakiye güncelleme API çağrısı
-      const updatedUser = await userApi.updateBalance(user.id, amount);
+      const updatedBalance = await userApi.addBalance(user.id, amount);
       
       // State güncelleme
-      setUser(updatedUser);
+      setUser(prev => prev ? { ...prev, balance: updatedBalance } : null);
       
       // Kullanıcı bilgisini localStorage'da güncelle
-      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      if (user) {
+        const updatedUser = { ...user, balance: updatedBalance };
+        localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      }
       
       toast({
         title: "Bakiye Eklendi",
@@ -278,13 +280,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Bakiye güncelleme API çağrısı (negatif değer göndererek düşme işlemi)
-      const updatedUser = await userApi.updateBalance(user.id, -amount);
+      const updatedBalance = await userApi.addBalance(user.id, -amount);
       
       // State güncelleme
-      setUser(updatedUser);
+      setUser(prev => prev ? { ...prev, balance: updatedBalance } : null);
       
       // Kullanıcı bilgisini localStorage'da güncelle
-      localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      if (user) {
+        const updatedUser = { ...user, balance: updatedBalance };
+        localStorage.setItem('valorant_user', JSON.stringify(updatedUser));
+      }
       
       return true;
     } catch (error) {

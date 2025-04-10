@@ -1,6 +1,15 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Add UserResponse type that was missing
+export interface UserResponse {
+  id: string;
+  email: string;
+  username: string;
+  role: 'customer' | 'booster' | 'admin';
+  balance: number;
+}
+
 export interface OrderResponse {
   id: string;
   userId: string;
@@ -23,6 +32,102 @@ export interface MessageResponse {
   content: string;
   timestamp: string;
 }
+
+// Add missing authApi
+export const authApi = {
+  login: async (email: string, password: string): Promise<UserResponse> => {
+    console.log('🔄 API Service - Logging in user');
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      // Fetch user data from users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+      
+      if (userError) throw userError;
+      
+      return {
+        id: userData.id,
+        email: userData.email,
+        username: userData.username,
+        role: userData.role as 'customer' | 'booster' | 'admin',
+        balance: userData.balance
+      };
+    } catch (error) {
+      console.error('❌ API Service - Login failed:', error);
+      throw error;
+    }
+  },
+  
+  register: async (email: string, username: string, password: string): Promise<UserResponse> => {
+    console.log('🔄 API Service - Registering user');
+    
+    try {
+      // Register user with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            role: 'customer'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Create user record in our users table
+      const newUser = {
+        id: data.user?.id,
+        email,
+        username,
+        role: 'customer',
+        balance: 0
+      };
+      
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert([newUser]);
+      
+      if (insertError) throw insertError;
+      
+      return newUser;
+    } catch (error) {
+      console.error('❌ API Service - Registration failed:', error);
+      throw error;
+    }
+  },
+  
+  signOut: async (): Promise<void> => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+  
+  getUserCount: async (): Promise<{ count: number }> => {
+    try {
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+        
+      if (error) throw error;
+      
+      return { count: count || 0 };
+    } catch (error) {
+      console.error('❌ API Service - Failed to get user count:', error);
+      return { count: 0 };
+    }
+  }
+};
 
 export const orderApi = {
   // Get all orders
@@ -283,7 +388,7 @@ export const orderApi = {
       };
       
       // Append new message to existing ones
-      const messages = [...(orderData?.messages || []), newMessage];
+      const messages = [...((orderData?.messages as any[]) || []), newMessage];
       
       // Update order with new messages
       const { error: updateError } = await supabase
@@ -323,7 +428,7 @@ export const userApi = {
         throw userError;
       }
       
-      const currentBalance = userData?.balance || 0;
+      const currentBalance = (userData?.balance as number) || 0;
       const newBalance = currentBalance + amount;
       
       // Update user balance
