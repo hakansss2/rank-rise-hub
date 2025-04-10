@@ -9,7 +9,90 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          booster_id: string | null
+          booster_username: string | null
+          created_at: string | null
+          current_rank: number
+          game_password: string | null
+          game_username: string | null
+          id: string
+          messages: Json | null
+          price: number
+          status: string
+          target_rank: number
+          user_id: string
+        }
+        Insert: {
+          booster_id?: string | null
+          booster_username?: string | null
+          created_at?: string | null
+          current_rank: number
+          game_password?: string | null
+          game_username?: string | null
+          id?: string
+          messages?: Json | null
+          price: number
+          status: string
+          target_rank: number
+          user_id: string
+        }
+        Update: {
+          booster_id?: string | null
+          booster_username?: string | null
+          created_at?: string | null
+          current_rank?: number
+          game_password?: string | null
+          game_username?: string | null
+          id?: string
+          messages?: Json | null
+          price?: number
+          status?: string
+          target_rank?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_booster_id_fkey"
+            columns: ["booster_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          balance: number | null
+          email: string
+          id: string
+          role: string
+          username: string
+        }
+        Insert: {
+          balance?: number | null
+          email: string
+          id: string
+          role: string
+          username: string
+        }
+        Update: {
+          balance?: number | null
+          email?: string
+          id?: string
+          role?: string
+          username?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -53,7 +53,29 @@ export const authApi = {
         .eq('id', data.user.id)
         .single();
       
-      if (userError) throw userError;
+      if (userError) {
+        // If user doesn't exist in the users table yet, create a new entry
+        if (userError.code === 'PGRST116') {
+          // Create a new user entry
+          const newUser = {
+            id: data.user.id,
+            email: data.user.email || '',
+            username: data.user.email?.split('@')[0] || 'user',
+            role: 'customer',
+            balance: 0
+          };
+          
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert([newUser]);
+            
+          if (insertError) throw insertError;
+          
+          return newUser;
+        } else {
+          throw userError;
+        }
+      }
       
       // Use type assertion to ensure the role is of the correct type
       const userRole = userData.role as 'customer' | 'booster' | 'admin';
@@ -79,19 +101,15 @@ export const authApi = {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            username,
-            role: 'customer'
-          }
-        }
       });
       
       if (error) throw error;
       
+      if (!data.user) throw new Error('User registration failed');
+      
       // Create user record in our users table
       const newUser: UserResponse = {
-        id: data.user?.id || '',
+        id: data.user.id,
         email,
         username,
         role: 'customer', // Explicitly set as one of the allowed roles
@@ -208,7 +226,6 @@ export const orderApi = {
         status: 'pending',
         game_username: orderData.gameUsername || '',
         game_password: orderData.gamePassword || '',
-        created_at: new Date().toISOString(),
         messages: []
       };
       
@@ -419,6 +436,22 @@ export const userApi = {
     console.log('🔄 API Service - Adding balance for user:', userId, amount);
     
     try {
+      // Handle admin user case separately
+      if (userId === "admin-user-id" || userId === "admin-user-id-1") {
+        console.log('✅ Admin user detected, using localStorage for balance');
+        
+        // Get from localStorage
+        const stored = localStorage.getItem('valorant_user');
+        if (stored) {
+          const currentUser = JSON.parse(stored);
+          currentUser.balance = (currentUser.balance || 0) + amount;
+          localStorage.setItem('valorant_user', JSON.stringify(currentUser));
+          return currentUser.balance;
+        }
+        
+        return 5000 + amount; // Default admin balance
+      }
+    
       // First get current user balance
       const { data: userData, error: userError } = await supabase
         .from('users')
